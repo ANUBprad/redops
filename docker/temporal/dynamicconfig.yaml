@@ -1,0 +1,9 @@
+# Temporal dynamic configuration for development.
+# Override defaults here. See:
+# https://docs.temporal.io/references/dynamic-configuration
+
+frontend.enableLogCompression:
+  - value: false
+
+system.forceSearchAttributes:
+  - value: false

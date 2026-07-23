@@ -1,0 +1,148 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: redops-postgres
+    environment:
+      POSTGRES_USER: redops
+      POSTGRES_PASSWORD: redops
+      POSTGRES_DB: redops
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U redops"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - redops-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redops-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - redops-network
+
+  temporal:
+    image: temporalio/server:1.25.0
+    container_name: redops-temporal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: redops
+      POSTGRES_PWD: redops
+      POSTGRES_SEEDS: postgres
+      DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/dynamicconfig.yaml
+    ports:
+      - "7233:7233"
+    volumes:
+      - ./temporal/dynamicconfig.yaml:/etc/temporal/dynamicconfig.yaml
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "health-check"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - redops-network
+
+  temporal-admin:
+    image: temporalio/admin-tools:1.25.0
+    container_name: redops-temporal-admin
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CLI_ADDRESS: temporal:7233
+    networks:
+      - redops-network
+
+  temporal-ui:
+    image: temporalio/ui:1.25.0
+    container_name: redops-temporal-ui
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8233:8080"
+    networks:
+      - redops-network
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: redops-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      APP_DEBUG: "true"
+      APP_LOG_LEVEL: DEBUG
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: redops
+      DB_PASSWORD: redops
+      DB_NAME: redops
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      TEMPORAL_HOST: temporal
+      TEMPORAL_PORT: 7233
+      SERVER_CORS_ORIGINS: http://localhost:5173
+      APP_SECRET_KEY: development-secret-key-change-in-production
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - redops-network
+
+  frontend:
+    image: node:20-alpine
+    container_name: redops-frontend
+    working_dir: /app
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev"
+    networks:
+      - redops-network
+
+volumes:
+  postgres-data:
+
+networks:
+  redops-network:
+    driver: bridge
