@@ -1,60 +1,56 @@
-"""Health check endpoints for liveness and readiness probes."""
+"""Health check endpoints for liveness and readiness probes.
+
+Uses the Kernel HealthRegistry from the composition root for
+consistent health reporting across all infrastructure components.
+"""
+
+from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
-from redis import asyncio as aioredis
-from temporalio.client import Client as TemporalClient
 
 from app.core.config import AppConfig
 from app.core.dependencies import get_config
-from app.db.health import check_database_health
+from app.kernel.health.health import HealthRegistry, HealthResult, HealthStatus
 from app.schemas.health import (
     DependencyCheck,
     HealthCheckResponse,
-    HealthStatus,
     ReadinessCheckResponse,
 )
 
 health_router = APIRouter(tags=["health"])
 
 
-async def _check_redis_health(request: Request) -> DependencyCheck:
-    """Check if Redis is reachable."""
-    redis_client: aioredis.Redis | None = request.app.state.redis_client
-    if redis_client is None:
-        return DependencyCheck(name="redis", healthy=False, detail="unreachable (failed at startup)")
+def _get_health_registry(request: Request) -> HealthRegistry | None:
+    """Extract the HealthRegistry from the application bootstrap.
 
-    try:
-        pong = await redis_client.ping()
-        return DependencyCheck(
-            name="redis",
-            healthy=pong,
-            detail="connected" if pong else "ping failed",
-        )
-    except Exception as exc:
-        return DependencyCheck(
-            name="redis",
-            healthy=False,
-            detail=str(exc),
-        )
+    Args:
+        request: The current request.
+
+    Returns:
+        The HealthRegistry instance or None if not available.
+
+    """
+    bootstrap = getattr(request.app.state, "bootstrap", None)
+    if bootstrap is not None:
+        return getattr(bootstrap, "health_registry", None)
+    return None
 
 
-async def _check_temporal_health(request: Request) -> DependencyCheck:
-    """Check if Temporal Server is reachable."""
-    temporal_client: TemporalClient | None = request.app.state.temporal_client
-    if temporal_client is None:
-        return DependencyCheck(
-            name="temporal", healthy=False, detail="unreachable (failed at startup)"
-        )
+def _to_dependency_check(result: HealthResult) -> DependencyCheck:
+    """Convert a Kernel HealthResult to a Pydantic DependencyCheck.
 
-    try:
-        await temporal_client.health_service.check()
-        return DependencyCheck(name="temporal", healthy=True, detail="connected")
-    except Exception as exc:
-        return DependencyCheck(
-            name="temporal",
-            healthy=False,
-            detail=str(exc),
-        )
+    Args:
+        result: The Kernel health result.
+
+    Returns:
+        A Pydantic DependencyCheck model.
+
+    """
+    return DependencyCheck(
+        name=result.name,
+        healthy=result.is_healthy,
+        detail=result.detail,
+    )
 
 
 @health_router.get("/health", response_model=HealthCheckResponse)
@@ -85,21 +81,14 @@ async def readiness_check(
     """
     checks: list[DependencyCheck] = []
 
-    # Database check
-    db_healthy = await check_database_health()
-    checks.append(
-        DependencyCheck(
-            name="database",
-            healthy=db_healthy,
-            detail="connected" if db_healthy else "unreachable",
-        )
-    )
-
-    # Redis check
-    checks.append(await _check_redis_health(request))
-
-    # Temporal check
-    checks.append(await _check_temporal_health(request))
+    health_registry = _get_health_registry(request)
+    if health_registry is not None:
+        report = await health_registry.check_all()
+        checks = [_to_dependency_check(r) for r in report.checks]
+    else:
+        checks = [
+            DependencyCheck(name="bootstrap", healthy=False, detail="not initialized"),
+        ]
 
     all_healthy = all(c.healthy for c in checks)
 
