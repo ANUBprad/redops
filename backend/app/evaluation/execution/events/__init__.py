@@ -1,0 +1,1 @@
+"""Execution-level domain events."""
