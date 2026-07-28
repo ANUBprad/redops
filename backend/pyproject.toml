@@ -39,6 +39,13 @@ dev = [
 target-version = "py312"
 line-length = 100
 
+[tool.ruff.format]
+exclude = ["*.md"]
+
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
 [tool.ruff.lint]
 select = [
     "E",      # pycodestyle errors
