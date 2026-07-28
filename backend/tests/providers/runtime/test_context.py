@@ -1,6 +1,10 @@
 """Tests for execution context."""
 
-from app.providers.runtime.context.execution_context import CancellationToken, ExecutionContext, ExecutionBudget
+from app.providers.runtime.context.execution_context import (
+    CancellationToken,
+    ExecutionBudget,
+    ExecutionContext,
+)
 
 
 class TestExecutionContext:

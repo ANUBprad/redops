@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.providers.capabilities.capability import Capability  # noqa: TC001
-from app.providers.capabilities.capability_set import CapabilitySet  # noqa: TC001
-from app.providers.catalog.model import ModelMetadata  # noqa: TC001
+from app.providers.capabilities.capability import Capability
+from app.providers.capabilities.capability_set import CapabilitySet
+from app.providers.catalog.model import ModelMetadata
 from app.providers.models.enums import ModelStatus
 
 
@@ -74,24 +74,15 @@ class ModelCatalog:
 
     def list_with_capability(self, capability: Capability) -> list[ModelMetadata]:
         """Return models supporting a specific capability."""
-        return [
-            m for m in self._models.values()
-            if m.capabilities.supports(capability)
-        ]
+        return [m for m in self._models.values() if m.capabilities.supports(capability)]
 
     def list_with_capabilities(self, capabilities: CapabilitySet) -> list[ModelMetadata]:
         """Return models supporting all given capabilities."""
-        return [
-            m for m in self._models.values()
-            if m.capabilities.supports_all(capabilities)
-        ]
+        return [m for m in self._models.values() if m.capabilities.supports_all(capabilities)]
 
     def search_by_context_window(self, min_tokens: int) -> list[ModelMetadata]:
         """Return models with at least min_tokens context window."""
-        return [
-            m for m in self._models.values()
-            if m.context_window >= min_tokens
-        ]
+        return [m for m in self._models.values() if m.context_window >= min_tokens]
 
     def search_by_price(
         self,

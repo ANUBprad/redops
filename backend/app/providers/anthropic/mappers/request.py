@@ -243,11 +243,13 @@ def map_tools(
     result: list[dict[str, Any]] = []
     for tool in tools:
         func = tool.get("function", {})
-        result.append({
-            "name": func.get("name", ""),
-            "description": func.get("description", ""),
-            "input_schema": func.get("parameters", {"type": "object", "properties": {}}),
-        })
+        result.append(
+            {
+                "name": func.get("name", ""),
+                "description": func.get("description", ""),
+                "input_schema": func.get("parameters", {"type": "object", "properties": {}}),
+            }
+        )
     return result
 
 

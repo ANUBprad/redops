@@ -1,7 +1,6 @@
 """Tests for runtime health."""
 
 from app.providers.runtime.health.runtime_health import (
-    AggregateHealth,
     HealthCheckResult,
     HealthStatus,
     RuntimeHealthAggregator,

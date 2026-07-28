@@ -1,7 +1,5 @@
 """Tests for OpenAI provider initialization and capabilities."""
 
-import pytest
-
 from app.providers.capabilities.capability import Capability
 from app.providers.openai.provider import OpenAIProvider
 
@@ -33,12 +31,14 @@ class TestOpenAIProvider:
     def test_supports(self) -> None:
         provider = OpenAIProvider(api_key="test-key")
         from app.providers.capabilities.capability_set import CapabilitySet
+
         assert provider.supports(CapabilitySet.of(Capability.CHAT))
         assert provider.supports(CapabilitySet.of(Capability.STREAMING, Capability.TOOL_CALLING))
 
     def test_lifecycle(self) -> None:
         provider = OpenAIProvider(api_key="test-key")
         import asyncio
+
         asyncio.run(provider.initialize())
         asyncio.run(provider.start())
         asyncio.run(provider.stop())

@@ -218,7 +218,7 @@ class EvaluationOrchestrator:
 
     def _build_pipeline(
         self,
-        plan: Any,  # noqa: ANN401
+        plan: Any,
     ) -> ExecutionPipeline:
         """Build an ExecutionPipeline from a plan and stages."""
         stages = [
@@ -272,9 +272,10 @@ class EvaluationOrchestrator:
         )
 
 
-def _create_runtime_coordinator() -> Any:  # noqa: ANN401
+def _create_runtime_coordinator() -> Any:
     """Create a RuntimeCoordinator for provider invocations."""
-    from app.providers.runtime.execution.runtime_coordinator import (  # noqa: PLC0415
+    from app.providers.runtime.execution.runtime_coordinator import (
         RuntimeCoordinator,
     )
+
     return RuntimeCoordinator()

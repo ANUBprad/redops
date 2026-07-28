@@ -17,7 +17,6 @@ from app.evaluation.execution.strategies.strategies import (
     StrategyPolicy,
     StrategyType,
 )
-from app.kernel.entities.base import UUIDv7
 
 
 class TestStrategyType:

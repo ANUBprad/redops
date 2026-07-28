@@ -12,8 +12,8 @@ async def check_database_health() -> bool:
         True if the database is reachable, False otherwise.
 
     """
-    from app.core.dependencies import get_config  # noqa: PLC0415
-    from app.db.session import create_engine_and_session_factory  # noqa: PLC0415
+    from app.core.dependencies import get_config
+    from app.db.session import create_engine_and_session_factory
 
     config = get_config()
 
@@ -25,9 +25,7 @@ async def check_database_health() -> bool:
 
     try:
         async with engine.connect() as connection:
-            result = await connection.execute(
-                __import__("sqlalchemy").text("SELECT 1")
-            )
+            result = await connection.execute(__import__("sqlalchemy").text("SELECT 1"))
             row = result.fetchone()
             return row is not None and row[0] == 1
     except Exception as exc:

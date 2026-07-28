@@ -38,12 +38,14 @@ from app.evaluation.domain.value_objects.evaluation_value_objects import (
 from app.kernel.entities.base import AggregateRoot, Entity, UUIDv7, VersionMixin
 from app.kernel.exceptions.errors import DomainError
 
-_ITEM_CANCELLED_TERMINAL_STATES: frozenset[ItemStatus] = frozenset({
-    ItemStatus.COMPLETED,
-    ItemStatus.FAILED,
-    ItemStatus.SKIPPED,
-    ItemStatus.CANCELLED,
-})
+_ITEM_CANCELLED_TERMINAL_STATES: frozenset[ItemStatus] = frozenset(
+    {
+        ItemStatus.COMPLETED,
+        ItemStatus.FAILED,
+        ItemStatus.SKIPPED,
+        ItemStatus.CANCELLED,
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -230,7 +232,7 @@ class EvaluationItem(Entity):
         self._status = ItemStatus.FAILED
         self.touch()
 
-    def skip(self, reason: str = "") -> None:  # noqa: ARG002
+    def skip(self, reason: str = "") -> None:
         """Skip this item.
 
         Args:

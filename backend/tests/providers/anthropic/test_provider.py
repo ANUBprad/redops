@@ -2,9 +2,9 @@
 
 import asyncio
 
+from app.providers.anthropic.provider import AnthropicProvider
 from app.providers.capabilities.capability import Capability
 from app.providers.capabilities.capability_set import CapabilitySet
-from app.providers.anthropic.provider import AnthropicProvider
 
 
 class TestAnthropicProvider:

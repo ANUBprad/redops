@@ -208,7 +208,9 @@ class OpenAIProvider(
 
         """
         async for chunk in self._streaming_adapter.chat_stream(
-            messages, model=model, options=options,
+            messages,
+            model=model,
+            options=options,
         ):
             yield chunk
 
@@ -254,5 +256,7 @@ class OpenAIProvider(
 
         """
         return await self._reasoning_adapter.reason(
-            messages, model=model, options=options,
+            messages,
+            model=model,
+            options=options,
         )

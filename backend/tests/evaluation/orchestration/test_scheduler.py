@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
-
-from app.evaluation.orchestration.scheduler import ParallelScheduler, SequentialScheduler
 from app.evaluation.execution.pipeline.step import ExecutionStep, StepDependency
 from app.evaluation.execution.stages.types import StageType
+from app.evaluation.orchestration.scheduler import ParallelScheduler, SequentialScheduler
 
 
 def _make_step(order: int, name: str = "", deps=None) -> ExecutionStep:

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.providers.capabilities.capability import Capability
 from app.providers.capabilities.capability_set import CapabilitySet
 from app.providers.catalog.catalog import ModelCatalog
@@ -103,27 +101,37 @@ class TestModelCatalog:
 
     def test_list_with_capability(self) -> None:
         catalog = ModelCatalog()
-        catalog.register(_make_model(
-            model_id="m1",
-            capabilities=CapabilitySet.of(Capability.CHAT, Capability.STREAMING),
-        ))
-        catalog.register(_make_model(
-            model_id="m2",
-            capabilities=CapabilitySet.of(Capability.CHAT),
-        ))
+        catalog.register(
+            _make_model(
+                model_id="m1",
+                capabilities=CapabilitySet.of(Capability.CHAT, Capability.STREAMING),
+            )
+        )
+        catalog.register(
+            _make_model(
+                model_id="m2",
+                capabilities=CapabilitySet.of(Capability.CHAT),
+            )
+        )
         streaming = catalog.list_with_capability(Capability.STREAMING)
         assert len(streaming) == 1
 
     def test_list_with_capabilities(self) -> None:
         catalog = ModelCatalog()
-        catalog.register(_make_model(
-            model_id="m1",
-            capabilities=CapabilitySet.of(Capability.CHAT, Capability.STREAMING, Capability.VISION),
-        ))
-        catalog.register(_make_model(
-            model_id="m2",
-            capabilities=CapabilitySet.of(Capability.CHAT),
-        ))
+        catalog.register(
+            _make_model(
+                model_id="m1",
+                capabilities=CapabilitySet.of(
+                    Capability.CHAT, Capability.STREAMING, Capability.VISION
+                ),
+            )
+        )
+        catalog.register(
+            _make_model(
+                model_id="m2",
+                capabilities=CapabilitySet.of(Capability.CHAT),
+            )
+        )
         result = catalog.list_with_capabilities(
             CapabilitySet.of(Capability.CHAT, Capability.STREAMING),
         )

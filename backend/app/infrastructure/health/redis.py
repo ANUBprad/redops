@@ -48,7 +48,7 @@ class RedisHealthContributor(HealthContributor):
                 status=HealthStatus.UNHEALTHY,
                 detail="redis ping returned false",
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return HealthResult(
                 name=self.contributor_name,
                 status=HealthStatus.UNHEALTHY,

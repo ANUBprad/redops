@@ -14,7 +14,7 @@ from app.providers.models.messages import (
     ToolResultContent,
 )
 from app.providers.models.options import ChatOptions, EmbeddingOptions, ProviderRequestOptions
-from app.providers.models.responses import ChatResponse, EmbeddingResponse, ProviderResponse, Usage
+from app.providers.models.responses import ChatResponse, EmbeddingResponse, Usage
 
 
 class TestEnums:

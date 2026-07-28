@@ -1,7 +1,8 @@
 """Tests for Anthropic client wrapper."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from app.providers.anthropic.client.anthropic_client import AnthropicClient
 from app.providers.exceptions.auth import AuthenticationRequired
@@ -138,6 +139,7 @@ class TestAnthropicClient:
 
         client = AnthropicClient(api_key="test-key")
         from app.providers.exceptions.rate_limit import RateLimitExceeded
+
         with pytest.raises(RateLimitExceeded):
             await client.create_message_stream(
                 model="claude-sonnet-4-20250514",

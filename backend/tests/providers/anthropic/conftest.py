@@ -4,17 +4,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.providers.models.enums import MessageRole
 from app.providers.models.messages import (
-    AudioContent,
-    ImageContent,
     Message,
-    TextContent,
-    ToolCallContent,
-    ToolResultContent,
 )
 from app.providers.models.options import ChatOptions
-from app.providers.models.responses import ChatResponse, Usage
 
 
 @pytest.fixture

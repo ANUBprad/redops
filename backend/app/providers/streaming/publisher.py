@@ -7,9 +7,9 @@ to consumers.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator  # noqa: TC003
+from collections.abc import AsyncIterator
 
-from app.providers.streaming.chunk import StreamChunk  # noqa: TC001
+from app.providers.streaming.chunk import StreamChunk
 
 
 class StreamPublisher(ABC):

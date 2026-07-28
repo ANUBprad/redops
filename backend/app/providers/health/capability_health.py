@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.providers.capabilities.capability import Capability  # noqa: TC001
+from app.providers.capabilities.capability import Capability
 from app.providers.health.status import ProviderStatus
 
 

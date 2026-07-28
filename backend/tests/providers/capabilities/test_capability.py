@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.providers.capabilities.capability import Capability
 from app.providers.capabilities.capability_set import CapabilitySet
 

@@ -116,11 +116,14 @@ _VALID_TRANSITIONS: list[Transition] = [
     Transition(source=RunStatus.STARTING, target=RunStatus.RUNNING, description="Active"),
     Transition(source=RunStatus.STARTING, target=RunStatus.FAILED, description="Init failed"),
     Transition(
-        source=RunStatus.RUNNING, target=RunStatus.PAUSED,
-        guards=(_noop_guard,), description="Pause",
+        source=RunStatus.RUNNING,
+        target=RunStatus.PAUSED,
+        guards=(_noop_guard,),
+        description="Pause",
     ),
     Transition(
-        source=RunStatus.RUNNING, target=RunStatus.CANCELLING,
+        source=RunStatus.RUNNING,
+        target=RunStatus.CANCELLING,
         description="Begin cancel",
     ),
     Transition(
@@ -157,7 +160,8 @@ _VALID_TRANSITIONS: list[Transition] = [
         description="Final cancellation",
     ),
     Transition(
-        source=RunStatus.CANCELLING, target=RunStatus.FAILED,
+        source=RunStatus.CANCELLING,
+        target=RunStatus.FAILED,
         description="Failed during cancel",
     ),
 ]

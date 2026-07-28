@@ -18,7 +18,7 @@ _FINISH_REASON_MAP: dict[str, FinishReason] = {
 
 
 def map_chat_response(
-    response: Any,  # noqa: ANN401
+    response: Any,
     *,
     provider: str = "openai",
 ) -> ChatResponse:
@@ -53,7 +53,7 @@ def map_chat_response(
 
 
 def map_embedding_response(
-    response: Any,  # noqa: ANN401
+    response: Any,
     *,
     provider: str = "openai",
 ) -> EmbeddingResponse:
@@ -82,7 +82,7 @@ def map_embedding_response(
     )
 
 
-def _map_usage(usage: Any) -> Usage:  # noqa: ANN401
+def _map_usage(usage: Any) -> Usage:
     """Map OpenAI usage to framework Usage."""
     if usage is None:
         return Usage()
@@ -102,7 +102,7 @@ def _map_usage(usage: Any) -> Usage:  # noqa: ANN401
     )
 
 
-def _extract_cached_tokens(usage: Any) -> int:  # noqa: ANN401
+def _extract_cached_tokens(usage: Any) -> int:
     """Extract cached tokens from OpenAI usage."""
     details = getattr(usage, "prompt_tokens_details", None)
     if details is not None:
@@ -112,7 +112,7 @@ def _extract_cached_tokens(usage: Any) -> int:  # noqa: ANN401
     return 0
 
 
-def _extract_audio_tokens(usage: Any) -> int:  # noqa: ANN401
+def _extract_audio_tokens(usage: Any) -> int:
     """Extract audio tokens from OpenAI usage."""
     details = getattr(usage, "prompt_tokens_details", None)
     if details is not None:
@@ -159,7 +159,7 @@ def _map_finish_reason(reason: str | None) -> FinishReason:
     return _FINISH_REASON_MAP.get(reason, FinishReason.UNKNOWN)
 
 
-def _extract_metadata(response: Any) -> dict[str, Any]:  # noqa: ANN401
+def _extract_metadata(response: Any) -> dict[str, Any]:
     """Extract additional metadata from OpenAI response."""
     metadata: dict[str, Any] = {}
 

@@ -13,9 +13,9 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from app.evaluation.execution.context.context import PipelineContext
-    from app.evaluation.execution.pipeline.step import ExecutionStep
     from app.evaluation.execution.pipeline.pipeline import ExecutionPipeline
-    from app.evaluation.execution.results.results import ExecutionResult, StageResult, StepResult
+    from app.evaluation.execution.pipeline.step import ExecutionStep
+    from app.evaluation.execution.results.results import ExecutionResult, StageResult
 
 
 class StageExecutor(ABC):

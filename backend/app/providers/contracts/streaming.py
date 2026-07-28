@@ -7,7 +7,7 @@ responses via async iteration.
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import AsyncIterator  # noqa: TC003
+from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

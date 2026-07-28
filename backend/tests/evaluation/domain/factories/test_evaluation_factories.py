@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.evaluation.domain.enums.evaluation_enums import EvaluationType, Priority, RunStatus
+from app.evaluation.domain.enums.evaluation_enums import EvaluationType, RunStatus
 from app.evaluation.domain.factories.evaluation_factories import (
     AggregatedMetricsFactory,
     EvaluationConfigurationFactory,
@@ -15,7 +15,6 @@ from app.evaluation.domain.factories.evaluation_factories import (
 from app.evaluation.domain.value_objects.evaluation_value_objects import (
     DatasetReference,
     EvaluationProfile,
-    ExecutionBudget,
 )
 from app.kernel.entities.base import UUIDv7
 from app.kernel.exceptions.errors import ValidationError

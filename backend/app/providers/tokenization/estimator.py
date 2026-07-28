@@ -32,7 +32,7 @@ class TokenEstimator(TokenCounter):
         """
         self._chars_per_token = chars_per_token
 
-    def count_tokens(self, text: str, model: str | None = None) -> int:  # noqa: ARG002
+    def count_tokens(self, text: str, model: str | None = None) -> int:
         """Estimate token count using character ratio.
 
         Args:

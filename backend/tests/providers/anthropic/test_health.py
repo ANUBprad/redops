@@ -1,10 +1,11 @@
 """Tests for Anthropic health contributor."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from app.providers.health.status import ProviderStatus
+import pytest
+
 from app.providers.anthropic.health.contributor import AnthropicHealthContributor
+from app.providers.health.status import ProviderStatus
 
 
 class TestAnthropicHealthContributor:

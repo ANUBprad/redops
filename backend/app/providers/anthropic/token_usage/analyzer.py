@@ -7,7 +7,7 @@ from typing import Any
 from app.providers.models.responses import Usage
 
 
-def extract_usage(response: Any) -> Usage:  # noqa: ANN401
+def extract_usage(response: Any) -> Usage:
     """Extract token usage from an Anthropic response.
 
     Args:
@@ -35,7 +35,7 @@ def extract_usage(response: Any) -> Usage:  # noqa: ANN401
     )
 
 
-def extract_stream_usage(chunk: Any) -> Usage | None:  # noqa: ANN401
+def extract_stream_usage(chunk: Any) -> Usage | None:
     """Extract token usage from a streaming event.
 
     Only the message_start and message_delta events contain usage data.

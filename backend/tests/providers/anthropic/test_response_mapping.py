@@ -3,15 +3,15 @@
 import json
 from unittest.mock import MagicMock
 
-from app.providers.models.enums import FinishReason
-from app.providers.models.messages import ToolCallContent
-from app.providers.models.responses import ChatResponse, Usage
 from app.providers.anthropic.mappers.response import (
     _extract_content_and_tools,
     _map_finish_reason,
     _map_usage,
     map_chat_response,
 )
+from app.providers.models.enums import FinishReason
+from app.providers.models.messages import ToolCallContent
+from app.providers.models.responses import ChatResponse
 
 
 def _make_text_block(text: str) -> MagicMock:
@@ -246,12 +246,12 @@ class TestExtractContentAndTools:
 
     def test_empty_text_block(self) -> None:
         block = _make_text_block("")
-        content, tools = _extract_content_and_tools([block])
+        content, _tools = _extract_content_and_tools([block])
         assert content == ""
 
     def test_tool_use_non_dict_input(self) -> None:
         block = _make_tool_block("toolu_3", "log", "not a dict")
-        content, tools = _extract_content_and_tools([block])
+        _content, tools = _extract_content_and_tools([block])
         assert len(tools) == 1
         assert tools[0].arguments == "not a dict"
 

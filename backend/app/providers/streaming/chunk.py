@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum, unique
 from typing import Any
 
-from app.providers.models.enums import FinishReason  # noqa: TC001
+from app.providers.models.enums import FinishReason
 
 
 @unique

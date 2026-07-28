@@ -7,7 +7,7 @@ from typing import Any
 from app.providers.models.responses import Usage
 
 
-def extract_usage(response: Any) -> Usage:  # noqa: ANN401
+def extract_usage(response: Any) -> Usage:
     """Extract token usage from an OpenAI response.
 
     Args:
@@ -36,7 +36,7 @@ def extract_usage(response: Any) -> Usage:  # noqa: ANN401
     )
 
 
-def extract_stream_usage(chunk: Any) -> Usage | None:  # noqa: ANN401
+def extract_stream_usage(chunk: Any) -> Usage | None:
     """Extract token usage from a streaming chunk.
 
     Only the final chunk contains usage data.
@@ -63,7 +63,7 @@ def extract_stream_usage(chunk: Any) -> Usage | None:  # noqa: ANN401
     )
 
 
-def _extract_cached_tokens(usage: Any) -> int:  # noqa: ANN401
+def _extract_cached_tokens(usage: Any) -> int:
     """Extract cached tokens from OpenAI usage."""
     details = getattr(usage, "prompt_tokens_details", None)
     if details is not None:
@@ -73,7 +73,7 @@ def _extract_cached_tokens(usage: Any) -> int:  # noqa: ANN401
     return 0
 
 
-def _extract_audio_tokens(usage: Any) -> int:  # noqa: ANN401
+def _extract_audio_tokens(usage: Any) -> int:
     """Extract audio tokens from OpenAI usage."""
     prompt_details = getattr(usage, "prompt_tokens_details", None)
     if prompt_details is not None:

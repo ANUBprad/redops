@@ -57,7 +57,7 @@ class FilesystemPluginDiscovery(PluginDiscoveryStrategy):
         if directory not in self._plugin_dirs:
             self._plugin_dirs.append(directory)
 
-    async def discover(self, plugin_type: str) -> list[type[Plugin]]:  # noqa: ARG002
+    async def discover(self, plugin_type: str) -> list[type[Plugin]]:
         """Discover Plugin subclasses from filesystem directories.
 
         Args:
@@ -83,7 +83,7 @@ class FilesystemPluginDiscovery(PluginDiscoveryStrategy):
                             and not inspect.isabstract(obj)
                         ):
                             discovered.append(obj)
-                except Exception:  # noqa: BLE001, S112
+                except Exception:  # noqa: S112
                     continue
 
         return discovered
@@ -100,7 +100,7 @@ class EntryPointPluginDiscovery(PluginDiscoveryStrategy):
         """Initialize with the entry point group name."""
         self._entry_point_group = entry_point_group
 
-    async def discover(self, plugin_type: str) -> list[type[Plugin]]:  # noqa: ARG002
+    async def discover(self, plugin_type: str) -> list[type[Plugin]]:
         """Discover Plugin subclasses registered as entry points.
 
         Args:
@@ -117,7 +117,7 @@ class EntryPointPluginDiscovery(PluginDiscoveryStrategy):
             entry_points = importlib.metadata.entry_points(
                 group=self._entry_point_group,
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             return discovered
 
         for entry_point in entry_points:
@@ -129,7 +129,7 @@ class EntryPointPluginDiscovery(PluginDiscoveryStrategy):
                     and not inspect.isabstract(plugin_class)
                 ):
                     discovered.append(plugin_class)
-            except Exception:  # noqa: BLE001, S112
+            except Exception:  # noqa: S112
                 continue
 
         return discovered

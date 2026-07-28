@@ -6,7 +6,6 @@ from app.providers.models.messages import (
     Message,
     TextContent,
     ToolCallContent,
-    ToolResultContent,
 )
 from app.providers.models.options import ChatOptions
 from app.providers.openai.mappers.request import map_chat_options, map_messages

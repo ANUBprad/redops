@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
@@ -19,17 +18,12 @@ from app.evaluation.domain.value_objects.evaluation_value_objects import (
 )
 from app.evaluation.execution.context.context import (
     CancellationToken,
-    ExecutionContext,
     MetricSelection,
     PipelineContext,
     ProviderSelection,
     TraceIdentifiers,
 )
 from app.kernel.entities.base import UUIDv7
-
-if TYPE_CHECKING:
-    pass
-
 
 # ---------------------------------------------------------------------------
 # Value Objects
@@ -55,7 +49,9 @@ def sample_dataset() -> DatasetReference:
 
 
 @pytest.fixture()
-def sample_config(sample_profile: EvaluationProfile, sample_dataset: DatasetReference) -> EvaluationConfiguration:
+def sample_config(
+    sample_profile: EvaluationProfile, sample_dataset: DatasetReference
+) -> EvaluationConfiguration:
     """Standard dataset evaluation configuration."""
     return EvaluationConfiguration(
         name="Test Evaluation",
@@ -65,7 +61,9 @@ def sample_config(sample_profile: EvaluationProfile, sample_dataset: DatasetRefe
         metrics=("accuracy", "relevance"),
         budget=ExecutionBudget(max_cost_usd=100.0, max_tokens=100_000, max_duration_seconds=3600),
         limits=ExecutionLimits(max_concurrency=1, batch_size=50, checkpoint_interval=5),
-        policy=ExecutionPolicy(continue_on_item_failure=True, max_retries_per_item=0, timeout_per_item_seconds=30),
+        policy=ExecutionPolicy(
+            continue_on_item_failure=True, max_retries_per_item=0, timeout_per_item_seconds=30
+        ),
         priority=Priority.NORMAL,
     )
 
@@ -98,7 +96,9 @@ def sample_metadata() -> EvaluationMetadata:
 
 
 @pytest.fixture()
-def sample_run(sample_config: EvaluationConfiguration, sample_profile: EvaluationProfile) -> EvaluationRun:
+def sample_run(
+    sample_config: EvaluationConfiguration, sample_profile: EvaluationProfile
+) -> EvaluationRun:
     """Standard EvaluationRun in CREATED state."""
     from app.evaluation.domain.entities.evaluation_entities import EvaluationRun
 
@@ -110,7 +110,9 @@ def sample_run(sample_config: EvaluationConfiguration, sample_profile: Evaluatio
 
 
 @pytest.fixture()
-def queued_run(sample_config: EvaluationConfiguration, sample_profile: EvaluationProfile) -> EvaluationRun:
+def queued_run(
+    sample_config: EvaluationConfiguration, sample_profile: EvaluationProfile
+) -> EvaluationRun:
     """EvaluationRun in QUEUED state."""
     from app.evaluation.domain.entities.evaluation_entities import EvaluationRun
 
@@ -124,7 +126,9 @@ def queued_run(sample_config: EvaluationConfiguration, sample_profile: Evaluatio
 
 
 @pytest.fixture()
-def running_run(sample_config: EvaluationConfiguration, sample_profile: EvaluationProfile) -> EvaluationRun:
+def running_run(
+    sample_config: EvaluationConfiguration, sample_profile: EvaluationProfile
+) -> EvaluationRun:
     """EvaluationRun in RUNNING state with 10 items."""
     from app.evaluation.domain.entities.evaluation_entities import EvaluationRun
 

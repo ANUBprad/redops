@@ -43,7 +43,7 @@ class SqlAlchemyUnitOfWork(UnitOfWork):
 
         """
         if self._session is None:
-            raise RuntimeError("UnitOfWork not started; use 'async with' to enter")  # noqa: TRY003
+            raise RuntimeError("UnitOfWork not started; use 'async with' to enter")
         return self._session
 
     async def __aenter__(self) -> Self:

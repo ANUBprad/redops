@@ -172,7 +172,7 @@ class StateTransitionValidator:
         target: RunStatus,
         items_completed: int = 0,
         items_total: int = 0,
-        has_checkpoint: bool = False,  # noqa: FBT001, FBT002
+        has_checkpoint: bool = False,
     ) -> list[ValidationError]:
         """Validate a state transition."""
         ctx = TransitionContext(
@@ -207,7 +207,7 @@ class StateTransitionValidator:
         target: RunStatus,
         items_completed: int = 0,
         items_total: int = 0,
-        has_checkpoint: bool = False,  # noqa: FBT001, FBT002
+        has_checkpoint: bool = False,
     ) -> None:
         """Validate transition and raise on first error."""
         errors = self.validate(

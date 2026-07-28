@@ -20,7 +20,6 @@ from app.providers.runtime.middleware.middleware_pipeline import MiddlewareConte
 from app.providers.runtime.policies.runtime_policies import (
     ExecutionPolicy,
     RetryPolicy,
-    TimeoutPolicy,
 )
 from app.providers.runtime.retry.retry_framework import RetryContext, RetryEvaluator
 from app.providers.runtime.telemetry.runtime_telemetry import (
@@ -150,9 +149,10 @@ class RuntimeCoordinator:
     def _get_timeout_evaluator(self) -> TimeoutEvaluator:
         """Get or create timeout evaluator (lazy)."""
         if self._timeout_evaluator is None:
-            from app.providers.runtime.timeout.timeout_framework import (  # noqa: PLC0415
+            from app.providers.runtime.timeout.timeout_framework import (
                 TimeoutEvaluator,
             )
+
             self._timeout_evaluator = TimeoutEvaluator(self._policy.timeout)
         return self._timeout_evaluator
 
@@ -203,7 +203,9 @@ class RuntimeCoordinator:
                         request_id=request.request_id,
                     )
                     response = await self._pipeline.execute(
-                        request, handler, ctx,
+                        request,
+                        handler,
+                        ctx,
                     )
                 else:
                     response = await handler(request)
@@ -231,7 +233,7 @@ class RuntimeCoordinator:
                     model_used=request.model_id,
                 )
 
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 last_error = exc
                 cb.record_failure()
                 attempt_latency = (datetime.now(UTC) - attempt_start).total_seconds() * 1000

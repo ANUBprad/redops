@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.evaluation.domain.enums.evaluation_enums import RunStatus
 from app.evaluation.domain.state_machine.run_state_machine import (
     InvalidTransitionError,
     RunStateMachine,
     TransitionContext,
-    TransitionResult,
 )
 from app.kernel.entities.base import UUIDv7
 

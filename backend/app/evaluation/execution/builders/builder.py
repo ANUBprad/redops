@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 
 from app.evaluation.execution.pipeline.pipeline import ExecutionPipeline
 from app.evaluation.execution.validators.validators import (
-    ConcurrencyValidator,
     DependencyGraphValidator,
     PlanValidator,
     StageOrderingValidator,

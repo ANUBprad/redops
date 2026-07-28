@@ -5,7 +5,6 @@ import pytest
 from app.providers.runtime.execution.runtime_coordinator import (
     ExecutionRequest,
     RuntimeCoordinator,
-    RuntimeExecutionResult,
 )
 from app.providers.runtime.policies.runtime_policies import ExecutionPolicy, RetryPolicy
 
@@ -63,15 +62,15 @@ class TestRuntimeCoordinator:
 
     @pytest.mark.asyncio
     async def test_circuit_breaker_opens(self) -> None:
-        from app.providers.runtime.circuit_breaker.runtime_circuit_breaker import CircuitBreakerConfig
+        from app.providers.runtime.circuit_breaker.runtime_circuit_breaker import (
+            CircuitBreakerConfig,
+        )
 
         policy = ExecutionPolicy(
             retry=RetryPolicy(max_attempts=0),
         )
         coordinator = RuntimeCoordinator(policy)
-        cb = coordinator.get_circuit_breaker(
-            "openai", CircuitBreakerConfig(failure_threshold=2)
-        )
+        coordinator.get_circuit_breaker("openai", CircuitBreakerConfig(failure_threshold=2))
 
         request = ExecutionRequest(provider_name="openai", model_id="gpt-4", request_id="req-3")
 
@@ -83,7 +82,9 @@ class TestRuntimeCoordinator:
 
         result = await coordinator.execute(request, handler)
         assert result.success is False
-        assert "circuit breaker" in result.error.lower() or "CircuitBreakerOpenError" in result.error
+        assert (
+            "circuit breaker" in result.error.lower() or "CircuitBreakerOpenError" in result.error
+        )
 
     def test_circuit_breaker_singleton(self) -> None:
         coordinator = RuntimeCoordinator()

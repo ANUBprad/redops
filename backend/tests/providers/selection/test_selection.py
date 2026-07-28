@@ -13,8 +13,8 @@ from app.providers.models.enums import ModelStatus
 from app.providers.selection.capability import CapabilityMatchingStrategy
 from app.providers.selection.cheapest import CheapestStrategy
 from app.providers.selection.context import HighestContextStrategy
-from app.providers.selection.fastest import FastestStrategy
 from app.providers.selection.fallback import FallbackChainStrategy
+from app.providers.selection.fastest import FastestStrategy
 from app.providers.selection.health import HealthBasedStrategy
 from app.providers.selection.round_robin import RoundRobinStrategy
 from app.providers.selection.weighted import WeightedStrategy
@@ -141,6 +141,7 @@ class TestFallbackChainStrategy:
     def test_uses_first_successful(self) -> None:
         class EmptyStrategy:
             strategy_name = "empty"
+
             def select(self, candidates):
                 return None
 
@@ -158,14 +159,20 @@ class TestFallbackChainStrategy:
 class TestHealthBasedStrategy:
     def test_selects_from_healthy(self) -> None:
         s = HealthBasedStrategy()
-        s.update_health("healthy_provider", ProviderHealth(
-            provider_name="healthy_provider",
-            status=ProviderStatus.HEALTHY,
-        ))
-        s.update_health("unhealthy_provider", ProviderHealth(
-            provider_name="unhealthy_provider",
-            status=ProviderStatus.UNHEALTHY,
-        ))
+        s.update_health(
+            "healthy_provider",
+            ProviderHealth(
+                provider_name="healthy_provider",
+                status=ProviderStatus.HEALTHY,
+            ),
+        )
+        s.update_health(
+            "unhealthy_provider",
+            ProviderHealth(
+                provider_name="unhealthy_provider",
+                status=ProviderStatus.UNHEALTHY,
+            ),
+        )
         candidates = [
             _model("m1", provider="healthy_provider"),
             _model("m2", provider="unhealthy_provider"),
@@ -176,10 +183,13 @@ class TestHealthBasedStrategy:
 
     def test_fallback_to_all_when_none_healthy(self) -> None:
         s = HealthBasedStrategy()
-        s.update_health("p1", ProviderHealth(
-            provider_name="p1",
-            status=ProviderStatus.UNHEALTHY,
-        ))
+        s.update_health(
+            "p1",
+            ProviderHealth(
+                provider_name="p1",
+                status=ProviderStatus.UNHEALTHY,
+            ),
+        )
         candidates = [_model("m1", provider="p1")]
         result = s.select(candidates)
         assert result is not None

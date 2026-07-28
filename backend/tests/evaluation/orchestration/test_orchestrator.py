@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.evaluation.orchestration.orchestrator import EvaluationOrchestrator
-from app.evaluation.domain.enums.evaluation_enums import RunStatus, CancellationReason
+from app.evaluation.domain.enums.evaluation_enums import RunStatus
 from app.evaluation.execution.results.results import ExecutionOutcome, ExecutionResult
+from app.evaluation.orchestration.orchestrator import EvaluationOrchestrator
 from app.kernel.entities.base import UUIDv7
 
 
@@ -306,9 +306,7 @@ class TestEvaluationOrchestratorResumeRun:
         event_pub = _make_event_publisher()
         run_repo = _make_run_repository(run=running_run)
         checkpoint_repo = MagicMock()
-        checkpoint_repo.find_latest = AsyncMock(
-            return_value=MagicMock(checkpoint_number=1)
-        )
+        checkpoint_repo.find_latest = AsyncMock(return_value=MagicMock(checkpoint_number=1))
         orch = _make_orchestrator(
             event_publisher=event_pub,
             run_repository=run_repo,
@@ -333,7 +331,9 @@ class TestEvaluationOrchestratorResumeRun:
                 instance.execute = fake_execute
 
                 with patch.object(
-                    type(running_run), "start", lambda self, n: None,
+                    type(running_run),
+                    "start",
+                    lambda self, n: None,
                 ):
                     result = await orch.resume_run(running_run.id)
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -19,10 +19,8 @@ from app.kernel.entities.base import (
     AggregateRoot,
     DomainEvent,
     Entity,
-    TimestampMixin,
     UUIDv7,
     ValueObject,
-    VersionMixin,
 )
 from app.kernel.events.event_bus import (
     BaseEvent,
@@ -60,7 +58,9 @@ from app.kernel.registry.plugin import (
     PluginRegistry,
 )
 from app.kernel.repositories.repository import QueryOptions, ReadRepository, WriteRepository
-from app.kernel.repositories.specification import AndSpecification, NotSpecification, OrSpecification, Specification
+from app.kernel.repositories.specification import (
+    Specification,
+)
 from app.kernel.repositories.unit_of_work import Transaction, UnitOfWork
 from app.kernel.results.result import (
     Failure,
@@ -69,16 +69,17 @@ from app.kernel.results.result import (
     failure,
     is_failure,
     is_success,
-    map as map_result,
     success,
     unwrap,
     unwrap_or,
 )
+from app.kernel.results.result import (
+    map as map_result,
+)
 from app.kernel.service_registry.service_registry import ServiceRegistry
-from app.kernel.utils.clock import Clock, FrozenClock, SystemClock
+from app.kernel.utils.clock import FrozenClock, SystemClock
 from app.kernel.utils.paginator import (
     CursorPage,
-    CursorPage as CursorPageAlias,
     CursorPaginator,
     CursorParams,
     Page,
@@ -92,12 +93,15 @@ from app.kernel.utils.retry import (
     RetryPolicy,
     with_retry,
 )
-from app.kernel.utils.uuid_generator import RandomUUIDGenerator, SequentialUUIDGenerator, UUIDGenerator
-
+from app.kernel.utils.uuid_generator import (
+    RandomUUIDGenerator,
+    SequentialUUIDGenerator,
+)
 
 # ──────────────────────────────────────────────
 # 1. DI Container Tests
 # ──────────────────────────────────────────────
+
 
 class _TestService(ABC):
     @abstractmethod
@@ -252,6 +256,7 @@ class TestDIContainer:
 # 2. Error Hierarchy Tests
 # ──────────────────────────────────────────────
 
+
 class TestErrors:
     def test_base_error_defaults(self) -> None:
         err = BaseError()
@@ -337,6 +342,7 @@ class TestErrors:
 # 3. Result Pattern Tests
 # ──────────────────────────────────────────────
 
+
 class TestResult:
     def test_success_creation(self) -> None:
         result = success(42)
@@ -420,6 +426,7 @@ class TestResult:
 # ──────────────────────────────────────────────
 # 4. Entity / Value Object / DomainEvent Tests
 # ──────────────────────────────────────────────
+
 
 class _TestEntity(Entity):
     def __init__(self, name: str = "", entity_id: UUIDv7 | None = None) -> None:
@@ -557,6 +564,7 @@ class TestDomainEvent:
 # 5. Event Bus Contract Tests
 # ──────────────────────────────────────────────
 
+
 class TestEventBusContracts:
     def test_event_publisher_has_publish(self) -> None:
         methods = [m for m in dir(EventPublisher) if not m.startswith("_")]
@@ -589,6 +597,7 @@ class TestEventBusContracts:
 # ──────────────────────────────────────────────
 # 6. Repository Contract Tests
 # ──────────────────────────────────────────────
+
 
 class TestRepositoryContracts:
     def test_read_repository_has_find_by_id(self) -> None:
@@ -629,6 +638,7 @@ class TestRepositoryContracts:
 # ──────────────────────────────────────────────
 # 7. Specification Pattern Tests
 # ──────────────────────────────────────────────
+
 
 class _EvenNumber(Specification[int]):
     def satisfied_by(self, candidate: int) -> bool:
@@ -673,6 +683,7 @@ class TestSpecification:
 # ──────────────────────────────────────────────
 # 8. Lifecycle Tests
 # ──────────────────────────────────────────────
+
 
 class _MockLifecycle(LifecycleService):
     def __init__(self) -> None:
@@ -768,6 +779,7 @@ class TestLifecycleManager:
 # ──────────────────────────────────────────────
 # 9. Service Registry Tests
 # ──────────────────────────────────────────────
+
 
 class _MockService(LifecycleService):
     def __init__(self) -> None:
@@ -881,6 +893,7 @@ class TestServiceRegistry:
 # 10. Plugin Registry Tests
 # ──────────────────────────────────────────────
 
+
 class _MockPlugin(Plugin):
     def __init__(self, name: str = "test-plugin") -> None:
         self._meta = PluginMetadata(name=name, version="1.0.0", plugin_type="test")
@@ -988,6 +1001,7 @@ class TestPluginRegistry:
 # 11. Health Framework Tests
 # ──────────────────────────────────────────────
 
+
 class _MockHealthContributor(HealthContributor):
     def __init__(self, name: str, healthy: bool = True) -> None:
         self._name = name
@@ -1050,6 +1064,7 @@ class TestHealthRegistry:
 # 12. Configuration Contract Tests
 # ──────────────────────────────────────────────
 
+
 class TestConfigContracts:
     def test_service_configuration(self) -> None:
         config = ServiceConfiguration(host="localhost", port=5432)
@@ -1083,6 +1098,7 @@ class TestConfigContracts:
 # 13. Utility Tests
 # ──────────────────────────────────────────────
 
+
 class TestClock:
     def test_system_clock_returns_datetime(self) -> None:
         clock = SystemClock()
@@ -1090,18 +1106,18 @@ class TestClock:
         assert isinstance(now, datetime)
 
     def test_frozen_clock_returns_fixed_time(self) -> None:
-        fixed = datetime(2026, 7, 1, tzinfo=timezone.utc)
+        fixed = datetime(2026, 7, 1, tzinfo=UTC)
         clock = FrozenClock(fixed)
         assert clock.now() == fixed
 
     def test_frozen_clock_advance(self) -> None:
-        fixed = datetime(2026, 7, 1, tzinfo=timezone.utc)
+        fixed = datetime(2026, 7, 1, tzinfo=UTC)
         clock = FrozenClock(fixed)
         clock.advance(timedelta(days=1))
         assert clock.now() == fixed + timedelta(days=1)
 
     def test_today(self) -> None:
-        clock = FrozenClock(datetime(2026, 7, 1, 14, 30, tzinfo=timezone.utc))
+        clock = FrozenClock(datetime(2026, 7, 1, 14, 30, tzinfo=UTC))
         today = clock.today()
         assert today.hour == 0
         assert today.minute == 0
@@ -1235,8 +1251,8 @@ class TestCircuitBreaker:
     async def test_opens_after_threshold(self) -> None:
         from app.kernel.utils.circuit_breaker import (
             CircuitBreakerOpenError,
-            InMemoryCircuitBreaker,
             CircuitState,
+            InMemoryCircuitBreaker,
         )
 
         cb = InMemoryCircuitBreaker(failure_threshold=2, recovery_timeout_seconds=999)
@@ -1256,8 +1272,8 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_half_open_on_recovery_timeout(self) -> None:
         from app.kernel.utils.circuit_breaker import (
-            InMemoryCircuitBreaker,
             CircuitState,
+            InMemoryCircuitBreaker,
         )
 
         cb = InMemoryCircuitBreaker(failure_threshold=1, recovery_timeout_seconds=0.01)
@@ -1275,7 +1291,7 @@ class TestCircuitBreaker:
 
     @pytest.mark.asyncio
     async def test_reset(self) -> None:
-        from app.kernel.utils.circuit_breaker import InMemoryCircuitBreaker, CircuitState
+        from app.kernel.utils.circuit_breaker import CircuitState, InMemoryCircuitBreaker
 
         cb = InMemoryCircuitBreaker(failure_threshold=1)
 
@@ -1294,6 +1310,7 @@ class TestAsyncLock:
     @pytest.mark.asyncio
     async def test_async_lock_abstract(self) -> None:
         from app.kernel.utils.async_lock import AsyncLock
+
         assert "acquire" in AsyncLock.__abstractmethods__
         assert "release" in AsyncLock.__abstractmethods__
 

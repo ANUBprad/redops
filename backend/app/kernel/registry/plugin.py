@@ -24,20 +24,16 @@ class PluginContext:
 
 class Plugin(ABC):
     @abstractmethod
-    def metadata(self) -> PluginMetadata:
-        ...
+    def metadata(self) -> PluginMetadata: ...
 
     @abstractmethod
-    async def initialize(self, context: PluginContext | None = None) -> None:
-        ...
+    async def initialize(self, context: PluginContext | None = None) -> None: ...
 
     @abstractmethod
-    async def shutdown(self) -> None:
-        ...
+    async def shutdown(self) -> None: ...
 
     @abstractmethod
-    async def health(self) -> bool:
-        ...
+    async def health(self) -> bool: ...
 
     async def validate(self) -> list[str]:
         return []
@@ -83,7 +79,7 @@ class PluginRegistry(Generic[P]):
         return results
 
     async def shutdown_all(self) -> None:
-        for name, plugin in reversed(list(self._plugins.items())):
+        for _name, plugin in reversed(list(self._plugins.items())):
             try:
                 await plugin.shutdown()
             except Exception:
@@ -115,9 +111,7 @@ class PluginRegistry(Generic[P]):
 
 class PluginLoader(ABC):
     @abstractmethod
-    async def discover_plugins(self, plugin_type: str) -> list[P]:
-        ...
+    async def discover_plugins(self, plugin_type: str) -> list[P]: ...
 
     @abstractmethod
-    async def load_plugin(self, name: str, plugin_type: str) -> P | None:
-        ...
+    async def load_plugin(self, name: str, plugin_type: str) -> P | None: ...

@@ -4,12 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from app.evaluation.domain.enums.evaluation_enums import (
-    CancellationReason,
-    FailureReason,
-    ItemStatus,
-    RunStatus,
-)
 from app.evaluation.domain.entities.evaluation_entities import (
     AggregatedMetrics,
     EvaluationItem,
@@ -18,12 +12,16 @@ from app.evaluation.domain.entities.evaluation_entities import (
     ItemResult,
     RunCheckpoint,
 )
+from app.evaluation.domain.enums.evaluation_enums import (
+    CancellationReason,
+    FailureReason,
+    ItemStatus,
+    RunStatus,
+)
 from app.evaluation.domain.state_machine.run_state_machine import InvalidTransitionError
 from app.evaluation.domain.value_objects.evaluation_value_objects import (
-    DatasetReference,
     EvaluationConfiguration,
     EvaluationProfile,
-    ExecutionBudget,
 )
 from app.kernel.entities.base import UUIDv7
 

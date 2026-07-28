@@ -1,11 +1,8 @@
 """Tests for runtime telemetry models."""
 
-from datetime import UTC, datetime
-
 from app.providers.runtime.telemetry.runtime_telemetry import (
     CompletionStatus,
     CostEstimate,
-    FailureCategory,
     LatencyMetrics,
     RuntimeTelemetry,
     TokenUsage,

@@ -99,11 +99,11 @@ class RetryEvaluator:
             and ctx.last_error_code
             and ctx.last_error_code not in self._policy.retryable_error_codes
         ):
-                return RetryDecision(
-                    should_retry=False,
-                    attempt=ctx.attempt,
-                    reason=f"Error code '{ctx.last_error_code}' not retryable",
-                )
+            return RetryDecision(
+                should_retry=False,
+                attempt=ctx.attempt,
+                reason=f"Error code '{ctx.last_error_code}' not retryable",
+            )
 
         delay = self._calculate_delay(ctx.attempt)
 

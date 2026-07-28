@@ -12,7 +12,7 @@ from typing import Any
 from app.kernel.exceptions.errors import InfrastructureError
 
 
-class ProviderException(InfrastructureError):  # noqa: N818
+class ProviderException(InfrastructureError):
     """Base exception for all provider-related errors.
 
     Provides structured error context including provider name,
@@ -25,7 +25,7 @@ class ProviderException(InfrastructureError):  # noqa: N818
 
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         message: str,
         *,

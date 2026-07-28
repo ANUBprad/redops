@@ -36,19 +36,23 @@ class RunStatus(Enum):
         return self == RunStatus.COMPLETED
 
 
-_TERMINAL_STATES: frozenset[RunStatus] = frozenset({
-    RunStatus.COMPLETED,
-    RunStatus.FAILED,
-    RunStatus.TIMEDOUT,
-    RunStatus.CANCELLED,
-})
+_TERMINAL_STATES: frozenset[RunStatus] = frozenset(
+    {
+        RunStatus.COMPLETED,
+        RunStatus.FAILED,
+        RunStatus.TIMEDOUT,
+        RunStatus.CANCELLED,
+    }
+)
 
-_ACTIVE_STATES: frozenset[RunStatus] = frozenset({
-    RunStatus.STARTING,
-    RunStatus.RUNNING,
-    RunStatus.PAUSED,
-    RunStatus.CANCELLING,
-})
+_ACTIVE_STATES: frozenset[RunStatus] = frozenset(
+    {
+        RunStatus.STARTING,
+        RunStatus.RUNNING,
+        RunStatus.PAUSED,
+        RunStatus.CANCELLING,
+    }
+)
 
 
 @unique
@@ -68,12 +72,14 @@ class ItemStatus(Enum):
         return self in _ITEM_TERMINAL_STATES
 
 
-_ITEM_TERMINAL_STATES: frozenset[ItemStatus] = frozenset({
-    ItemStatus.COMPLETED,
-    ItemStatus.FAILED,
-    ItemStatus.SKIPPED,
-    ItemStatus.CANCELLED,
-})
+_ITEM_TERMINAL_STATES: frozenset[ItemStatus] = frozenset(
+    {
+        ItemStatus.COMPLETED,
+        ItemStatus.FAILED,
+        ItemStatus.SKIPPED,
+        ItemStatus.CANCELLED,
+    }
+)
 
 
 @unique
@@ -114,11 +120,13 @@ class FailureReason(Enum):
         return self in _RETRYABLE_FAILURES
 
 
-_RETRYABLE_FAILURES: frozenset[FailureReason] = frozenset({
-    FailureReason.PROVIDER_TIMEOUT,
-    FailureReason.PROVIDER_UNAVAILABLE,
-    FailureReason.RATE_LIMITED,
-})
+_RETRYABLE_FAILURES: frozenset[FailureReason] = frozenset(
+    {
+        FailureReason.PROVIDER_TIMEOUT,
+        FailureReason.PROVIDER_UNAVAILABLE,
+        FailureReason.RATE_LIMITED,
+    }
+)
 
 
 @unique

@@ -39,20 +39,22 @@ _ERROR_MESSAGES = {
     "last_index_invalid": "Last item index cannot be less than -1",
 }
 
-_DATASET_REQUIRED_TYPES: frozenset[EvaluationType] = frozenset({
-    EvaluationType.DATASET,
-    EvaluationType.REGRESSION,
-    EvaluationType.SAFETY,
-    EvaluationType.RAG,
-    EvaluationType.COMPARISON,
-})
+_DATASET_REQUIRED_TYPES: frozenset[EvaluationType] = frozenset(
+    {
+        EvaluationType.DATASET,
+        EvaluationType.REGRESSION,
+        EvaluationType.SAFETY,
+        EvaluationType.RAG,
+        EvaluationType.COMPARISON,
+    }
+)
 
 
 class EvaluationConfigurationFactory:
     """Factory for creating validated EvaluationConfiguration instances."""
 
     @staticmethod
-    def create(  # noqa: PLR0913
+    def create(
         name: str,
         eval_type: EvaluationType,
         profile: EvaluationProfile,
@@ -137,7 +139,7 @@ class RunCheckpointFactory:
     """Factory for creating valid RunCheckpoint instances."""
 
     @staticmethod
-    def create(  # noqa: PLR0913
+    def create(
         run_id: UUIDv7,
         checkpoint_number: int,
         items_completed: int,
@@ -208,9 +210,7 @@ class AggregatedMetricsFactory:
     ) -> AggregatedMetrics:
         """Create aggregated metrics from item results."""
         scores = [
-            result.scores[metric_name]
-            for result in item_results
-            if metric_name in result.scores
+            result.scores[metric_name] for result in item_results if metric_name in result.scores
         ]
         total_items = len(item_results)
         computed_count = len(scores)

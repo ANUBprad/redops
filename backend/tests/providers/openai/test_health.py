@@ -1,7 +1,8 @@
 """Tests for OpenAI health contributor."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from app.providers.health.status import ProviderStatus
 from app.providers.openai.health.contributor import OpenAIHealthContributor

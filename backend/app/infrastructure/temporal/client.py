@@ -39,7 +39,7 @@ class TemporalClientFactory(LifecycleService):
 
         """
         if self._client is None:
-            raise RuntimeError("Temporal client not initialized")  # noqa: TRY003
+            raise RuntimeError("Temporal client not initialized")
         return self._client
 
     @property
@@ -81,5 +81,5 @@ class TemporalClientFactory(LifecycleService):
             return False
         try:
             return await self._client.service_client.check_health()
-        except Exception:  # noqa: BLE001
+        except Exception:
             return False

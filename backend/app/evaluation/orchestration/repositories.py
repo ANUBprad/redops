@@ -49,11 +49,8 @@ class InMemoryRunRepository(RunRepository):
         offset: int = 0,
     ) -> list[EvaluationRun]:
         """Find runs by status with pagination."""
-        matching = [
-            r for r in self._runs.values()
-            if r.status == status
-        ]
-        return matching[offset:offset + limit]
+        matching = [r for r in self._runs.values() if r.status == status]
+        return matching[offset : offset + limit]
 
     async def delete(self, run_id: UUIDv7) -> bool:
         """Delete a run by ID."""
@@ -83,17 +80,13 @@ class InMemoryItemRepository(ItemRepository):
         offset: int = 0,
     ) -> list[EvaluationItem]:
         """Find items by run ID."""
-        matching = [
-            i for i in self._items.values()
-            if i.run_id == run_id
-        ]
-        return matching[offset:offset + limit]
+        matching = [i for i in self._items.values() if i.run_id == run_id]
+        return matching[offset : offset + limit]
 
     async def find_pending_by_run_id(self, run_id: UUIDv7) -> list[EvaluationItem]:
         """Find pending items for a run."""
         return [
-            i for i in self._items.values()
-            if i.run_id == run_id and i.status.value == "pending"
+            i for i in self._items.values() if i.run_id == run_id and i.status.value == "pending"
         ]
 
 

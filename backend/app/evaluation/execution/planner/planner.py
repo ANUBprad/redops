@@ -10,7 +10,12 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from app.evaluation.execution.contracts.planner import ExecutionPlanner as ExecutionPlannerContract, PlanEstimate
+from app.evaluation.execution.contracts.planner import (
+    ExecutionPlanner as ExecutionPlannerContract,
+)
+from app.evaluation.execution.contracts.planner import (
+    PlanEstimate,
+)
 
 if TYPE_CHECKING:
     from app.evaluation.domain.entities.evaluation_entities import EvaluationRun

@@ -10,9 +10,8 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, mapped_column
 from sqlalchemy.orm import Mapped as Mapped
-from sqlalchemy.orm import mapped_column
 
 from app.infrastructure.database.repository import SqlAlchemyRepository
 from app.kernel.entities.base import UUIDv7
@@ -39,7 +38,9 @@ class TestSqlAlchemyRepository:
     def repo(self, session: AsyncMock) -> SqlAlchemyRepository[Any]:
         return SqlAlchemyRepository(session, _TestModel)
 
-    async def test_find_by_id_found(self, repo: SqlAlchemyRepository[Any], session: AsyncMock) -> None:
+    async def test_find_by_id_found(
+        self, repo: SqlAlchemyRepository[Any], session: AsyncMock
+    ) -> None:
         entity_id = UUIDv7()
         model = _TestModel(id=str(entity_id.value), name="test")
         scalar_result = MagicMock()
@@ -51,7 +52,9 @@ class TestSqlAlchemyRepository:
         assert isinstance(result, Success)
         assert result.value == model
 
-    async def test_find_by_id_not_found(self, repo: SqlAlchemyRepository[Any], session: AsyncMock) -> None:
+    async def test_find_by_id_not_found(
+        self, repo: SqlAlchemyRepository[Any], session: AsyncMock
+    ) -> None:
         entity_id = UUIDv7()
         scalar_result = MagicMock()
         scalar_result.scalar_one_or_none.return_value = None
@@ -106,7 +109,9 @@ class TestSqlAlchemyRepository:
         assert isinstance(result, Success)
         session.delete.assert_called_once_with(model)
 
-    async def test_delete_not_found(self, repo: SqlAlchemyRepository[Any], session: AsyncMock) -> None:
+    async def test_delete_not_found(
+        self, repo: SqlAlchemyRepository[Any], session: AsyncMock
+    ) -> None:
         entity_id = UUIDv7()
         scalar_result = MagicMock()
         scalar_result.scalar_one_or_none.return_value = None
@@ -126,7 +131,9 @@ class TestSqlAlchemyRepository:
 
         assert count == 5
 
-    async def test_count_with_filters(self, repo: SqlAlchemyRepository[Any], session: AsyncMock) -> None:
+    async def test_count_with_filters(
+        self, repo: SqlAlchemyRepository[Any], session: AsyncMock
+    ) -> None:
         scalar_result = MagicMock()
         scalar_result.scalar_one.return_value = 2
         session.execute = AsyncMock(return_value=scalar_result)

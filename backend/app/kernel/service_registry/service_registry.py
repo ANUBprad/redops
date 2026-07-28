@@ -90,7 +90,7 @@ class ServiceRegistry:
         for name, entry in self._services.items():
             graph[name] = set(entry.depends_on)
 
-        in_degree: dict[str, int] = {name: 0 for name in graph}
+        in_degree: dict[str, int] = dict.fromkeys(graph, 0)
         for name, deps in graph.items():
             for dep in deps:
                 if dep in in_degree:

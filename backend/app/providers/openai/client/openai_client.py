@@ -65,8 +65,8 @@ class OpenAIClient:
         *,
         model: str,
         messages: list[dict[str, Any]],
-        **kwargs: Any,  # noqa: ANN401
-    ) -> Any:  # noqa: ANN401
+        **kwargs: Any,
+    ) -> Any:
         """Create a chat completion.
 
         Args:
@@ -95,8 +95,8 @@ class OpenAIClient:
         *,
         model: str,
         messages: list[dict[str, Any]],
-        **kwargs: Any,  # noqa: ANN401
-    ) -> Any:  # noqa: ANN401
+        **kwargs: Any,
+    ) -> Any:
         """Create a streaming chat completion.
 
         Args:
@@ -126,8 +126,8 @@ class OpenAIClient:
         *,
         model: str,
         texts: list[str],
-        **kwargs: Any,  # noqa: ANN401
-    ) -> Any:  # noqa: ANN401
+        **kwargs: Any,
+    ) -> Any:
         """Create embeddings.
 
         Args:
@@ -160,7 +160,7 @@ class OpenAIClient:
         """
         try:
             await self._client.models.list()
-        except Exception:  # noqa: BLE001
+        except Exception:
             return False
         else:
             return True

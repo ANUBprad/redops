@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum, auto
 from typing import Any, TypeVar
 
@@ -101,10 +101,10 @@ class InMemoryCircuitBreaker(CircuitBreaker):
         self._half_open_calls = 0
 
     @property
-    def state(self) -> CircuitState:  # noqa: D102
+    def state(self) -> CircuitState:
         # Check if we should transition from OPEN to HALF_OPEN
         if self._state is CircuitState.OPEN and self._last_failure_time is not None:
-            if datetime.now(timezone.utc) - self._last_failure_time >= self._recovery_timeout:
+            if datetime.now(UTC) - self._last_failure_time >= self._recovery_timeout:
                 self._state = CircuitState.HALF_OPEN
                 self._half_open_calls = 0
         return self._state
@@ -147,7 +147,7 @@ class InMemoryCircuitBreaker(CircuitBreaker):
 
     def _on_failure(self) -> None:
         self._failure_count += 1
-        self._last_failure_time = datetime.now(timezone.utc)
+        self._last_failure_time = datetime.now(UTC)
         if self._failure_count >= self._failure_threshold:
             self._state = CircuitState.OPEN
 
@@ -160,4 +160,5 @@ class InMemoryCircuitBreaker(CircuitBreaker):
 
 class CircuitBreakerOpenError(Exception):
     """Raised when a call is rejected because the circuit is open."""
+
     ...

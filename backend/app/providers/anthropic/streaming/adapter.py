@@ -22,9 +22,9 @@ _ACTIVE_TOOL_CALLS: dict[str, str] = {}
 
 
 async def adapt_stream(
-    sdk_stream: Any,  # noqa: ANN401
+    sdk_stream: Any,
     *,
-    provider: str = "anthropic",  # noqa: ARG001
+    provider: str = "anthropic",
 ) -> AsyncIterator[StreamChunk]:
     """Adapt an Anthropic SDK stream to framework StreamChunks.
 
@@ -64,7 +64,7 @@ _EVENT_HANDLERS: dict[str, str] = {
 }
 
 
-def _map_event(event: Any, *, index: int) -> StreamChunk | None:  # noqa: ANN401
+def _map_event(event: Any, *, index: int) -> StreamChunk | None:
     """Map a single Anthropic stream event to a StreamChunk."""
     event_type = type(event).__name__
     handler_name = _EVENT_HANDLERS.get(event_type)
@@ -76,7 +76,7 @@ def _map_event(event: Any, *, index: int) -> StreamChunk | None:  # noqa: ANN401
     return handler(event, index=index)
 
 
-def _map_content_delta(event: Any, *, index: int) -> StreamChunk | None:  # noqa: ANN401
+def _map_content_delta(event: Any, *, index: int) -> StreamChunk | None:
     """Map a ContentBlockDeltaEvent to a StreamChunk."""
     delta = getattr(event, "delta", None)
     if delta is None:
@@ -104,7 +104,7 @@ def _map_content_delta(event: Any, *, index: int) -> StreamChunk | None:  # noqa
     return None
 
 
-def _map_content_block_start(event: Any, *, index: int) -> StreamChunk | None:  # noqa: ANN401
+def _map_content_block_start(event: Any, *, index: int) -> StreamChunk | None:
     """Map a ContentBlockStartEvent to a StreamChunk."""
     content_block = getattr(event, "content_block", None)
     if content_block is None:
@@ -126,7 +126,7 @@ def _map_content_block_start(event: Any, *, index: int) -> StreamChunk | None:  
     return None
 
 
-def _map_message_delta(event: Any, *, index: int) -> StreamChunk | None:  # noqa: ANN401
+def _map_message_delta(event: Any, *, index: int) -> StreamChunk | None:
     """Map a MessageDeltaEvent to a StreamChunk."""
     delta = getattr(event, "delta", None)
     if delta is None:
@@ -146,7 +146,7 @@ def _find_tool_call_id(block_index: int) -> str | None:
     return _ACTIVE_TOOL_CALLS.get(str(block_index))
 
 
-def _extract_message_delta_usage(event: Any) -> dict[str, Any]:  # noqa: ANN401
+def _extract_message_delta_usage(event: Any) -> dict[str, Any]:
     """Extract usage metadata from a MessageDeltaEvent."""
     usage = getattr(event, "usage", None)
     if usage is None:

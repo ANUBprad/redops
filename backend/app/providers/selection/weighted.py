@@ -9,7 +9,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
-from app.providers.catalog.model import ModelMetadata  # noqa: TC001
+from app.providers.catalog.model import ModelMetadata
 from app.providers.selection.strategy import SelectionStrategy
 
 
@@ -62,10 +62,7 @@ class WeightedStrategy(SelectionStrategy):
         eligible = self.filter_candidates(candidates)
         if not eligible:
             return None
-        weights = [
-            self._weights.get(m.model_id, self._default_weight)
-            for m in eligible
-        ]
+        weights = [self._weights.get(m.model_id, self._default_weight) for m in eligible]
         total = sum(weights)
         if total == 0:
             return eligible[0]

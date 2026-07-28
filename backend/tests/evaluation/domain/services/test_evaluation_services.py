@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.evaluation.domain.entities.evaluation_entities import (
     EvaluationRun,
     ItemResult,
@@ -16,7 +14,6 @@ from app.evaluation.domain.enums.evaluation_enums import (
 )
 from app.evaluation.domain.services.evaluation_services import (
     BudgetPolicy,
-    BudgetStatus,
     ExecutionPolicyResolver,
     FailureThresholdConfig,
     FailureThresholdPolicy,
@@ -52,7 +49,13 @@ def _make_run(
     # Force status through state machine
     if status != RunStatus.CREATED:
         run.queue()
-    if status in (RunStatus.RUNNING, RunStatus.PAUSED, RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.TIMEDOUT):
+    if status in (
+        RunStatus.RUNNING,
+        RunStatus.PAUSED,
+        RunStatus.COMPLETED,
+        RunStatus.FAILED,
+        RunStatus.TIMEDOUT,
+    ):
         run.start(total_items=items_total)
     if status == RunStatus.PAUSED:
         run.save_checkpoint(
@@ -203,7 +206,9 @@ class TestBudgetPolicy:
         """Unlimited budget is always within budget."""
         budget = ExecutionBudget()
         policy = BudgetPolicy()
-        status = policy.check_budget(budget, cost_usd=999999, total_tokens=999999999, elapsed_seconds=999999)
+        status = policy.check_budget(
+            budget, cost_usd=999999, total_tokens=999999999, elapsed_seconds=999999
+        )
         assert status.is_within_budget is True
 
 
@@ -227,14 +232,21 @@ class TestExecutionPolicyResolver:
     def test_should_retry_within_limit(self) -> None:
         """Should retry when within limit and retryable reason."""
         policy = ExecutionPolicy(max_retries_per_item=3)
-        assert ExecutionPolicyResolver.should_retry(policy, 1, FailureReason.PROVIDER_TIMEOUT) is True
+        assert (
+            ExecutionPolicyResolver.should_retry(policy, 1, FailureReason.PROVIDER_TIMEOUT) is True
+        )
 
     def test_should_retry_at_limit(self) -> None:
         """Should not retry at retry limit."""
         policy = ExecutionPolicy(max_retries_per_item=3)
-        assert ExecutionPolicyResolver.should_retry(policy, 3, FailureReason.PROVIDER_TIMEOUT) is False
+        assert (
+            ExecutionPolicyResolver.should_retry(policy, 3, FailureReason.PROVIDER_TIMEOUT) is False
+        )
 
     def test_should_retry_non_retryable(self) -> None:
         """Should not retry non-retryable reason."""
         policy = ExecutionPolicy(max_retries_per_item=3)
-        assert ExecutionPolicyResolver.should_retry(policy, 1, FailureReason.AUTHENTICATION_FAILED) is False
+        assert (
+            ExecutionPolicyResolver.should_retry(policy, 1, FailureReason.AUTHENTICATION_FAILED)
+            is False
+        )

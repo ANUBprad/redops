@@ -91,10 +91,7 @@ class ExecutionPolicy:
         if self.max_retries_per_item < 0:
             msg = "Max retries cannot be negative"
             raise ValueError(msg)
-        if (
-            self.timeout_per_item_seconds is not None
-            and self.timeout_per_item_seconds <= 0
-        ):
+        if self.timeout_per_item_seconds is not None and self.timeout_per_item_seconds <= 0:
             msg = "Per-item timeout must be positive"
             raise ValueError(msg)
 
@@ -156,13 +153,15 @@ class EvaluationConfiguration:
             raise ValueError(msg)
 
 
-_DATASET_REQUIRED_TYPES: frozenset[EvaluationType] = frozenset({
-    EvaluationType.DATASET,
-    EvaluationType.REGRESSION,
-    EvaluationType.SAFETY,
-    EvaluationType.RAG,
-    EvaluationType.COMPARISON,
-})
+_DATASET_REQUIRED_TYPES: frozenset[EvaluationType] = frozenset(
+    {
+        EvaluationType.DATASET,
+        EvaluationType.REGRESSION,
+        EvaluationType.SAFETY,
+        EvaluationType.RAG,
+        EvaluationType.COMPARISON,
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)

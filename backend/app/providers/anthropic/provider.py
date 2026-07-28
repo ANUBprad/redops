@@ -118,8 +118,7 @@ class AnthropicProvider(
             name=PROVIDER_NAME,
             display_name="Anthropic",
             description=(
-                "Anthropic Claude models including "
-                "Claude 3.5, Claude 3, and reasoning models"
+                "Anthropic Claude models including Claude 3.5, Claude 3, and reasoning models"
             ),
             version="0.1.0",
             author="RedOps Eval",
@@ -202,7 +201,9 @@ class AnthropicProvider(
 
         """
         async for chunk in self._streaming_adapter.chat_stream(
-            messages, model=model, options=options,
+            messages,
+            model=model,
+            options=options,
         ):
             yield chunk
 
@@ -248,5 +249,7 @@ class AnthropicProvider(
 
         """
         return await self._reasoning_adapter.reason(
-            messages, model=model, options=options,
+            messages,
+            model=model,
+            options=options,
         )

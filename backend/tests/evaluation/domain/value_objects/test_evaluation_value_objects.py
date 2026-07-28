@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.evaluation.domain.enums.evaluation_enums import EvaluationType, Priority
+from app.evaluation.domain.enums.evaluation_enums import EvaluationType
 from app.evaluation.domain.value_objects.evaluation_value_objects import (
     DatasetReference,
     EvaluationConfiguration,

@@ -6,8 +6,8 @@ all candidates if no healthy providers exist.
 
 from __future__ import annotations
 
-from app.providers.catalog.model import ModelMetadata  # noqa: TC001
-from app.providers.health.provider_health import ProviderHealth  # noqa: TC001
+from app.providers.catalog.model import ModelMetadata
+from app.providers.health.provider_health import ProviderHealth
 from app.providers.health.status import ProviderStatus
 from app.providers.selection.strategy import SelectionStrategy
 
@@ -52,10 +52,7 @@ class HealthBasedStrategy(SelectionStrategy):
         if not eligible:
             return None
 
-        healthy = [
-            m for m in eligible
-            if self._is_healthy(m.provider_name)
-        ]
+        healthy = [m for m in eligible if self._is_healthy(m.provider_name)]
         pool = healthy or eligible
         return min(
             pool,

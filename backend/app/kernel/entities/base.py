@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -76,7 +76,7 @@ class TimestampMixin:
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)  # type: ignore[call-arg]
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if not hasattr(self, "created_at") or self.created_at is None:
             self.created_at = now
         if not hasattr(self, "updated_at") or self.updated_at is None:
@@ -84,7 +84,7 @@ class TimestampMixin:
 
     def touch(self) -> None:
         """Update the updated_at timestamp to now."""
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)
 
 
 class SoftDeleteMixin:
@@ -103,7 +103,7 @@ class SoftDeleteMixin:
 
     def soft_delete(self) -> None:
         """Mark this entity as deleted."""
-        self.deleted_at = datetime.now(timezone.utc)
+        self.deleted_at = datetime.now(UTC)
 
     def restore(self) -> None:
         """Restore a soft-deleted entity."""
@@ -206,7 +206,7 @@ class DomainEvent(ABC):
 
     def __init__(self, correlation_id: str | None = None) -> None:
         self.event_id = UUIDv7.generate()
-        self.occurred_at = datetime.now(timezone.utc)
+        self.occurred_at = datetime.now(UTC)
         self.correlation_id = correlation_id
 
     @property

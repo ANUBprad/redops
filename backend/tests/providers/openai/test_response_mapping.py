@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 from app.providers.models.enums import FinishReason
 from app.providers.models.messages import ToolCallContent
-from app.providers.models.responses import ChatResponse, Usage
+from app.providers.models.responses import ChatResponse
 from app.providers.openai.mappers.response import (
     _map_finish_reason,
     _map_tool_calls,
@@ -65,7 +65,9 @@ class TestMapChatResponse:
 
     def test_usage_mapping(self) -> None:
         raw = _make_openai_response(
-            prompt_tokens=20, completion_tokens=10, total_tokens=30,
+            prompt_tokens=20,
+            completion_tokens=10,
+            total_tokens=30,
         )
         result = map_chat_response(raw)
         assert result.usage.input_tokens == 20

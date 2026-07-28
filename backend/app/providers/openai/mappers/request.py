@@ -78,7 +78,7 @@ def _map_content_blocks(
     return _map_mixed_blocks(role, blocks)
 
 
-def _map_single_block(role: MessageRole, block: Any) -> dict[str, Any]:  # noqa: ANN401
+def _map_single_block(role: MessageRole, block: Any) -> dict[str, Any]:
     """Map a single content block."""
     if isinstance(block, TextContent):
         return {"role": role.value, "content": block.text}

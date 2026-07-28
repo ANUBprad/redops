@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from anthropic import (
     APIConnectionError,
     APIStatusError,
@@ -14,15 +12,14 @@ from anthropic import (
     RateLimitError,
 )
 
+from app.providers.anthropic.errors.mapping import map_anthropic_error, wrap_streaming_error
 from app.providers.exceptions.auth import AuthenticationRequired
 from app.providers.exceptions.availability import ProviderUnavailable
-from app.providers.exceptions.base import ProviderException
 from app.providers.exceptions.limits import ContextWindowExceeded, TokenLimitExceeded
 from app.providers.exceptions.model import InvalidModel
 from app.providers.exceptions.rate_limit import RateLimitExceeded
 from app.providers.exceptions.streaming import StreamingFailure
 from app.providers.exceptions.timeout import ProviderTimeout
-from app.providers.anthropic.errors.mapping import map_anthropic_error, wrap_streaming_error
 
 
 def _make_response(status: int, headers: dict | None = None) -> MagicMock:

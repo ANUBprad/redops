@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
-
-from app.evaluation.domain.enums.evaluation_enums import EvaluationType
-from app.evaluation.orchestration.planner import EvaluationPlanner
 from app.evaluation.execution.pipeline.plan import ExecutionPlan
 from app.evaluation.execution.stages.types import StageType
+from app.evaluation.orchestration.planner import EvaluationPlanner
 
 _planner = EvaluationPlanner()
 
@@ -151,7 +148,6 @@ class TestEvaluationPlannerEstimate:
         """Estimate should reflect dataset size and metrics."""
         estimate = await _planner.estimate(sample_run)
         row_count = sample_run.config.dataset.row_count
-        metric_count = len(sample_run.config.metrics)
         assert estimate.estimated_steps == row_count
         assert estimate.estimated_tokens > 0
         assert estimate.estimated_cost_usd > 0

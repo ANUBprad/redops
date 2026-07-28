@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.providers.models.enums import FinishReason
 from app.providers.streaming.backpressure import BackpressureManager
 from app.providers.streaming.chunk import StreamChunk, StreamEventType

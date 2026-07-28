@@ -26,7 +26,7 @@ class SequentialScheduler(ExecutionScheduler):
     async def schedule(
         self,
         steps: Sequence[ExecutionStep],
-        context: PipelineContext,  # noqa: ARG002
+        context: PipelineContext,
     ) -> Sequence[ExecutionStep]:
         """Return steps sorted by order for sequential execution."""
         return sorted(steps, key=lambda s: (s.order, s.step_id))
@@ -43,7 +43,7 @@ class ParallelScheduler(ExecutionScheduler):
     async def schedule(
         self,
         steps: Sequence[ExecutionStep],
-        context: PipelineContext,  # noqa: ARG002
+        context: PipelineContext,
     ) -> Sequence[ExecutionStep]:
         """Return steps in parallel-compatible order.
 

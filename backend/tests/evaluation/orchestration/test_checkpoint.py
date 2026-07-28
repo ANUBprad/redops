@@ -4,16 +4,13 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
-from app.evaluation.orchestration.checkpoint import CheckpointManager
 from app.evaluation.domain.enums.evaluation_enums import EvaluationType
 from app.evaluation.domain.value_objects.evaluation_value_objects import (
     EvaluationConfiguration,
     EvaluationProfile,
     ExecutionLimits,
 )
-from app.kernel.entities.base import UUIDv7
+from app.evaluation.orchestration.checkpoint import CheckpointManager
 
 
 def _make_run(checkpoint_interval: int = 5, total_items: int = 20):

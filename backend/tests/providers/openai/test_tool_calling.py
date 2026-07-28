@@ -1,7 +1,8 @@
 """Tests for tool calling adapter."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from app.providers.models.messages import Message
 from app.providers.openai.adapters.contracts import OpenAIToolCallingAdapter

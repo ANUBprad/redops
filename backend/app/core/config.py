@@ -76,7 +76,7 @@ class AppConfig(BaseSettings):
     @property
     def app_logger(self) -> Any:
         """Get a pre-configured logger for the application."""
-        from structlog import get_logger  # noqa: PLC0415
+        from structlog import get_logger
 
         return get_logger("redops_eval")
 
@@ -96,7 +96,7 @@ class AppConfig(BaseSettings):
 
     @field_validator("app_log_level")
     @classmethod
-    def validate_log_level(cls, v: str) -> str:  # noqa: D102
+    def validate_log_level(cls, v: str) -> str:
         valid = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         if v.upper() not in valid:
             raise ValueError(f"Invalid log level: {v}. Must be one of {valid}")

@@ -1,11 +1,12 @@
 """Tests for OpenAI streaming adapter."""
 
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
+
 from app.providers.models.enums import FinishReason
-from app.providers.openai.streaming.adapter import adapt_stream, _map_chunk
-from app.providers.streaming.chunk import StreamChunk, StreamEventType
+from app.providers.openai.streaming.adapter import _map_chunk, adapt_stream
+from app.providers.streaming.chunk import StreamEventType
 
 
 def _make_stream_chunk(

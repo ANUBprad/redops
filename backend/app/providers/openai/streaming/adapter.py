@@ -21,9 +21,9 @@ _FINISH_REASON_MAP: dict[str, FinishReason] = {
 
 
 async def adapt_stream(
-    sdk_stream: Any,  # noqa: ANN401
+    sdk_stream: Any,
     *,
-    provider: str = "openai",  # noqa: ARG001
+    provider: str = "openai",
 ) -> AsyncIterator[StreamChunk]:
     """Adapt an OpenAI SDK stream to framework StreamChunks.
 
@@ -54,7 +54,7 @@ async def adapt_stream(
         raise wrap_streaming_error(exc, chunk_index=chunk_index) from exc
 
 
-def _map_chunk(chunk: Any, *, index: int) -> StreamChunk | None:  # noqa: ANN401
+def _map_chunk(chunk: Any, *, index: int) -> StreamChunk | None:
     """Map a single OpenAI chunk to a StreamChunk."""
     choice = chunk.choices[0] if chunk.choices else None
 
@@ -114,7 +114,7 @@ def _map_tool_call_deltas(
     return None
 
 
-def _extract_chunk_usage(chunk: Any) -> dict[str, Any]:  # noqa: ANN401
+def _extract_chunk_usage(chunk: Any) -> dict[str, Any]:
     """Extract usage metadata from a stream chunk."""
     usage = getattr(chunk, "usage", None)
     if usage is None:

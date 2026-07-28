@@ -113,26 +113,26 @@ class NoOpMiddleware(RuntimeMiddleware[Any, Any]):
 
     async def before(
         self,
-        request: Any,  # noqa: ANN401
-        ctx: MiddlewareContext,  # noqa: ARG002
-    ) -> Any:  # noqa: ANN401
+        request: Any,
+        ctx: MiddlewareContext,
+    ) -> Any:
         """Pass through request unchanged."""
         return request
 
     async def after(
         self,
-        request: Any,  # noqa: ANN401, ARG002
-        response: Any,  # noqa: ANN401
-        ctx: MiddlewareContext,  # noqa: ARG002
-    ) -> Any:  # noqa: ANN401
+        request: Any,
+        response: Any,
+        ctx: MiddlewareContext,
+    ) -> Any:
         """Pass through response unchanged."""
         return response
 
     async def on_error(
         self,
-        request: Any,  # noqa: ANN401, ARG002
+        request: Any,
         error: Exception,
-        ctx: MiddlewareContext,  # noqa: ARG002
+        ctx: MiddlewareContext,
     ) -> Exception:
         """Pass through error unchanged."""
         return error
@@ -189,7 +189,7 @@ class MiddlewarePipeline[TRequest, TResponse]:
 
         try:
             response = await handler(processed_request)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             current_error = exc
             for mw in reversed(self._middlewares):
                 current_error = await mw.on_error(processed_request, current_error, ctx)

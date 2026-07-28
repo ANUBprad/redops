@@ -10,7 +10,7 @@ from app.kernel.exceptions.errors import InfrastructureError
 class RuntimeBaseError(InfrastructureError):
     """Base error for all runtime errors."""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         message: str = "",
         *,
@@ -123,7 +123,7 @@ class ExecutionTimeoutError(RuntimeBaseError):
 class BudgetExceededError(RuntimeBaseError):
     """Raised when execution budget is exceeded."""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         message: str = "Execution budget exceeded",
         *,

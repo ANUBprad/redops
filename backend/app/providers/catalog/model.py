@@ -7,7 +7,7 @@ limits, pricing, and lifecycle status.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date  # noqa: TC003
+from datetime import date
 from typing import Any
 
 from app.providers.capabilities.capability_set import CapabilitySet

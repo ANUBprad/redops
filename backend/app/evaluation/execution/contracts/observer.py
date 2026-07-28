@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.evaluation.execution.context.context import PipelineContext
-    from app.evaluation.execution.pipeline.step import ExecutionStep
     from app.evaluation.execution.results.results import (
         ExecutionResult,
         StageResult,

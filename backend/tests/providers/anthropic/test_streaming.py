@@ -1,17 +1,13 @@
 """Tests for Anthropic streaming adapter."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 
 from app.providers.anthropic.streaming.adapter import (
-    _map_content_block_start,
-    _map_content_delta,
     _map_event,
-    _map_message_delta,
     adapt_stream,
 )
 from app.providers.models.enums import FinishReason
-from app.providers.streaming.chunk import StreamChunk, StreamEventType
+from app.providers.streaming.chunk import StreamEventType
 
 
 class ContentBlockDeltaEvent:
@@ -70,6 +66,7 @@ async def _run_stream(events):
             async def aiter():
                 for e in self._events:
                     yield e
+
             return aiter()
 
         async def __aexit__(self, *args):
@@ -110,6 +107,7 @@ class TestAdaptStream:
         class FailingStream:
             async def __aenter__(self):
                 raise RuntimeError("connection lost")
+
             async def __aexit__(self, *args):
                 pass
 
@@ -126,6 +124,7 @@ class TestAdaptStream:
     async def test_unknown_event_type_ignored(self) -> None:
         class UnknownEvent:
             pass
+
         events = [UnknownEvent()]
         result = await _run_stream(events)
         assert len(result) == 1
@@ -165,6 +164,7 @@ class TestMapEvent:
     def test_content_block_delta_unknown_type(self) -> None:
         class UnknownDelta:
             type = "unknown_type"
+
         event = ContentBlockDeltaEvent(UnknownDelta(), index=0)
         result = _map_event(event, index=0)
         assert result is None
@@ -186,6 +186,7 @@ class TestMapEvent:
     def test_content_block_start_text(self) -> None:
         class TextBlock:
             type = "text"
+
         event = ContentBlockStartEvent(TextBlock(), index=0)
         result = _map_event(event, index=0)
         assert result is None

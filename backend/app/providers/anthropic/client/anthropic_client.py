@@ -64,8 +64,8 @@ class AnthropicClient:
         messages: list[dict[str, Any]],
         max_tokens: int,
         system: str | None = None,
-        **kwargs: Any,  # noqa: ANN401
-    ) -> Any:  # noqa: ANN401
+        **kwargs: Any,
+    ) -> Any:
         """Create a message.
 
         Args:
@@ -102,8 +102,8 @@ class AnthropicClient:
         messages: list[dict[str, Any]],
         max_tokens: int,
         system: str | None = None,
-        **kwargs: Any,  # noqa: ANN401
-    ) -> Any:  # noqa: ANN401
+        **kwargs: Any,
+    ) -> Any:
         """Create a streaming message.
 
         Args:
@@ -146,7 +146,7 @@ class AnthropicClient:
                 max_tokens=1,
                 messages=[{"role": "user", "content": "hi"}],
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             return False
         else:
             return True

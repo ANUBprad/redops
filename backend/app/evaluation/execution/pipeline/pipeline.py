@@ -7,15 +7,11 @@ stages and steps in executable order.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 
 from app.evaluation.execution.pipeline.plan import ExecutionPlan
 from app.evaluation.execution.stages.stage import ExecutionStage
 from app.evaluation.execution.stages.types import StageType
 from app.kernel.entities.base import UUIDv7
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
 
 @dataclass(frozen=True, slots=True)

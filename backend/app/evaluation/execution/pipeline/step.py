@@ -33,11 +33,13 @@ class StepStatus(Enum):
         return self in _STEP_TERMINAL_STATES
 
 
-_STEP_TERMINAL_STATES: frozenset[StepStatus] = frozenset({
-    StepStatus.COMPLETED,
-    StepStatus.FAILED,
-    StepStatus.SKIPPED,
-})
+_STEP_TERMINAL_STATES: frozenset[StepStatus] = frozenset(
+    {
+        StepStatus.COMPLETED,
+        StepStatus.FAILED,
+        StepStatus.SKIPPED,
+    }
+)
 
 
 @unique
@@ -96,18 +98,14 @@ class ExecutionStep:
     def hard_dependency_ids(self) -> tuple[UUIDv7, ...]:
         """Return IDs of hard (blocking) dependencies."""
         return tuple(
-            dep.step_id
-            for dep in self.dependencies
-            if dep.dependency_type == DependencyType.HARD
+            dep.step_id for dep in self.dependencies if dep.dependency_type == DependencyType.HARD
         )
 
     @property
     def soft_dependency_ids(self) -> tuple[UUIDv7, ...]:
         """Return IDs of soft (non-blocking) dependencies."""
         return tuple(
-            dep.step_id
-            for dep in self.dependencies
-            if dep.dependency_type == DependencyType.SOFT
+            dep.step_id for dep in self.dependencies if dep.dependency_type == DependencyType.SOFT
         )
 
     @property

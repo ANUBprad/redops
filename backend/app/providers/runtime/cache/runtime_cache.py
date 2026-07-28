@@ -88,7 +88,7 @@ class RuntimeCache:
             size=len(self._entries),
         )
 
-    def get(self, key: str) -> Any | None:  # noqa: ANN401
+    def get(self, key: str) -> Any | None:
         """Get value by key.
 
         Returns:
@@ -112,7 +112,7 @@ class RuntimeCache:
         self._hits += 1
         return entry.value
 
-    def set(self, key: str, value: Any, ttl_seconds: float | None = None) -> None:  # noqa: ANN401
+    def set(self, key: str, value: Any, ttl_seconds: float | None = None) -> None:
         """Set a cache entry."""
         if not self._config.enabled:
             return
@@ -146,7 +146,7 @@ class RuntimeCache:
         provider: str,
         model: str,
         messages: list[dict[str, str]],
-        **kwargs: Any,  # noqa: ANN401
+        **kwargs: Any,
     ) -> str:
         """Build a deterministic cache key."""
         payload = json.dumps(

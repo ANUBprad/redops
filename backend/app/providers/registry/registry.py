@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.providers.capabilities.capability import Capability  # noqa: TC001
-from app.providers.capabilities.capability_set import CapabilitySet  # noqa: TC001
-from app.providers.contracts.base import BaseProvider  # noqa: TC001
+from app.providers.capabilities.capability import Capability
+from app.providers.capabilities.capability_set import CapabilitySet
+from app.providers.contracts.base import BaseProvider
 from app.providers.health.provider_health import ProviderHealth
 from app.providers.health.status import ProviderStatus
 
@@ -81,10 +81,7 @@ class ProviderRegistry:
             List of providers supporting the capability.
 
         """
-        return [
-            p for p in self._providers.values()
-            if p.capabilities().supports(capability)
-        ]
+        return [p for p in self._providers.values() if p.capabilities().supports(capability)]
 
     def discover_all(self, capabilities: CapabilitySet) -> list[BaseProvider]:
         """Discover providers supporting all capabilities.
@@ -96,10 +93,7 @@ class ProviderRegistry:
             List of providers supporting all capabilities.
 
         """
-        return [
-            p for p in self._providers.values()
-            if p.capabilities().supports_all(capabilities)
-        ]
+        return [p for p in self._providers.values() if p.capabilities().supports_all(capabilities)]
 
     async def health(self) -> dict[str, ProviderHealth]:
         """Check health of all registered providers.
@@ -126,7 +120,7 @@ class ProviderRegistry:
                         status=ProviderStatus.UNHEALTHY,
                         message="Health check returned False",
                     )
-            except Exception:  # noqa: BLE001
+            except Exception:
                 results[name] = ProviderHealth(
                     provider_name=name,
                     status=ProviderStatus.UNHEALTHY,

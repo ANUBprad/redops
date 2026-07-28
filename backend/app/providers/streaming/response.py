@@ -25,10 +25,12 @@ class StreamingResponse:
 
     _content_parts: list[str] = field(default_factory=list, init=False)
     _tool_calls: dict[str, _ToolCallAccumulator] = field(
-        default_factory=dict, init=False,
+        default_factory=dict,
+        init=False,
     )
     _finish_reason: FinishReason = field(
-        default=FinishReason.UNKNOWN, init=False,
+        default=FinishReason.UNKNOWN,
+        init=False,
     )
     _usage: dict[str, Any] = field(default_factory=dict, init=False)
     _chunk_count: int = field(default=0, init=False)

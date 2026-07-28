@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock
 
 import pytest
 
@@ -15,7 +14,6 @@ from app.evaluation.execution.stages.types import StageType
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from app.evaluation.domain.entities.evaluation_entities import EvaluationRun
     from app.evaluation.execution.context.context import PipelineContext
     from app.evaluation.execution.pipeline.step import ExecutionStep
     from app.evaluation.execution.results.results import StageResult
@@ -109,11 +107,13 @@ class _MockPlanner:
 
     async def estimate(self, run):  # type: ignore[no-untyped-def]
         from app.evaluation.execution.contracts.planner import PlanEstimate
+
         return PlanEstimate()
 
 
 class _MockRun:
     """Mock evaluation run for testing."""
+
     pass
 
 
@@ -129,6 +129,7 @@ class _ConcreteStage(ExecutionStage):
         steps: Sequence[ExecutionStep],
     ) -> StageResult:
         from app.evaluation.execution.results.results import StageResult
+
         return StageResult(stage_type=self.stage_type, stage_name=self.name)
 
     async def rollback(self, context: PipelineContext, result: StageResult) -> None:

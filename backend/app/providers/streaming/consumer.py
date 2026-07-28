@@ -6,9 +6,9 @@ Defines the interface for consuming streaming responses.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator, Callable  # noqa: TC003
+from collections.abc import AsyncIterator, Callable
 
-from app.providers.streaming.chunk import StreamChunk  # noqa: TC001
+from app.providers.streaming.chunk import StreamChunk
 
 
 class StreamConsumer(ABC):

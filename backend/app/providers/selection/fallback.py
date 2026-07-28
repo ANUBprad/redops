@@ -7,7 +7,7 @@ unavailable.
 
 from __future__ import annotations
 
-from app.providers.catalog.model import ModelMetadata  # noqa: TC001
+from app.providers.catalog.model import ModelMetadata
 from app.providers.selection.strategy import SelectionStrategy
 
 

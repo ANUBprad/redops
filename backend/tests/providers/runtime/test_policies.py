@@ -9,7 +9,6 @@ from app.providers.runtime.policies.runtime_policies import (
     RetryPolicy,
     TelemetryPolicy,
     TimeoutPolicy,
-    TimeoutType,
 )
 
 

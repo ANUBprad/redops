@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.providers.models.enums import FinishReason
-from app.providers.models.messages import ToolCallContent  # noqa: TC001
+from app.providers.models.messages import ToolCallContent
 
 
 @dataclass(frozen=True, slots=True)

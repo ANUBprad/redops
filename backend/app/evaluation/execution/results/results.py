@@ -9,15 +9,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum, unique
-from typing import TYPE_CHECKING
 
 from app.evaluation.execution.pipeline.step import StepStatus
 from app.evaluation.execution.stages.types import StageType
 from app.kernel.entities.base import UUIDv7
-
-if TYPE_CHECKING:
-    from app.evaluation.domain.enums.evaluation_enums import FailureReason
-    from app.evaluation.execution.pipeline.step import ExecutionStep
 
 
 @unique

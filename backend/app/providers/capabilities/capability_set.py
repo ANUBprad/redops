@@ -7,10 +7,10 @@ capability comparison and matching.
 
 from __future__ import annotations
 
-from collections.abc import Iterator  # noqa: TC003
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 
-from app.providers.capabilities.capability import Capability  # noqa: TC001
+from app.providers.capabilities.capability import Capability
 
 
 @dataclass(frozen=True, slots=True)

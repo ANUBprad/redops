@@ -88,6 +88,7 @@ class _TestStage(ExecutionStage):
 
     async def execute(self, context, steps):  # type: ignore[no-untyped-def]
         from app.evaluation.execution.results.results import StageResult
+
         return StageResult(stage_type=self.stage_type, stage_name=self.name)
 
     async def rollback(self, context, result):  # type: ignore[no-untyped-def]

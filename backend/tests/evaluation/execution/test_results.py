@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.evaluation.execution.pipeline.step import StepStatus
 from app.evaluation.execution.results.results import (
     ExecutionOutcome,

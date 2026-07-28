@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.evaluation.domain.enums.evaluation_enums import (
     CancellationReason,
     FailureReason,

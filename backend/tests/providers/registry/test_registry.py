@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 from app.providers.capabilities.capability import Capability
@@ -100,10 +98,12 @@ class TestProviderRegistry:
 
     def test_discover_all(self) -> None:
         reg = ProviderRegistry()
-        reg.register(MockProvider(
-            "multi",
-            CapabilitySet.of(Capability.CHAT, Capability.STREAMING),
-        ))
+        reg.register(
+            MockProvider(
+                "multi",
+                CapabilitySet.of(Capability.CHAT, Capability.STREAMING),
+            )
+        )
         reg.register(MockProvider("chat_only", CapabilitySet.of(Capability.CHAT)))
         result = reg.discover_all(CapabilitySet.of(Capability.CHAT, Capability.STREAMING))
         assert len(result) == 1

@@ -5,7 +5,6 @@ import time
 from app.providers.runtime.cache.runtime_cache import (
     CacheConfig,
     CacheEntry,
-    CacheStats,
     RuntimeCache,
 )
 
@@ -89,9 +88,8 @@ class TestRuntimeCache:
 
     def test_immutability(self) -> None:
         from datetime import UTC, datetime
-        entry = CacheEntry(
-            key="k", value="v", created_at=datetime.now(UTC), ttl_seconds=60
-        )
+
+        entry = CacheEntry(key="k", value="v", created_at=datetime.now(UTC), ttl_seconds=60)
         try:
             entry.key = "new"  # type: ignore[misc]
         except AttributeError:

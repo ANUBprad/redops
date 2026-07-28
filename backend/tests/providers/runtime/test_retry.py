@@ -3,7 +3,6 @@
 from app.providers.runtime.policies.runtime_policies import BackoffStrategy, RetryPolicy
 from app.providers.runtime.retry.retry_framework import (
     RetryContext,
-    RetryDecision,
     RetryEvaluator,
 )
 
@@ -35,18 +34,14 @@ class TestRetryEvaluator:
     def test_non_retryable_error_code(self) -> None:
         policy = RetryPolicy(retryable_error_codes=("rate_limit", "timeout"))
         evaluator = RetryEvaluator(policy)
-        decision = evaluator.evaluate(
-            RetryContext(attempt=0, last_error_code="auth_error")
-        )
+        decision = evaluator.evaluate(RetryContext(attempt=0, last_error_code="auth_error"))
         assert decision.should_retry is False
         assert "not retryable" in decision.reason.lower()
 
     def test_retryable_error_code(self) -> None:
         policy = RetryPolicy(retryable_error_codes=("rate_limit", "timeout"))
         evaluator = RetryEvaluator(policy)
-        decision = evaluator.evaluate(
-            RetryContext(attempt=0, last_error_code="rate_limit")
-        )
+        decision = evaluator.evaluate(RetryContext(attempt=0, last_error_code="rate_limit"))
         assert decision.should_retry is True
         assert decision.attempt == 1
 
@@ -106,10 +101,7 @@ class TestRetryEvaluator:
             jitter=True,
         )
         evaluator = RetryEvaluator(policy)
-        delays = [
-            evaluator.evaluate(RetryContext(attempt=0)).delay_seconds
-            for _ in range(20)
-        ]
+        delays = [evaluator.evaluate(RetryContext(attempt=0)).delay_seconds for _ in range(20)]
         assert any(d != 10.0 for d in delays)
 
     def test_successive_attempts_increment(self) -> None:

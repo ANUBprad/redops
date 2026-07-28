@@ -66,14 +66,16 @@ class EvaluationPipelineExecutor(PipelineExecutor):
             except Exception as exc:
                 error_msg = str(exc)
                 outcome = ExecutionOutcome.FAILURE
-                stage_results.append(StageResult(
-                    stage_type=stage_type,
-                    stage_name=stage.name,
-                    outcome=ExecutionOutcome.FAILURE,
-                    error=error_msg,
-                    items_failed=1,
-                    items_processed=1,
-                ))
+                stage_results.append(
+                    StageResult(
+                        stage_type=stage_type,
+                        stage_name=stage.name,
+                        outcome=ExecutionOutcome.FAILURE,
+                        error=error_msg,
+                        items_failed=1,
+                        items_processed=1,
+                    )
+                )
                 break
 
         elapsed_ms = int((time.monotonic() - start_time) * 1000)
@@ -179,10 +181,12 @@ class ProviderInvocationStage(ExecutionStage):
         issues: list[ValidationIssue] = []
         provider_name = context.provider_selection.provider_name
         if provider_name and not self._provider_registry.is_registered(provider_name):
-            issues.append(ValidationIssue(
-                message=f"Provider '{provider_name}' not registered",
-                code="PROVIDER_NOT_FOUND",
-            ))
+            issues.append(
+                ValidationIssue(
+                    message=f"Provider '{provider_name}' not registered",
+                    code="PROVIDER_NOT_FOUND",
+                )
+            )
         return issues
 
     async def execute(
@@ -198,10 +202,14 @@ class ProviderInvocationStage(ExecutionStage):
 
         for step in steps:
             if context.is_cancelled:
-                step_results.append(_build_step_result(
-                    step, StageType.PROVIDER_INVOCATION, StepStatus.SKIPPED,
-                    ExecutionOutcome.CANCELLED,
-                ))
+                step_results.append(
+                    _build_step_result(
+                        step,
+                        StageType.PROVIDER_INVOCATION,
+                        StepStatus.SKIPPED,
+                        ExecutionOutcome.CANCELLED,
+                    )
+                )
                 continue
 
             result = await self._execute_step(context, step)
@@ -269,21 +277,32 @@ class ProviderInvocationStage(ExecutionStage):
 
             if runtime_result.success:
                 return _build_step_result(
-                    step, StageType.PROVIDER_INVOCATION, StepStatus.COMPLETED,
-                    ExecutionOutcome.SUCCESS, elapsed,
+                    step,
+                    StageType.PROVIDER_INVOCATION,
+                    StepStatus.COMPLETED,
+                    ExecutionOutcome.SUCCESS,
+                    elapsed,
                     response=runtime_result.response,
                 )
 
             return _build_step_result(
-                step, StageType.PROVIDER_INVOCATION, StepStatus.FAILED,
-                ExecutionOutcome.FAILURE, elapsed, runtime_result.error,
+                step,
+                StageType.PROVIDER_INVOCATION,
+                StepStatus.FAILED,
+                ExecutionOutcome.FAILURE,
+                elapsed,
+                runtime_result.error,
             )
 
         except Exception as exc:
             elapsed = int((time.monotonic() - step_start) * 1000)
             return _build_step_result(
-                step, StageType.PROVIDER_INVOCATION, StepStatus.FAILED,
-                ExecutionOutcome.FAILURE, elapsed, str(exc),
+                step,
+                StageType.PROVIDER_INVOCATION,
+                StepStatus.FAILED,
+                ExecutionOutcome.FAILURE,
+                elapsed,
+                str(exc),
             )
 
     async def _invoke_provider(
@@ -308,11 +327,14 @@ class ProviderInvocationStage(ExecutionStage):
 
 
 MetricDispatchStage: type[ExecutionStage] = _make_placeholder(
-    StageType.METRIC_DISPATCH, "Metric Dispatch",
+    StageType.METRIC_DISPATCH,
+    "Metric Dispatch",
 )
 AggregationStage: type[ExecutionStage] = _make_placeholder(
-    StageType.AGGREGATION, "Aggregation",
+    StageType.AGGREGATION,
+    "Aggregation",
 )
 PersistenceStage: type[ExecutionStage] = _make_placeholder(
-    StageType.PERSISTENCE, "Persistence",
+    StageType.PERSISTENCE,
+    "Persistence",
 )

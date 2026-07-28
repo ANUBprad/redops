@@ -30,7 +30,7 @@ class TestSessionManager:
 
     async def test_auto_session_commit(self, engine: AsyncMock) -> None:
         manager = SessionManager(engine)
-        session = manager.create_session()
+        manager.create_session()
 
         async with manager.auto_session() as s:
             assert s is not None

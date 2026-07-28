@@ -11,7 +11,7 @@ No concrete execution logic.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, unique
 from typing import TYPE_CHECKING
 
@@ -117,13 +117,13 @@ class SequentialExecution(ExecutionStrategy):
     async def order(
         self,
         steps: Sequence[ExecutionStep],
-        context: PipelineContext,  # noqa: ARG002
+        context: PipelineContext,
     ) -> Sequence[ExecutionStep]:
         return sorted(steps, key=lambda s: s.order)
 
     async def max_concurrency(
         self,
-        context: PipelineContext,  # noqa: ARG002
+        context: PipelineContext,
     ) -> int:
         return 1
 
@@ -142,7 +142,7 @@ class ParallelExecution(ExecutionStrategy):
     async def order(
         self,
         steps: Sequence[ExecutionStep],
-        context: PipelineContext,  # noqa: ARG002
+        context: PipelineContext,
     ) -> Sequence[ExecutionStep]:
         return sorted(steps, key=lambda s: s.order)
 
@@ -166,7 +166,7 @@ class AdaptiveExecution(ExecutionStrategy):
     async def order(
         self,
         steps: Sequence[ExecutionStep],
-        context: PipelineContext,  # noqa: ARG002
+        context: PipelineContext,
     ) -> Sequence[ExecutionStep]:
         return sorted(steps, key=lambda s: s.priority, reverse=True)
 
@@ -188,7 +188,7 @@ class BudgetAwareExecution(ExecutionStrategy):
     async def order(
         self,
         steps: Sequence[ExecutionStep],
-        context: PipelineContext,  # noqa: ARG002
+        context: PipelineContext,
     ) -> Sequence[ExecutionStep]:
         # Budget-aware ordering prefers lower-cost steps first
         return sorted(steps, key=lambda s: s.priority, reverse=True)
@@ -210,12 +210,12 @@ class PriorityExecution(ExecutionStrategy):
     async def order(
         self,
         steps: Sequence[ExecutionStep],
-        context: PipelineContext,  # noqa: ARG002
+        context: PipelineContext,
     ) -> Sequence[ExecutionStep]:
         return sorted(steps, key=lambda s: (s.priority, s.order), reverse=True)
 
     async def max_concurrency(
         self,
-        context: PipelineContext,  # noqa: ARG002
+        context: PipelineContext,
     ) -> int:
         return 1

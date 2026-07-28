@@ -40,4 +40,4 @@ class ProviderHealth:
 
 
 # Avoid circular import; re-export for convenience.
-from app.providers.health.capability_health import CapabilityHealth  # noqa: E402, TC001
+from app.providers.health.capability_health import CapabilityHealth  # noqa: E402

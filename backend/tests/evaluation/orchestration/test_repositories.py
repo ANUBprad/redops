@@ -2,22 +2,22 @@
 
 from __future__ import annotations
 
-import pytest
-
+from app.evaluation.domain.entities.evaluation_entities import (
+    EvaluationItem,
+    EvaluationRun,
+    RunCheckpoint,
+)
+from app.evaluation.domain.enums.evaluation_enums import EvaluationType, ItemStatus, RunStatus
+from app.evaluation.domain.value_objects.evaluation_value_objects import (
+    EvaluationConfiguration,
+    EvaluationProfile,
+)
 from app.evaluation.orchestration.repositories import (
     InMemoryCheckpointRepository,
     InMemoryEventPublisher,
     InMemoryItemRepository,
     InMemoryRunRepository,
 )
-from app.evaluation.domain.entities.evaluation_entities import EvaluationItem, EvaluationRun
-from app.evaluation.domain.enums.evaluation_enums import EvaluationType, ItemStatus, RunStatus
-from app.evaluation.domain.value_objects.evaluation_value_objects import (
-    EvaluationConfiguration,
-    EvaluationProfile,
-    ExecutionLimits,
-)
-from app.evaluation.domain.entities.evaluation_entities import RunCheckpoint
 from app.kernel.entities.base import UUIDv7
 
 
@@ -43,7 +43,9 @@ def _make_run(name: str = "test", status: RunStatus = RunStatus.CREATED) -> Eval
     return run
 
 
-def _make_item(run_id: UUIDv7, index: int, status: ItemStatus = ItemStatus.PENDING) -> EvaluationItem:
+def _make_item(
+    run_id: UUIDv7, index: int, status: ItemStatus = ItemStatus.PENDING
+) -> EvaluationItem:
     """Create a minimal EvaluationItem."""
     item = EvaluationItem(run_id=run_id, index=index)
     if status == ItemStatus.RUNNING:
@@ -51,6 +53,7 @@ def _make_item(run_id: UUIDv7, index: int, status: ItemStatus = ItemStatus.PENDI
     elif status == ItemStatus.COMPLETED:
         item.start()
         from app.evaluation.domain.entities.evaluation_entities import ItemResult
+
         item.complete(ItemResult(item_id=item.id, item_index=index, status=ItemStatus.COMPLETED))
     elif status == ItemStatus.FAILED:
         item.start()
@@ -264,7 +267,6 @@ class TestInMemoryCheckpointRepository:
         removed = await repo.prune(run_id, keep_latest=3)
         assert removed == 4
 
-        remaining = await repo.find_by_run_id_all(run_id) if hasattr(repo, 'find_by_run_id_all') else None
         latest = await repo.find_latest(run_id)
         assert latest is not None
         assert latest.checkpoint_number == 7

@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
-from app.evaluation.orchestration.observer import EventPublishingObserver
 from app.evaluation.domain.events.evaluation_events import (
     ItemCompleted,
     ItemFailed,
@@ -14,6 +11,7 @@ from app.evaluation.domain.events.evaluation_events import (
 from app.evaluation.execution.pipeline.step import StepStatus
 from app.evaluation.execution.results.results import ExecutionOutcome, StageResult, StepResult
 from app.evaluation.execution.stages.types import StageType
+from app.evaluation.orchestration.observer import EventPublishingObserver
 
 
 class TestEventPublishingObserver:

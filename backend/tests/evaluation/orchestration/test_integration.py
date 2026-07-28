@@ -67,9 +67,14 @@ def _make_config(
         max_tokens=1024,
         timeout_seconds=30,
     )
-    dataset = DatasetReference(
-        dataset_id="ds-int-001", row_count=row_count,
-    ) if eval_type == EvaluationType.DATASET else None
+    dataset = (
+        DatasetReference(
+            dataset_id="ds-int-001",
+            row_count=row_count,
+        )
+        if eval_type == EvaluationType.DATASET
+        else None
+    )
     return EvaluationConfiguration(
         name="Integration Test Eval",
         eval_type=eval_type,
@@ -404,6 +409,7 @@ class TestRuntimeProviderAgnostic:
         results = []
 
         for name in ("openai", "anthropic", "ollama"):
+
             async def handler(req: ExecutionRequest, n: str = name) -> str:
                 return f"Response from {n}"
 
@@ -538,12 +544,15 @@ class TestCancellationFlow:
 
         orch = _make_orchestrator(provider_registry=registry)
 
-        with patch(
-            "app.evaluation.orchestration.orchestrator._create_runtime_coordinator",
-            return_value=MagicMock(),
-        ), patch(
-            "app.evaluation.orchestration.orchestrator.EvaluationPipelineExecutor",
-        ) as MockExec:
+        with (
+            patch(
+                "app.evaluation.orchestration.orchestrator._create_runtime_coordinator",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "app.evaluation.orchestration.orchestrator.EvaluationPipelineExecutor",
+            ) as MockExec,
+        ):
             instance = MockExec.return_value
             run_ref = run
 

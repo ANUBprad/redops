@@ -18,7 +18,7 @@ _FINISH_REASON_MAP: dict[str, FinishReason] = {
 
 
 def map_chat_response(
-    response: Any,  # noqa: ANN401
+    response: Any,
     *,
     provider: str = "anthropic",
 ) -> ChatResponse:
@@ -48,7 +48,7 @@ def map_chat_response(
     )
 
 
-def _map_usage(usage: Any) -> Usage:  # noqa: ANN401
+def _map_usage(usage: Any) -> Usage:
     """Map Anthropic usage to framework Usage."""
     if usage is None:
         return Usage()
@@ -89,7 +89,7 @@ def _extract_content_and_tools(
     return "".join(text_parts), tool_calls
 
 
-def _map_tool_use_block(block: Any) -> ToolCallContent:  # noqa: ANN401
+def _map_tool_use_block(block: Any) -> ToolCallContent:
     """Map an Anthropic tool_use block to ToolCallContent."""
     tool_input = getattr(block, "input", {})
     arguments = json.dumps(tool_input) if isinstance(tool_input, dict) else str(tool_input)
@@ -107,7 +107,7 @@ def _map_finish_reason(reason: str | None) -> FinishReason:
     return _FINISH_REASON_MAP.get(reason, FinishReason.UNKNOWN)
 
 
-def _extract_metadata(response: Any) -> dict[str, Any]:  # noqa: ANN401
+def _extract_metadata(response: Any) -> dict[str, Any]:
     """Extract additional metadata from Anthropic response."""
     metadata: dict[str, Any] = {}
     stop_sequence = getattr(response, "stop_sequence", None)

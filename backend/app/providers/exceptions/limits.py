@@ -15,7 +15,7 @@ class ContextWindowExceeded(ProviderException):
 
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         message: str = "Context window exceeded",
         *,

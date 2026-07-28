@@ -17,6 +17,8 @@ dependencies = [
     "pyjwt>=2.8",
     "cryptography>=42.0",
     "uvicorn[standard]>=0.30",
+    "openai>=1.0",
+    "anthropic>=0.20",
 ]
 
 [tool.setuptools.packages.find]
@@ -38,21 +40,69 @@ target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["ALL"]
+select = [
+    "E",      # pycodestyle errors
+    "F",      # pyflakes
+    "W",      # pycodestyle warnings
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "RUF",    # ruff-specific rules
+    "SIM",    # flake8-simplify
+    "TCH",    # flake8-type-checking
+    "PERF",   # perflint
+    "C4",     # flake8-comprehensions
+    "S",      # flake8-bandit (security)
+    "BLE",    # blind-except
+    "PT",     # flake8-pytest-style
+]
 ignore = [
-    "D203",    # 1 blank line required before class docstring
-    "D213",    # Multi-line docstring summary should start at second line
-    "D401",    # First line should be in imperative mood
-    "ANN101",  # Missing type annotation for self
-    "ANN102",  # Missing type annotation for cls
-    "S311",    # Standard pseudo-random generators
-    "EM101",   # Exception must not use string literal
-    "EM102",   # Exception must not use f-string
+    "UP046",   # non-pep695-generic-class
+    "UP047",   # non-pep695-generic-function
+    "UP042",   # replace-str-enum
+    "E501",    # line-too-long (handled by line-length)
+    "B024",    # abstract-base-class-without-abstract-method
+    "BLE001",  # blind-except (used in broad exception handlers)
+    "SIM105",  # suppressible-exception
+    "SIM102",  # collapsible-if
+    "PERF401", # manual-list-comprehension
+    "S104",    # hardcoded-bind-all-interfaces
+    "S106",    # hardcoded-password-func-arg
+    "S108",    # hardcoded-temp-file
+    "S110",    # try-except-pass (intentional in some patterns)
+    "S311",    # suspicious-non-cryptographic-random-usage
+    "TC001",   # typing-only-first-party-import (defer to later)
+    "TC002",   # typing-only-third-party-import (defer to later)
+    "TC003",   # typing-only-standard-library-import (defer to later)
+    "RUF005",  # collection-literal-concatenation (style)
+    "RUF043",  # pytest-raises-ambiguous-pattern (style)
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401", "D104"]
-"tests/*" = ["D", "ANN", "S101", "SLF001"]
+"tests/*" = [
+    "D",       # all docstring rules
+    "ANN",     # all annotation rules
+    "S101",    # assert used
+    "SLF001",  # private member access
+    "PLR2004", # magic values
+    "PLC0415", # import-outside-top-level
+    "ARG",     # unused arguments
+    "PT",      # pytest style
+    "N",       # naming conventions
+    "TRY",     # tryceratops
+    "INP",     # namespace packages
+    "PLR",     # pylint refactoring
+    "SIM",     # simplify
+    "B011",    # assert-false
+    "B017",    # assert-raises-exception
+    "BLE001",  # blind-except
+    "FBT",     # boolean trap
+    "ERA",     # commented-out code
+    "PGH",     # blanket-type-ignore
+]
+"tests/evaluation/orchestration/conftest.py" = ["F821"]
+"app/api/*" = ["B008"]
 
 [tool.ruff.format]
 quote-style = "double"

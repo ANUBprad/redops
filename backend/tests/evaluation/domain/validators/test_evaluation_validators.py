@@ -34,12 +34,6 @@ class TestEvaluationValidator:
 
     def test_empty_name(self) -> None:
         """Empty name produces error."""
-        config = EvaluationConfiguration(
-            name="Test",
-            eval_type=EvaluationType.SINGLE,
-            profile=EvaluationProfile(provider_name="openai", model_id="gpt-4"),
-            metrics=("accuracy",),
-        )
         errors = EvaluationValidator.validate(
             EvaluationConfiguration(
                 name="x",
@@ -81,7 +75,6 @@ class TestEvaluationValidator:
 
     def test_validate_or_raise_invalid(self) -> None:
         """validate_or_raise raises on first error."""
-        from app.kernel.exceptions.errors import ValidationError as KernelValidationError
 
         config = EvaluationConfiguration(
             name="Test",

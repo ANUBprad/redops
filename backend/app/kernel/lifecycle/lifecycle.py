@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Any
 
 
 class LifecycleState(Enum):
@@ -15,24 +14,19 @@ class LifecycleState(Enum):
 
 class LifecycleService(ABC):
     @abstractmethod
-    async def initialize(self) -> None:
-        ...
+    async def initialize(self) -> None: ...
 
     @abstractmethod
-    async def start(self) -> None:
-        ...
+    async def start(self) -> None: ...
 
     @abstractmethod
-    async def stop(self) -> None:
-        ...
+    async def stop(self) -> None: ...
 
     @abstractmethod
-    async def dispose(self) -> None:
-        ...
+    async def dispose(self) -> None: ...
 
     @abstractmethod
-    async def health(self) -> bool:
-        ...
+    async def health(self) -> bool: ...
 
 
 class LifecycleManager:

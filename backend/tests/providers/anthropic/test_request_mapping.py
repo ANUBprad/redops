@@ -2,6 +2,12 @@
 
 import json
 
+from app.providers.anthropic.mappers.request import (
+    map_chat_options,
+    map_messages,
+    map_tool_choice,
+    map_tools,
+)
 from app.providers.models.enums import MessageRole
 from app.providers.models.messages import (
     AudioContent,
@@ -12,12 +18,6 @@ from app.providers.models.messages import (
     ToolResultContent,
 )
 from app.providers.models.options import ChatOptions
-from app.providers.anthropic.mappers.request import (
-    map_chat_options,
-    map_messages,
-    map_tool_choice,
-    map_tools,
-)
 
 
 class TestMapMessages:

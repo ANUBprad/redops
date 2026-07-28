@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
+from app.evaluation.execution.pipeline.pipeline import ExecutionPipeline
+from app.evaluation.execution.pipeline.plan import ExecutionPlan
+from app.evaluation.execution.pipeline.step import ExecutionStep, StepStatus
+from app.evaluation.execution.results.results import ExecutionOutcome, StageResult
+from app.evaluation.execution.stages.types import StageType
 from app.evaluation.orchestration.executor import (
     AggregationStage,
     EvaluationPipelineExecutor,
@@ -13,19 +16,15 @@ from app.evaluation.orchestration.executor import (
     PersistenceStage,
     ProviderInvocationStage,
 )
-from app.evaluation.execution.pipeline.pipeline import ExecutionPipeline
-from app.evaluation.execution.pipeline.plan import ExecutionPlan
-from app.evaluation.execution.pipeline.step import ExecutionStep, StepStatus
-from app.evaluation.execution.results.results import ExecutionOutcome, StageResult
-from app.evaluation.execution.stages.types import StageType
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _make_plan(total_items: int = 3, stage_type: StageType = StageType.PROVIDER_INVOCATION) -> ExecutionPlan:
+def _make_plan(
+    total_items: int = 3, stage_type: StageType = StageType.PROVIDER_INVOCATION
+) -> ExecutionPlan:
     """Build a minimal ExecutionPlan."""
     steps = [
         ExecutionStep.create(
@@ -110,20 +109,24 @@ class TestEvaluationPipelineExecutor:
         plan = _make_plan(1)
         s1 = MagicMock()
         s1.stage_type = StageType.PROVIDER_INVOCATION
-        s1.execute = AsyncMock(return_value=StageResult(
-            stage_type=StageType.PROVIDER_INVOCATION,
-            stage_name="S1",
-            outcome=ExecutionOutcome.SUCCESS,
-            items_succeeded=1,
-        ))
+        s1.execute = AsyncMock(
+            return_value=StageResult(
+                stage_type=StageType.PROVIDER_INVOCATION,
+                stage_name="S1",
+                outcome=ExecutionOutcome.SUCCESS,
+                items_succeeded=1,
+            )
+        )
         s2 = MagicMock()
         s2.stage_type = StageType.METRIC_DISPATCH
-        s2.execute = AsyncMock(return_value=StageResult(
-            stage_type=StageType.METRIC_DISPATCH,
-            stage_name="S2",
-            outcome=ExecutionOutcome.SUCCESS,
-            items_succeeded=1,
-        ))
+        s2.execute = AsyncMock(
+            return_value=StageResult(
+                stage_type=StageType.METRIC_DISPATCH,
+                stage_name="S2",
+                outcome=ExecutionOutcome.SUCCESS,
+                items_succeeded=1,
+            )
+        )
         pipeline = ExecutionPipeline(
             plan=plan,
             stages=(s1, s2),
@@ -139,12 +142,14 @@ class TestEvaluationPipelineExecutor:
         plan = _make_plan(2)
         good_stage = MagicMock()
         good_stage.stage_type = StageType.PROVIDER_INVOCATION
-        good_stage.execute = AsyncMock(return_value=StageResult(
-            stage_type=StageType.PROVIDER_INVOCATION,
-            stage_name="Good",
-            outcome=ExecutionOutcome.SUCCESS,
-            items_succeeded=2,
-        ))
+        good_stage.execute = AsyncMock(
+            return_value=StageResult(
+                stage_type=StageType.PROVIDER_INVOCATION,
+                stage_name="Good",
+                outcome=ExecutionOutcome.SUCCESS,
+                items_succeeded=2,
+            )
+        )
         bad_stage = MagicMock()
         bad_stage.stage_type = StageType.METRIC_DISPATCH
         bad_stage.execute = AsyncMock(side_effect=RuntimeError("fail"))
@@ -195,7 +200,8 @@ class TestProviderInvocationStage:
 
     def test_validate_empty_provider_name(self, sample_context) -> None:
         """Empty provider name should produce no issues (nothing to check)."""
-        from app.evaluation.execution.context.context import ProviderSelection, PipelineContext
+        from app.evaluation.execution.context.context import PipelineContext, ProviderSelection
+
         ctx = PipelineContext(
             run_id=sample_context.run_id,
             provider_selection=ProviderSelection(provider_name="", model_id="m"),
@@ -223,8 +229,12 @@ class TestProviderInvocationStage:
         stage._runtime_coordinator = coord
 
         steps = [
-            ExecutionStep.create(stage_type=StageType.PROVIDER_INVOCATION, name="s0", item_index=0, order=0),
-            ExecutionStep.create(stage_type=StageType.PROVIDER_INVOCATION, name="s1", item_index=1, order=1),
+            ExecutionStep.create(
+                stage_type=StageType.PROVIDER_INVOCATION, name="s0", item_index=0, order=0
+            ),
+            ExecutionStep.create(
+                stage_type=StageType.PROVIDER_INVOCATION, name="s1", item_index=1, order=1
+            ),
         ]
         result = await stage.execute(sample_context, steps)
         assert result.outcome == ExecutionOutcome.SUCCESS
@@ -244,7 +254,9 @@ class TestProviderInvocationStage:
         stage._runtime_coordinator = coord
 
         steps = [
-            ExecutionStep.create(stage_type=StageType.PROVIDER_INVOCATION, name="s0", item_index=0, order=0),
+            ExecutionStep.create(
+                stage_type=StageType.PROVIDER_INVOCATION, name="s0", item_index=0, order=0
+            ),
         ]
         result = await stage.execute(sample_context, steps)
         assert result.outcome == ExecutionOutcome.FAILURE
@@ -258,7 +270,9 @@ class TestProviderInvocationStage:
         stage._runtime_coordinator = coord
 
         steps = [
-            ExecutionStep.create(stage_type=StageType.PROVIDER_INVOCATION, name="s0", item_index=0, order=0),
+            ExecutionStep.create(
+                stage_type=StageType.PROVIDER_INVOCATION, name="s0", item_index=0, order=0
+            ),
         ]
         result = await stage.execute(sample_context, steps)
         assert result.outcome == ExecutionOutcome.FAILURE
@@ -277,8 +291,12 @@ class TestProviderInvocationStage:
         stage._runtime_coordinator = coord
 
         steps = [
-            ExecutionStep.create(stage_type=StageType.PROVIDER_INVOCATION, name="s0", item_index=0, order=0),
-            ExecutionStep.create(stage_type=StageType.PROVIDER_INVOCATION, name="s1", item_index=1, order=1),
+            ExecutionStep.create(
+                stage_type=StageType.PROVIDER_INVOCATION, name="s0", item_index=0, order=0
+            ),
+            ExecutionStep.create(
+                stage_type=StageType.PROVIDER_INVOCATION, name="s1", item_index=1, order=1
+            ),
         ]
         result = await stage.execute(cancelled_context, steps)
         assert result.items_failed == 0
@@ -305,7 +323,9 @@ class TestProviderInvocationStage:
 class TestPlaceholderStages:
     """Tests for MetricDispatchStage, AggregationStage, PersistenceStage."""
 
-    async def _run_placeholder(self, stage_cls, sample_context, total_steps: int = 2) -> StageResult:
+    async def _run_placeholder(
+        self, stage_cls, sample_context, total_steps: int = 2
+    ) -> StageResult:
         """Run a placeholder stage with given number of steps."""
         steps = [
             ExecutionStep.create(

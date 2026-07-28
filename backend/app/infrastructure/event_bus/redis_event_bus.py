@@ -47,7 +47,9 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
         self._config = config
         self._serializer = serializer or JsonEventSerializer()
         self._dead_letter_queue = dead_letter_queue or DeadLetterQueue(
-            redis, config, self._serializer,
+            redis,
+            config,
+            self._serializer,
         )
         self._subscriptions: dict[str, list[tuple[EventHandler, str | None]]] = {}
         self._consumer_tasks: dict[str, asyncio.Task[None]] = {}
@@ -90,7 +92,7 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
         """
         try:
             return await self._redis.ping()  # type: ignore[no-any-return]
-        except Exception:  # noqa: BLE001
+        except Exception:
             return False
 
     def _stream_name(self, event_type: str) -> str:
@@ -267,7 +269,7 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
 
             except asyncio.CancelledError:
                 break
-            except Exception:  # noqa: BLE001
+            except Exception:
                 await asyncio.sleep(1)
 
     async def _process_entry(
@@ -289,7 +291,7 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
         payload_str: str = data.get("payload", "{}")
         try:
             event = self._serializer.deserialize(payload_str, event_type)
-        except Exception:  # noqa: BLE001
+        except Exception:
             event = None
 
         for handler, _group in subscriptions:
@@ -298,7 +300,7 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
                     await handler(event)
                 else:
                     await handler(data)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 delivery_count = int(data.get("delivery_count", 0)) + 1
                 if delivery_count >= self._config.max_delivery_count:
                     if event is not None:

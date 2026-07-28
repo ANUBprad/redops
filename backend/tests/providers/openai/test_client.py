@@ -1,10 +1,11 @@
 """Tests for OpenAI client wrapper."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from app.providers.openai.client.openai_client import OpenAIClient
+import pytest
+
 from app.providers.exceptions.auth import AuthenticationRequired
+from app.providers.openai.client.openai_client import OpenAIClient
 
 
 class TestOpenAIClient:
@@ -32,8 +33,9 @@ class TestOpenAIClient:
 
     @pytest.mark.asyncio
     async def test_create_chat_completion_error(self) -> None:
-        from openai import AuthenticationError
         from unittest.mock import MagicMock
+
+        from openai import AuthenticationError
 
         resp = MagicMock()
         resp.status_code = 401

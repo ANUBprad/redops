@@ -15,7 +15,6 @@ from app.kernel.entities.base import UUIDv7
 
 if TYPE_CHECKING:
     from app.evaluation.domain.entities.evaluation_entities import EvaluationRun
-    from app.evaluation.domain.enums.evaluation_enums import Priority
     from app.evaluation.domain.value_objects.evaluation_value_objects import (
         EvaluationConfiguration,
         EvaluationMetadata,

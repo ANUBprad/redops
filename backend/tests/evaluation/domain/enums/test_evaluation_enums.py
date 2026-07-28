@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.evaluation.domain.enums.evaluation_enums import (
     CancellationReason,
     EvaluationType,
@@ -59,8 +57,16 @@ class TestRunStatus:
     def test_all_values(self) -> None:
         """All expected values exist."""
         expected = {
-            "created", "queued", "starting", "running", "paused",
-            "cancelling", "completed", "failed", "timedout", "cancelled",
+            "created",
+            "queued",
+            "starting",
+            "running",
+            "paused",
+            "cancelling",
+            "completed",
+            "failed",
+            "timedout",
+            "cancelled",
         }
         assert {s.value for s in RunStatus} == expected
 
@@ -121,8 +127,11 @@ class TestCancellationReason:
     def test_all_values(self) -> None:
         """All expected values exist."""
         expected = {
-            "user_cancelled", "system_cancelled", "quota_exceeded",
-            "budget_exceeded", "deployment_cancelled",
+            "user_cancelled",
+            "system_cancelled",
+            "quota_exceeded",
+            "budget_exceeded",
+            "deployment_cancelled",
         }
         assert {r.value for r in CancellationReason} == expected
 

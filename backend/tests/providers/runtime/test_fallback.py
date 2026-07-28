@@ -6,8 +6,6 @@ from app.providers.runtime.fallback.fallback_chain import (
     FallbackChain,
     FallbackDecision,
     FallbackEntry,
-    FallbackState,
-    FallbackStrategy,
 )
 
 
@@ -83,7 +81,11 @@ class TestFallbackChain:
 
     def test_decision_immutability(self) -> None:
         decision = FallbackDecision(
-            provider_name="openai", model_id="gpt-4", index=0, is_final=False, attempt_count=0,
+            provider_name="openai",
+            model_id="gpt-4",
+            index=0,
+            is_final=False,
+            attempt_count=0,
         )
         try:
             decision.provider_name = "anthropic"  # type: ignore[misc]

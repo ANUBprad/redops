@@ -121,9 +121,7 @@ class TestExtractStreamUsage:
     """Tests for extract_stream_usage."""
 
     def test_message_start_event(self) -> None:
-        event = MessageStartEvent(
-            message=MagicMock(usage=_Usage(input_tokens=50))
-        )
+        event = MessageStartEvent(message=MagicMock(usage=_Usage(input_tokens=50)))
         result = extract_stream_usage(event)
         assert result is not None
         assert result.input_tokens == 50
@@ -154,14 +152,13 @@ class TestExtractStreamUsage:
     def test_unknown_event_type(self) -> None:
         class ContentBlockDeltaEvent:
             pass
+
         event = ContentBlockDeltaEvent()
         result = extract_stream_usage(event)
         assert result is None
 
     def test_message_start_none_input_tokens(self) -> None:
-        event = MessageStartEvent(
-            message=MagicMock(usage=_Usage(input_tokens=None))
-        )
+        event = MessageStartEvent(message=MagicMock(usage=_Usage(input_tokens=None)))
         result = extract_stream_usage(event)
         assert result is not None
         assert result.input_tokens == 0
