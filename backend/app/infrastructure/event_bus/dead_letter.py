@@ -7,7 +7,7 @@ dead-letter stream for manual inspection and replay.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis as AsyncRedis
@@ -15,16 +15,20 @@ if TYPE_CHECKING:
     from app.infrastructure.config.redis import RedisConfiguration
     from app.kernel.events.event_bus import BaseEvent, EventSerializer
 
-# Type alias matching redis-py stubs for xadd field values.
-RedisFieldValue = bytes | memoryview | str | int | float
+# Type alias matching redis-py stubs exactly.
+RedisFieldValue = bytes | bytearray | memoryview | str | int | float
 RedisFields = dict[RedisFieldValue, RedisFieldValue]
 
+# What redis-py stubs actually accept for xadd fields.
+_XaddFields = dict[bytes | memoryview | str | int | float, bytes | memoryview | str | int | float]
 
-def decode_field(value: object) -> str:
+# Each stream reply is (stream_name, entries) where entries is
+# list[tuple[entry_id, field_dict]].
+_StreamReply = list[tuple[bytes, list[tuple[bytes, dict[bytes, bytes]]]]]
+
+
+def decode_field(value: RedisFieldValue) -> str:
     """Decode a single Redis field value to str.
-
-    Handles bytes, bytearray, memoryview, str, and other types
-    by converting to string representation.
 
     Args:
         value: A raw Redis field value.
@@ -42,7 +46,7 @@ def decode_field(value: object) -> str:
     return str(value)
 
 
-def normalize_stream_fields(raw: dict[object, object]) -> dict[str, Any]:
+def normalize_stream_fields(raw: dict[RedisFieldValue, RedisFieldValue]) -> dict[str, Any]:
     """Normalize a raw Redis stream field dict to str keys and decoded values.
 
     Args:
@@ -63,22 +67,41 @@ def normalize_stream_fields(raw: dict[object, object]) -> dict[str, Any]:
 
 
 def normalize_stream_entry(
-    entry_id: object,
-    data: dict[object, object],
+    entry_id: RedisFieldValue,
+    data: dict[RedisFieldValue, RedisFieldValue] | None,
 ) -> tuple[str, dict[str, Any]]:
     """Normalize a single Redis stream entry (id + fields).
 
     Args:
-        entry_id: The stream entry ID (bytes or str).
-        data: The raw field dictionary from Redis.
+        entry_id: The stream entry ID.
+        data: The raw field dictionary from Redis, or None.
 
     Returns:
         A tuple of (decoded entry ID, normalized fields dict).
+        When data is None the normalized dict is empty.
 
     """
     decoded_id = decode_field(entry_id)
+    if data is None:
+        return decoded_id, {}
     normalized_data = normalize_stream_fields(data)
     return decoded_id, normalized_data
+
+
+def coerce_fields(source: dict[str, str]) -> RedisFields:
+    """Convert a str→str dict into a RedisFields dict via explicit loop.
+
+    Args:
+        source: A dictionary whose keys and values are plain strings.
+
+    Returns:
+        A new dict matching the RedisFields type alias.
+
+    """
+    fields: RedisFields = {}
+    for k, v in source.items():
+        fields[k] = v
+    return fields
 
 
 class DeadLetterQueue:
@@ -127,7 +150,7 @@ class DeadLetterQueue:
             last_error: A description of the last error encountered.
 
         Returns:
-            The ID of the dead-letter stream entry.
+            The decoded ID of the dead-letter stream entry.
 
         """
         payload: dict[str, str] = {
@@ -139,9 +162,10 @@ class DeadLetterQueue:
             "failed_at": datetime.now(UTC).isoformat(),
         }
         stream = self._stream_name(event.event_type)
-        fields: RedisFields = dict(payload.items())
-        entry_id: str = await self._redis.xadd(stream, fields)
-        return entry_id
+        fields = coerce_fields(payload)
+        xadd_fields = cast("_XaddFields", fields)
+        raw_entry_id = await self._redis.xadd(stream, xadd_fields)
+        return decode_field(raw_entry_id)
 
     async def replay_event(self, event_type: str, entry_id: str) -> dict[str, Any] | None:
         """Retrieve a dead-lettered event for replay.
@@ -155,11 +179,17 @@ class DeadLetterQueue:
 
         """
         stream = self._stream_name(event_type)
-        results = await self._redis.xrange(stream, min=entry_id, max=entry_id)
-        if not results:
+        raw_results: _StreamReply = cast(
+            "_StreamReply",
+            await self._redis.xrange(stream, min=entry_id, max=entry_id),
+        )
+        if not raw_results:
             return None
-        raw_entry_id, raw_data = results[0]
-        _decoded_id, normalized = normalize_stream_entry(raw_entry_id, raw_data)
+        first_raw = raw_results[0]
+        raw_entry_id = first_raw[0]
+        raw_data = first_raw[1]
+        cast_data = cast("dict[RedisFieldValue, RedisFieldValue]", raw_data)
+        _decoded_id, normalized = normalize_stream_entry(raw_entry_id, cast_data)
         return normalized
 
     async def remove_event(self, event_type: str, entry_id: str) -> None:
@@ -189,12 +219,18 @@ class DeadLetterQueue:
 
         """
         stream = self._stream_name(event_type)
-        results = await self._redis.xrevrange(stream, max="+", min="-", count=count)
+        raw_results: _StreamReply = cast(
+            "_StreamReply",
+            await self._redis.xrevrange(stream, max="+", min="-", count=count),
+        )
         events: list[dict[str, Any]] = []
-        if results is None:
+        if raw_results is None:
             return events
-        for raw_entry_id, raw_data in results:
-            entry_id_str, normalized = normalize_stream_entry(raw_entry_id, raw_data)
+        for first_raw in raw_results:
+            raw_entry_id = first_raw[0]
+            raw_data = first_raw[1]
+            cast_data = cast("dict[RedisFieldValue, RedisFieldValue]", raw_data)
+            entry_id_str, normalized = normalize_stream_entry(raw_entry_id, cast_data)
             events.append({"id": entry_id_str, **normalized})
         return events
 
