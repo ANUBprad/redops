@@ -7,7 +7,6 @@ contracts for evaluation execution.
 from __future__ import annotations
 
 import time
-from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -28,7 +27,10 @@ if TYPE_CHECKING:
     from app.evaluation.execution.context.context import PipelineContext
     from app.providers.contracts.chat import ChatProvider
     from app.providers.registry.registry import ProviderRegistry
-    from app.providers.runtime.execution.runtime_coordinator import RuntimeCoordinator
+    from app.providers.runtime.execution.runtime_coordinator import (
+        ExecutionRequest,
+        RuntimeCoordinator,
+    )
 
 
 class EvaluationPipelineExecutor(PipelineExecutor):
@@ -36,7 +38,7 @@ class EvaluationPipelineExecutor(PipelineExecutor):
 
     async def execute(
         self,
-        pipeline: Any,  # noqa: ANN401
+        pipeline: Any,
         context: PipelineContext,
     ) -> ExecutionResult:
         """Execute all stages in the pipeline sequentially."""
@@ -61,7 +63,7 @@ class EvaluationPipelineExecutor(PipelineExecutor):
                 stage_results.append(result)
                 items_succeeded += result.items_succeeded
                 items_failed += result.items_failed
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 error_msg = str(exc)
                 outcome = ExecutionOutcome.FAILURE
                 stage_results.append(StageResult(
@@ -90,7 +92,7 @@ class EvaluationPipelineExecutor(PipelineExecutor):
         )
 
 
-def _build_step_result(  # noqa: PLR0913
+def _build_step_result(
     step: ExecutionStep,
     stage_type: StageType,
     status: StepStatus,
@@ -125,12 +127,12 @@ def _make_placeholder(
         def __init__(self) -> None:
             super().__init__(stage_type=stage_type, name=stage_name)
 
-        def validate(self, context: PipelineContext) -> list[ValidationIssue]:  # noqa: ARG002
+        def validate(self, context: PipelineContext) -> list[ValidationIssue]:
             return []
 
         async def execute(
             self,
-            context: PipelineContext,  # noqa: ARG002
+            context: PipelineContext,
             steps: Sequence[ExecutionStep],
         ) -> StageResult:
             start = time.monotonic()
@@ -226,8 +228,8 @@ class ProviderInvocationStage(ExecutionStage):
 
     async def rollback(
         self,
-        context: PipelineContext,  # noqa: ARG002
-        result: StageResult,  # noqa: ARG002
+        context: PipelineContext,
+        result: StageResult,
     ) -> None:
         """No rollback needed for provider invocations."""
 
@@ -243,7 +245,7 @@ class ProviderInvocationStage(ExecutionStage):
         """Execute a single provider invocation step."""
         step_start = time.monotonic()
         try:
-            from app.providers.runtime.execution.runtime_coordinator import (  # noqa: PLC0415
+            from app.providers.runtime.execution.runtime_coordinator import (
                 ExecutionRequest,
             )
 
@@ -259,7 +261,7 @@ class ProviderInvocationStage(ExecutionStage):
                 context.provider_selection.provider_name,
             )
 
-            async def _handler(req: ExecutionRequest) -> str:  # noqa: ANN401
+            async def _handler(req: ExecutionRequest) -> str:
                 return await self._invoke_provider(provider, req)
 
             runtime_result = await self._runtime_coordinator.execute(request, _handler)
@@ -277,7 +279,7 @@ class ProviderInvocationStage(ExecutionStage):
                 ExecutionOutcome.FAILURE, elapsed, runtime_result.error,
             )
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             elapsed = int((time.monotonic() - step_start) * 1000)
             return _build_step_result(
                 step, StageType.PROVIDER_INVOCATION, StepStatus.FAILED,
@@ -290,7 +292,7 @@ class ProviderInvocationStage(ExecutionStage):
         request: ExecutionRequest,
     ) -> str:
         """Invoke the provider with proper Message objects."""
-        from app.providers.models.messages import Message, TextContent  # noqa: PLC0415
+        from app.providers.models.messages import Message, TextContent
 
         messages = [
             Message(role="user", content=[TextContent(text=msg["content"])])
@@ -305,6 +307,12 @@ class ProviderInvocationStage(ExecutionStage):
         return response.content
 
 
-MetricDispatchStage: type[ExecutionStage] = _make_placeholder(StageType.METRIC_DISPATCH, "Metric Dispatch")
-AggregationStage: type[ExecutionStage] = _make_placeholder(StageType.AGGREGATION, "Aggregation")
-PersistenceStage: type[ExecutionStage] = _make_placeholder(StageType.PERSISTENCE, "Persistence")
+MetricDispatchStage: type[ExecutionStage] = _make_placeholder(
+    StageType.METRIC_DISPATCH, "Metric Dispatch",
+)
+AggregationStage: type[ExecutionStage] = _make_placeholder(
+    StageType.AGGREGATION, "Aggregation",
+)
+PersistenceStage: type[ExecutionStage] = _make_placeholder(
+    StageType.PERSISTENCE, "Persistence",
+)

@@ -134,6 +134,7 @@ class EvaluationOrchestrator:
             run.start(plan.total_items)
             await self._run_repository.save(run)
             self._observer.set_run_id(run.id)
+            await self._observer.on_execution_started(context_with_plan)
 
             executor = EvaluationPipelineExecutor()
             result = await executor.execute(pipeline, context_with_plan)
@@ -147,6 +148,7 @@ class EvaluationOrchestrator:
             await self._run_repository.save(run)
             return self._build_error_result(run, str(exc))
         else:
+            await self._observer.on_execution_finished(result)
             await self._finalize_run(run, result)
             return result
 

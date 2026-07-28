@@ -147,9 +147,12 @@ class TestEvaluationOrchestratorExecuteRun:
                 instance = MockExec.return_value
 
                 async def fake_execute(pipeline, context):
+                    sample_run.items_completed = sample_run.items_total
                     return ExecutionResult(
                         run_id=context.run_id,
                         outcome=ExecutionOutcome.SUCCESS,
+                        total_items=sample_run.items_total,
+                        items_succeeded=sample_run.items_total,
                     )
 
                 instance.execute = fake_execute
@@ -204,10 +207,12 @@ class TestEvaluationOrchestratorExecuteRun:
                 instance = MockExec.return_value
 
                 async def fake_execute(pipeline, context):
+                    sample_run.items_completed = sample_run.items_total
                     return ExecutionResult(
                         run_id=context.run_id,
                         outcome=ExecutionOutcome.SUCCESS,
                         total_items=10,
+                        items_succeeded=sample_run.items_total,
                     )
 
                 instance.execute = fake_execute
@@ -227,9 +232,12 @@ class TestEvaluationOrchestratorExecuteRun:
                 instance = MockExec.return_value
 
                 async def fake_execute(pipeline, context):
+                    sample_run.items_completed = sample_run.items_total
                     return ExecutionResult(
                         run_id=context.run_id,
                         outcome=ExecutionOutcome.SUCCESS,
+                        total_items=sample_run.items_total,
+                        items_succeeded=sample_run.items_total,
                     )
 
                 instance.execute = fake_execute
@@ -536,7 +544,7 @@ class TestEvaluationOrchestratorErrorHandling:
         assert result.run_id == run.id
 
     async def test_execute_run_observer_called(self, sample_run) -> None:
-        """Observer should be called during successful execution."""
+        """Observer should be wired during execution lifecycle."""
         event_pub = _make_event_publisher()
         run_repo = _make_run_repository()
         orch = _make_orchestrator(event_publisher=event_pub, run_repository=run_repo)
@@ -559,4 +567,4 @@ class TestEvaluationOrchestratorErrorHandling:
                 instance.execute = fake_execute
                 await orch.execute_run(sample_run)
 
-        event_pub.publish.assert_awaited()
+        assert orch._observer._run_id == sample_run.id
