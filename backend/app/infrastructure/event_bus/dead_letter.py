@@ -7,7 +7,7 @@ dead-letter stream for manual inspection and replay.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis as AsyncRedis
@@ -15,9 +15,70 @@ if TYPE_CHECKING:
     from app.infrastructure.config.redis import RedisConfiguration
     from app.kernel.events.event_bus import BaseEvent, EventSerializer
 
-# Type alias for Redis stream field values (accounts for decode_responses=True).
-RedisFieldValue = str | int | float | bytes | memoryview
+# Type alias matching redis-py stubs for xadd field values.
+RedisFieldValue = bytes | memoryview | str | int | float
 RedisFields = dict[RedisFieldValue, RedisFieldValue]
+
+
+def decode_field(value: object) -> str:
+    """Decode a single Redis field value to str.
+
+    Handles bytes, bytearray, memoryview, str, and other types
+    by converting to string representation.
+
+    Args:
+        value: A raw Redis field value.
+
+    Returns:
+        The decoded string representation.
+
+    """
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    if isinstance(value, bytearray):
+        return value.decode("utf-8", errors="replace")
+    if isinstance(value, memoryview):
+        return bytes(value).decode("utf-8", errors="replace")
+    return str(value)
+
+
+def normalize_stream_fields(raw: dict[object, object]) -> dict[str, Any]:
+    """Normalize a raw Redis stream field dict to str keys and decoded values.
+
+    Args:
+        raw: The raw dictionary returned by Redis stream commands.
+
+    Returns:
+        A dictionary with string keys and decoded values.
+
+    """
+    normalized: dict[str, Any] = {}
+    for key, value in raw.items():
+        str_key = decode_field(key)
+        if isinstance(value, bytes | bytearray | memoryview):
+            normalized[str_key] = decode_field(value)
+        else:
+            normalized[str_key] = value
+    return normalized
+
+
+def normalize_stream_entry(
+    entry_id: object,
+    data: dict[object, object],
+) -> tuple[str, dict[str, Any]]:
+    """Normalize a single Redis stream entry (id + fields).
+
+    Args:
+        entry_id: The stream entry ID (bytes or str).
+        data: The raw field dictionary from Redis.
+
+    Returns:
+        A tuple of (decoded entry ID, normalized fields dict).
+
+    """
+    decoded_id = decode_field(entry_id)
+    normalized_data = normalize_stream_fields(data)
+    return decoded_id, normalized_data
 
 
 class DeadLetterQueue:
@@ -78,7 +139,7 @@ class DeadLetterQueue:
             "failed_at": datetime.now(UTC).isoformat(),
         }
         stream = self._stream_name(event.event_type)
-        fields: RedisFields = cast("RedisFields", payload)
+        fields: RedisFields = dict(payload.items())
         entry_id: str = await self._redis.xadd(stream, fields)
         return entry_id
 
@@ -97,8 +158,8 @@ class DeadLetterQueue:
         results = await self._redis.xrange(stream, min=entry_id, max=entry_id)
         if not results:
             return None
-        _entry_id, data = results[0]
-        normalized: dict[str, Any] = dict(data)
+        raw_entry_id, raw_data = results[0]
+        _decoded_id, normalized = normalize_stream_entry(raw_entry_id, raw_data)
         return normalized
 
     async def remove_event(self, event_type: str, entry_id: str) -> None:
@@ -130,8 +191,11 @@ class DeadLetterQueue:
         stream = self._stream_name(event_type)
         results = await self._redis.xrevrange(stream, max="+", min="-", count=count)
         events: list[dict[str, Any]] = []
-        for entry_id, data in results:
-            events.append({"id": entry_id, **data})
+        if results is None:
+            return events
+        for raw_entry_id, raw_data in results:
+            entry_id_str, normalized = normalize_stream_entry(raw_entry_id, raw_data)
+            events.append({"id": entry_id_str, **normalized})
         return events
 
     async def count_events(self, event_type: str) -> int:
@@ -145,5 +209,5 @@ class DeadLetterQueue:
 
         """
         stream = self._stream_name(event_type)
-        count: int = await self._redis.xlen(stream)
-        return count
+        count_result: int = await self._redis.xlen(stream)
+        return count_result
