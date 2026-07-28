@@ -3,8 +3,7 @@ from __future__ import annotations
 import asyncio
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
-from typing import Any
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
 
 class AsyncLock(ABC):
@@ -15,8 +14,7 @@ class AsyncLock(ABC):
     def release(self) -> None: ...
 
     @abstractmethod
-    @asynccontextmanager
-    async def locked(self) -> AsyncGenerator[None, Any]: ...
+    def locked(self) -> AbstractAsyncContextManager[None]: ...
 
 
 class AsyncioLock(AsyncLock):
@@ -30,6 +28,6 @@ class AsyncioLock(AsyncLock):
         self._lock.release()
 
     @asynccontextmanager
-    async def locked(self) -> AsyncGenerator[None, Any]:
+    async def locked(self) -> AsyncGenerator[None, None]:
         async with self._lock:
             yield

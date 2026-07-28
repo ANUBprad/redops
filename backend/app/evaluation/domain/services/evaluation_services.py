@@ -5,7 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from app.evaluation.domain.state_machine.run_state_machine import RunStateMachine, TransitionContext
+from app.evaluation.domain.state_machine.run_state_machine import (
+    RunStateMachine,
+    TransitionContext,
+    TransitionResult,
+)
 from app.evaluation.domain.value_objects.evaluation_value_objects import (
     ExecutionBudget,
     ExecutionPolicy,
@@ -37,16 +41,6 @@ class TransitionValidator:
     def valid_targets(self, run: EvaluationRun) -> list[RunStatus]:
         """Return all valid target states for the given run."""
         return self._state_machine.valid_targets(run.status)
-
-
-@dataclass(frozen=True, slots=True)
-class TransitionResult:
-    """Result of a transition validation."""
-
-    success: bool
-    new_status: RunStatus
-    error: object | None = None
-    guard_failures: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

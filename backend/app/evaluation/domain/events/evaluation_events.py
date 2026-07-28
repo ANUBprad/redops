@@ -6,11 +6,11 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from app.evaluation.domain.enums.evaluation_enums import CancellationReason, FailureReason
-from app.kernel.entities.base import UUIDv7
+from app.kernel.entities.base import DomainEvent, UUIDv7
 
 
 @dataclass(frozen=True, slots=True)
-class EvaluationCreated:
+class EvaluationCreated(DomainEvent):
     """Raised when an evaluation is created."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -29,7 +29,7 @@ class EvaluationCreated:
 
 
 @dataclass(frozen=True, slots=True)
-class EvaluationQueued:
+class EvaluationQueued(DomainEvent):
     """Raised when a run enters the QUEUED state."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -46,7 +46,7 @@ class EvaluationQueued:
 
 
 @dataclass(frozen=True, slots=True)
-class EvaluationStarted:
+class EvaluationStarted(DomainEvent):
     """Raised when a run begins execution."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -64,7 +64,7 @@ class EvaluationStarted:
 
 
 @dataclass(frozen=True, slots=True)
-class EvaluationPaused:
+class EvaluationPaused(DomainEvent):
     """Raised when a run is paused."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -81,7 +81,7 @@ class EvaluationPaused:
 
 
 @dataclass(frozen=True, slots=True)
-class EvaluationResumed:
+class EvaluationResumed(DomainEvent):
     """Raised when a paused run is resumed."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -98,7 +98,7 @@ class EvaluationResumed:
 
 
 @dataclass(frozen=True, slots=True)
-class EvaluationCompleted:
+class EvaluationCompleted(DomainEvent):
     """Raised when a run finishes successfully."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -116,7 +116,7 @@ class EvaluationCompleted:
 
 
 @dataclass(frozen=True, slots=True)
-class EvaluationCancelled:
+class EvaluationCancelled(DomainEvent):
     """Raised when a run is cancelled."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -135,7 +135,7 @@ class EvaluationCancelled:
 
 
 @dataclass(frozen=True, slots=True)
-class EvaluationFailed:
+class EvaluationFailed(DomainEvent):
     """Raised when a run fails irrecoverably."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -154,7 +154,7 @@ class EvaluationFailed:
 
 
 @dataclass(frozen=True, slots=True)
-class EvaluationTimedOut:
+class EvaluationTimedOut(DomainEvent):
     """Raised when a run exceeds its maximum duration."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -172,7 +172,7 @@ class EvaluationTimedOut:
 
 
 @dataclass(frozen=True, slots=True)
-class ItemStarted:
+class ItemStarted(DomainEvent):
     """Raised when an item begins processing."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -189,7 +189,7 @@ class ItemStarted:
 
 
 @dataclass(frozen=True, slots=True)
-class ItemCompleted:
+class ItemCompleted(DomainEvent):
     """Raised when an item finishes successfully."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -208,7 +208,7 @@ class ItemCompleted:
 
 
 @dataclass(frozen=True, slots=True)
-class ItemFailed:
+class ItemFailed(DomainEvent):
     """Raised when an item fails."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -229,7 +229,7 @@ class ItemFailed:
 
 
 @dataclass(frozen=True, slots=True)
-class ItemRetried:
+class ItemRetried(DomainEvent):
     """Raised when an item is retried after failure."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -247,7 +247,7 @@ class ItemRetried:
 
 
 @dataclass(frozen=True, slots=True)
-class ItemCancelled:
+class ItemCancelled(DomainEvent):
     """Raised when an item is abandoned due to cancellation."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -264,7 +264,7 @@ class ItemCancelled:
 
 
 @dataclass(frozen=True, slots=True)
-class ItemSkipped:
+class ItemSkipped(DomainEvent):
     """Raised when an item is skipped."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -281,7 +281,7 @@ class ItemSkipped:
 
 
 @dataclass(frozen=True, slots=True)
-class MetricComputed:
+class MetricComputed(DomainEvent):
     """Raised when a metric is computed for an item."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -299,7 +299,7 @@ class MetricComputed:
 
 
 @dataclass(frozen=True, slots=True)
-class MetricFailed:
+class MetricFailed(DomainEvent):
     """Raised when a metric computation fails."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -317,7 +317,7 @@ class MetricFailed:
 
 
 @dataclass(frozen=True, slots=True)
-class MetricAggregated:
+class MetricAggregated(DomainEvent):
     """Raised when metric scores are aggregated across items."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -335,7 +335,7 @@ class MetricAggregated:
 
 
 @dataclass(frozen=True, slots=True)
-class CheckpointCreated:
+class CheckpointCreated(DomainEvent):
     """Raised when a checkpoint is persisted."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -352,7 +352,7 @@ class CheckpointCreated:
 
 
 @dataclass(frozen=True, slots=True)
-class CheckpointLoaded:
+class CheckpointLoaded(DomainEvent):
     """Raised when a checkpoint is loaded for resume."""
 
     event_id: UUIDv7 = field(default_factory=UUIDv7.generate)

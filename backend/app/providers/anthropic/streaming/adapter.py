@@ -73,7 +73,8 @@ def _map_event(event: Any, *, index: int) -> StreamChunk | None:
         return None
 
     handler = globals()[handler_name]
-    return handler(event, index=index)
+    result: StreamChunk | None = handler(event, index=index)
+    return result
 
 
 def _map_content_delta(event: Any, *, index: int) -> StreamChunk | None:

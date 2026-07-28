@@ -66,6 +66,7 @@ class CircuitBreaker(ABC):
         """
         ...
 
+    @property
     @abstractmethod
     def state(self) -> CircuitState:
         """Return the current circuit breaker state."""

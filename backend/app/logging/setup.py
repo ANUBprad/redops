@@ -75,4 +75,4 @@ def configure_logging(config: AppConfig) -> None:
         logging.getLogger(noisy_logger).setLevel(logging.WARNING)
 
     # Ensure structlog's stdlib integration is used
-    structlog.stdlib.recreate_defaults(log_level=config.app_log_level)
+    structlog.stdlib.recreate_defaults(log_level=getattr(logging, config.app_log_level, None))

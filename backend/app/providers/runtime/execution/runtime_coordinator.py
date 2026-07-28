@@ -108,7 +108,7 @@ class RuntimeCoordinator:
     def __init__(
         self,
         policy: ExecutionPolicy | None = None,
-        pipeline: MiddlewarePipeline | None = None,
+        pipeline: MiddlewarePipeline[Any, Any] | None = None,
     ) -> None:
         """Initialize coordinator."""
         self._policy = policy or ExecutionPolicy()

@@ -13,6 +13,7 @@ from app.evaluation.domain.events.evaluation_events import (
     ItemFailed,
 )
 from app.evaluation.execution.contracts.observer import ExecutionObserver
+from app.kernel.entities.base import UUIDv7
 
 if TYPE_CHECKING:
     from app.evaluation.domain.contracts.evaluation_contracts import EventPublisher
@@ -34,9 +35,9 @@ class EventPublishingObserver(ExecutionObserver):
     def __init__(self, event_publisher: EventPublisher) -> None:
         """Initialize with an event publisher."""
         self._event_publisher = event_publisher
-        self._run_id = None
+        self._run_id: UUIDv7 | None = None
 
-    def set_run_id(self, run_id: object) -> None:
+    def set_run_id(self, run_id: UUIDv7) -> None:
         """Set the run ID for subsequent events."""
         self._run_id = run_id
 
@@ -56,6 +57,7 @@ class EventPublishingObserver(ExecutionObserver):
             return
 
         item_index = result.metadata.get("item_index", "0")
+        event: ItemCompleted | ItemFailed
         if result.is_success:
             event = ItemCompleted(
                 run_id=self._run_id,

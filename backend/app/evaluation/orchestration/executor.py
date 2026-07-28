@@ -20,11 +20,13 @@ from app.evaluation.execution.results.results import (
 )
 from app.evaluation.execution.stages.stage import ExecutionStage, ValidationIssue
 from app.evaluation.execution.stages.types import StageType
+from app.providers.models.enums import MessageRole
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from app.evaluation.execution.context.context import PipelineContext
+    from app.providers.contracts.base import BaseProvider
     from app.providers.contracts.chat import ChatProvider
     from app.providers.registry.registry import ProviderRegistry
     from app.providers.runtime.execution.runtime_coordinator import (
@@ -160,7 +162,7 @@ def _make_placeholder(
         def supports_resume(self) -> bool:
             return True
 
-    return _Stage  # type: ignore[return-value]
+    return _Stage
 
 
 class ProviderInvocationStage(ExecutionStage):
@@ -307,18 +309,20 @@ class ProviderInvocationStage(ExecutionStage):
 
     async def _invoke_provider(
         self,
-        provider: ChatProvider,
+        provider: BaseProvider,
         request: ExecutionRequest,
     ) -> str:
         """Invoke the provider with proper Message objects."""
         from app.providers.models.messages import Message, TextContent
 
+        chat_provider: ChatProvider = provider  # type: ignore[assignment]
+
         messages = [
-            Message(role="user", content=[TextContent(text=msg["content"])])
+            Message(role=MessageRole.USER, content=[TextContent(text=msg["content"])])
             for msg in request.messages
         ]
 
-        response = await provider.chat(
+        response = await chat_provider.chat(
             messages,
             model=request.model_id,
         )

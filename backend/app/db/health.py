@@ -12,7 +12,7 @@ async def check_database_health() -> bool:
         True if the database is reachable, False otherwise.
 
     """
-    from app.core.dependencies import get_config
+    from app.core.config import get_config
     from app.db.session import create_engine_and_session_factory
 
     config = get_config()

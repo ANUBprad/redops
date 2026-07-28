@@ -69,7 +69,7 @@ def _extract_cached_tokens(usage: Any) -> int:
     if details is not None:
         cached = getattr(details, "cached_tokens", None)
         if cached is not None:
-            return cached
+            return int(cached)
     return 0
 
 
@@ -79,12 +79,12 @@ def _extract_audio_tokens(usage: Any) -> int:
     if prompt_details is not None:
         audio = getattr(prompt_details, "audio_tokens", None)
         if audio is not None:
-            return audio
+            return int(audio)
 
     completion_details = getattr(usage, "completion_tokens_details", None)
     if completion_details is not None:
         audio = getattr(completion_details, "audio_tokens", None)
         if audio is not None:
-            return audio
+            return int(audio)
 
     return 0

@@ -8,7 +8,7 @@ across all bounded contexts.
 from __future__ import annotations
 
 import uuid
-from abc import ABC, abstractmethod
+from abc import ABC
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -75,7 +75,7 @@ class TimestampMixin:
     updated_at: datetime
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)  # type: ignore[call-arg]
+        super().__init__(*args, **kwargs)
         now = datetime.now(UTC)
         if not hasattr(self, "created_at") or self.created_at is None:
             self.created_at = now
@@ -192,12 +192,16 @@ class ValueObject(ABC):
         return hash(tuple(sorted(self.__dict__.items())))
 
 
-class DomainEvent(ABC):
+class DomainEvent:
     """Base class for all domain events.
 
     Domain events represent something that happened in the domain
     that other parts of the system might need to react to.
     Events are immutable and carry a timestamp and correlation ID.
+
+    Frozen dataclass subclasses define their own __init__ via
+    @dataclass(frozen=True) and do not call this __init__.
+    Plain subclasses inherit this __init__ for default setup.
     """
 
     event_id: UUIDv7
@@ -210,11 +214,10 @@ class DomainEvent(ABC):
         self.correlation_id = correlation_id
 
     @property
-    @abstractmethod
     def event_type(self) -> str:
         """Return a unique identifier for this event type.
 
         Convention: "<context>.<entity>.<action>"
         Example: "evaluation.run.completed"
         """
-        ...
+        raise NotImplementedError

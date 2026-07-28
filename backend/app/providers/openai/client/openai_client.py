@@ -84,7 +84,7 @@ class OpenAIClient:
         try:
             return await self._client.chat.completions.create(
                 model=model,
-                messages=messages,
+                messages=messages,  # type: ignore[arg-type]
                 **kwargs,
             )
         except Exception as exc:
@@ -114,7 +114,7 @@ class OpenAIClient:
         try:
             return await self._client.chat.completions.create(
                 model=model,
-                messages=messages,
+                messages=messages,  # type: ignore[arg-type]
                 stream=True,
                 **kwargs,
             )

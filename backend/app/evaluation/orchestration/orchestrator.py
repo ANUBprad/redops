@@ -223,9 +223,9 @@ class EvaluationOrchestrator:
         """Build an ExecutionPipeline from a plan and stages."""
         stages = [
             ProviderInvocationStage(self._provider_registry, self._runtime_coordinator),
-            MetricDispatchStage(),
-            AggregationStage(),
-            PersistenceStage(),
+            MetricDispatchStage(),  # type: ignore[call-arg]
+            AggregationStage(),  # type: ignore[call-arg]
+            PersistenceStage(),  # type: ignore[call-arg]
         ]
 
         stage_map = {s.stage_type: s for s in stages}

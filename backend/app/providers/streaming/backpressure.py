@@ -72,7 +72,7 @@ class BackpressureManager:
     def take_from_buffer(self) -> object | None:
         """Remove and return an item from the buffer."""
         if self._buffer:
-            item = self._buffer.pop(0)
+            item: object = self._buffer.pop(0)
             self.should_resume()
             return item
         return None
