@@ -7,13 +7,17 @@ dead-letter stream for manual inspection and replay.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis as AsyncRedis
 
     from app.infrastructure.config.redis import RedisConfiguration
     from app.kernel.events.event_bus import BaseEvent, EventSerializer
+
+# Type alias for Redis stream field values (accounts for decode_responses=True).
+RedisFieldValue = str | int | float | bytes | memoryview
+RedisFields = dict[RedisFieldValue, RedisFieldValue]
 
 
 class DeadLetterQueue:
@@ -74,7 +78,8 @@ class DeadLetterQueue:
             "failed_at": datetime.now(UTC).isoformat(),
         }
         stream = self._stream_name(event.event_type)
-        entry_id: str = await self._redis.xadd(stream, payload)  # type: ignore[arg-type]
+        fields: RedisFields = cast("RedisFields", payload)
+        entry_id: str = await self._redis.xadd(stream, fields)
         return entry_id
 
     async def replay_event(self, event_type: str, entry_id: str) -> dict[str, Any] | None:
@@ -93,7 +98,8 @@ class DeadLetterQueue:
         if not results:
             return None
         _entry_id, data = results[0]
-        return data  # type: ignore[no-any-return]
+        normalized: dict[str, Any] = dict(data)
+        return normalized
 
     async def remove_event(self, event_type: str, entry_id: str) -> None:
         """Remove a dead-lettered event after successful replay.
@@ -139,4 +145,5 @@ class DeadLetterQueue:
 
         """
         stream = self._stream_name(event_type)
-        return await self._redis.xlen(stream)  # type: ignore[no-any-return]
+        count: int = await self._redis.xlen(stream)
+        return count

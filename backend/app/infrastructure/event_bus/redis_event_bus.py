@@ -10,9 +10,9 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
-from app.infrastructure.event_bus.dead_letter import DeadLetterQueue
+from app.infrastructure.event_bus.dead_letter import DeadLetterQueue, RedisFields
 from app.infrastructure.event_bus.serialization import JsonEventSerializer
 from app.kernel.events.event_bus import BaseEvent, EventBus, EventHandler
 from app.kernel.lifecycle.lifecycle import LifecycleService
@@ -91,7 +91,8 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
 
         """
         try:
-            return await self._redis.ping()  # type: ignore[no-any-return]
+            result: bool = await self._redis.ping()
+            return result
         except Exception:
             return False
 
@@ -310,9 +311,12 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
                             last_error=str(exc),
                         )
                 else:
+                    retry_fields: RedisFields = cast(
+                        "RedisFields", {**data, "delivery_count": delivery_count}
+                    )
                     await self._redis.xadd(
                         self._stream_name(event_type),
-                        {**data, "delivery_count": delivery_count},  # type: ignore[dict-item]
+                        retry_fields,
                     )
                 continue
 
