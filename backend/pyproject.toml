@@ -111,11 +111,6 @@ ignore = [
 "tests/evaluation/orchestration/conftest.py" = ["F821"]
 "app/api/*" = ["B008"]
 
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-line-ending = "lf"
-
 [tool.mypy]
 strict = true
 python_version = "3.12"
