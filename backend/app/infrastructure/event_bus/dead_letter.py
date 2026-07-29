@@ -19,9 +19,6 @@ if TYPE_CHECKING:
 RedisFieldValue = bytes | bytearray | memoryview | str | int | float
 RedisFields = dict[RedisFieldValue, RedisFieldValue]
 
-# What redis-py stubs actually accept for xadd fields.
-_XaddFields = dict[bytes | memoryview | str | int | float, bytes | memoryview | str | int | float]
-
 # Each stream reply is (stream_name, entries) where entries is
 # list[tuple[entry_id, field_dict]].
 _StreamReply = list[tuple[bytes, list[tuple[bytes, dict[bytes, bytes]]]]]
@@ -163,8 +160,7 @@ class DeadLetterQueue:
         }
         stream = self._stream_name(event.event_type)
         fields = coerce_fields(payload)
-        xadd_fields = cast("_XaddFields", fields)
-        raw_entry_id = await self._redis.xadd(stream, xadd_fields)
+        raw_entry_id = await self._redis.xadd(stream, fields)
         return decode_field(raw_entry_id)
 
     async def replay_event(self, event_type: str, entry_id: str) -> dict[str, Any] | None:

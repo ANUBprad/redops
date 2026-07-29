@@ -28,9 +28,6 @@ if TYPE_CHECKING:
 
     from app.infrastructure.config.redis import RedisConfiguration
 
-# What redis-py stubs actually accept for xadd fields.
-_XaddFields = dict[bytes | memoryview | str | int | float, bytes | memoryview | str | int | float]
-
 
 class RedisStreamsEventBus(EventBus, LifecycleService):
     """Redis Streams implementation of the Kernel EventBus.
@@ -138,8 +135,7 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
         }
         stream = self._stream_name(event.event_type)
         fields = coerce_fields(payload)
-        xadd_fields = cast("_XaddFields", fields)
-        await self._redis.xadd(stream, xadd_fields)
+        await self._redis.xadd(stream, fields)
 
     async def publish_many(
         self,
@@ -168,8 +164,7 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
                 }
                 stream = self._stream_name(event.event_type)
                 fields = coerce_fields(payload)
-                xadd_fields = cast("_XaddFields", fields)
-                pipe.xadd(stream, xadd_fields)
+                pipe.xadd(stream, fields)
             await pipe.execute()
 
     async def subscribe(
@@ -338,10 +333,9 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
                         k: str(v) for k, v in {**data, "delivery_count": delivery_count}.items()
                     }
                     retry_fields = coerce_fields(retry_payload)
-                    xadd_fields = cast("_XaddFields", retry_fields)
                     await self._redis.xadd(
                         self._stream_name(event_type),
-                        xadd_fields,
+                        retry_fields,
                     )
                 continue
 
