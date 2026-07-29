@@ -1,8 +1,10 @@
-"""Root API router. Mounts only health endpoints."""
+"""Root API router. Mounts all endpoint modules."""
 
 from fastapi import APIRouter
 
+from app.api.evaluation import evaluation_router
 from app.api.health import health_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health_router)
+api_router.include_router(evaluation_router)

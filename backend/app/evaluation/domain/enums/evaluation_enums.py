@@ -83,6 +83,25 @@ _ITEM_TERMINAL_STATES: frozenset[ItemStatus] = frozenset(
 
 
 @unique
+class EvaluationStatus(Enum):
+    """Lifecycle status of an evaluation definition."""
+
+    DRAFT = "draft"
+    READY = "ready"
+    ARCHIVED = "archived"
+
+    @property
+    def is_editable(self) -> bool:
+        """Return True if the evaluation can be modified."""
+        return self == EvaluationStatus.DRAFT
+
+    @property
+    def is_terminal(self) -> bool:
+        """Return True if this is a terminal state."""
+        return self == EvaluationStatus.ARCHIVED
+
+
+@unique
 class EvaluationType(Enum):
     """Type of evaluation determining execution behavior."""
 
