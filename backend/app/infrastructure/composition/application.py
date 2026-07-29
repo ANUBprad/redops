@@ -17,10 +17,13 @@ from app.api.router import api_router
 from app.core.config import get_config
 from app.infrastructure.composition.bootstrap import Bootstrap
 from app.infrastructure.composition.container import InfrastructureContainer
+from app.infrastructure.database.engine import DatabaseEngine
+from app.infrastructure.event_bus.redis_event_bus import RedisStreamsEventBus
 from app.infrastructure.observability.context import (
     CorrelationIdMiddleware,
     RequestContextMiddleware,
 )
+from app.infrastructure.temporal.client import TemporalClientFactory
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -62,6 +65,11 @@ def create_application() -> FastAPI:
 
         await bootstrap.initialize()
         await bootstrap.start()
+
+        di_container = container.container
+        app.state.session_factory = di_container.resolve(DatabaseEngine).session_factory
+        app.state.redis_client = di_container.resolve(RedisStreamsEventBus).redis
+        app.state.temporal_client = di_container.resolve(TemporalClientFactory).client
 
         logger.info("Application started successfully")
 

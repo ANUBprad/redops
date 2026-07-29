@@ -11,6 +11,16 @@ from typing import TYPE_CHECKING
 
 from redis.asyncio import Redis as AsyncRedis
 
+from app.evaluation.temporal.activities import (
+    cancel_run_activity,
+    complete_run_activity,
+    create_run_activity,
+    fail_run_activity,
+    queue_run_activity,
+    start_run_activity,
+    update_progress_activity,
+)
+from app.evaluation.temporal.workflow import EvaluationRunWorkflow
 from app.infrastructure.config.database import DatabaseConfiguration
 from app.infrastructure.config.logging import LoggingConfiguration
 from app.infrastructure.config.redis import RedisConfiguration
@@ -170,13 +180,25 @@ class InfrastructureContainer:
 
     def _register_temporal(self) -> None:
         """Register Temporal infrastructure components."""
+        activity_registry = ActivityRegistry()
+        activity_registry.register(create_run_activity)
+        activity_registry.register(queue_run_activity)
+        activity_registry.register(start_run_activity)
+        activity_registry.register(update_progress_activity)
+        activity_registry.register(complete_run_activity)
+        activity_registry.register(fail_run_activity)
+        activity_registry.register(cancel_run_activity)
+
+        workflow_registry = WorkflowRegistry()
+        workflow_registry.register(EvaluationRunWorkflow)
+
         self._container.register_singleton(
             ActivityRegistry,
-            lambda _c: ActivityRegistry(),
+            lambda _c: activity_registry,
         )
         self._container.register_singleton(
             WorkflowRegistry,
-            lambda _c: WorkflowRegistry(),
+            lambda _c: workflow_registry,
         )
         self._container.register_singleton(
             TemporalClientFactory,

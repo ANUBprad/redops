@@ -54,6 +54,38 @@ class PaginatedEvaluations:
         return -(-self.total // self.page_size)
 
 
+@dataclass
+class RunQuery:
+    """Query parameters for listing evaluation runs."""
+
+    evaluation_id: str | None = None
+    status: RunStatus | None = None
+    provider: str | None = None
+    model: str | None = None
+    search: str | None = None
+    sort_by: str = "created_at"
+    sort_order: str = "desc"
+    page: int = 1
+    page_size: int = 20
+
+
+@dataclass
+class PaginatedRuns:
+    """Paginated result for run listing."""
+
+    items: list[EvaluationRun] = field(default_factory=list)
+    total: int = 0
+    page: int = 1
+    page_size: int = 20
+
+    @property
+    def total_pages(self) -> int:
+        """Return the total number of pages."""
+        if self.page_size <= 0:
+            return 0
+        return -(-self.total // self.page_size)
+
+
 class EvaluationRepository(ABC):
     """Repository for evaluation definition persistence."""
 
@@ -122,8 +154,23 @@ class RunRepository(ABC):
         ...
 
     @abstractmethod
+    async def list(self, query: RunQuery) -> PaginatedRuns:
+        """List runs with filtering, sorting, and pagination."""
+        ...
+
+    @abstractmethod
+    async def exists(self, run_id: UUIDv7) -> bool:
+        """Check whether a run exists."""
+        ...
+
+    @abstractmethod
     async def delete(self, run_id: UUIDv7) -> bool:
         """Delete a run by ID."""
+        ...
+
+    @abstractmethod
+    async def persist_progress(self, run: EvaluationRun) -> None:
+        """Persist progress-only updates (counters, tokens, cost)."""
         ...
 
 

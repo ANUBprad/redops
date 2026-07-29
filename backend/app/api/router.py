@@ -3,8 +3,10 @@
 from fastapi import APIRouter
 
 from app.api.evaluation import evaluation_router
+from app.api.evaluation_run import run_router
 from app.api.health import health_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health_router)
 api_router.include_router(evaluation_router)
+api_router.include_router(run_router)

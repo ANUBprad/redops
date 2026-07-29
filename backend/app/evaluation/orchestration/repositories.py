@@ -12,6 +12,8 @@ from app.evaluation.domain.contracts.evaluation_contracts import (
     CheckpointRepository,
     EventPublisher,
     ItemRepository,
+    PaginatedRuns,
+    RunQuery,
     RunRepository,
 )
 
@@ -59,6 +61,37 @@ class InMemoryRunRepository(RunRepository):
             del self._runs[key]
             return True
         return False
+
+    async def list(self, query: RunQuery) -> PaginatedRuns:
+        """List runs with filtering and pagination."""
+        matching = list(self._runs.values())
+        if query.evaluation_id is not None:
+            matching = [
+                r for r in matching if getattr(r, "evaluation_id", None) == query.evaluation_id
+            ]
+        if query.status is not None:
+            matching = [r for r in matching if r.status == query.status]
+        if query.provider is not None:
+            matching = [r for r in matching if r.profile.provider_name == query.provider]
+        if query.model is not None:
+            matching = [r for r in matching if r.profile.model_id == query.model]
+        total = len(matching)
+        offset = (query.page - 1) * query.page_size
+        page_items = matching[offset : offset + query.page_size]
+        return PaginatedRuns(
+            items=page_items,
+            total=total,
+            page=query.page,
+            page_size=query.page_size,
+        )
+
+    async def exists(self, run_id: UUIDv7) -> bool:
+        """Check whether a run exists."""
+        return str(run_id) in self._runs
+
+    async def persist_progress(self, run: EvaluationRun) -> None:
+        """Persist progress-only updates."""
+        self._runs[str(run.id)] = run
 
 
 class InMemoryItemRepository(ItemRepository):
