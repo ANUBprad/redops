@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.infrastructure.event_bus.serialization import JsonEventSerializer
 from app.kernel.entities.base import UUIDv7
@@ -13,7 +13,7 @@ from app.kernel.entities.base import UUIDv7
 class _TestEvent:
     event_type: str = "test.event.occurred"
     event_id: UUIDv7 = field(default_factory=lambda: UUIDv7())
-    occurred_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     data: str = "hello"
 
 

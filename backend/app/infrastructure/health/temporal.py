@@ -49,7 +49,7 @@ class TemporalHealthContributor(HealthContributor):
                 status=HealthStatus.UNHEALTHY,
                 detail="temporal health check failed",
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return HealthResult(
                 name=self.contributor_name,
                 status=HealthStatus.UNHEALTHY,

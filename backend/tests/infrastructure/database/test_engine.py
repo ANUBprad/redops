@@ -31,7 +31,9 @@ class TestDatabaseEngine:
         with pytest.raises(RuntimeError):
             _ = engine.engine
 
-    def test_session_factory_property_before_init_raises(self, config: DatabaseConfiguration) -> None:
+    def test_session_factory_property_before_init_raises(
+        self, config: DatabaseConfiguration
+    ) -> None:
         engine = DatabaseEngine(config)
         with pytest.raises(RuntimeError):
             _ = engine.session_factory
@@ -45,7 +47,9 @@ class TestDatabaseEngine:
         mock_engine = AsyncMock()
         mock_engine.dispose = AsyncMock()
 
-        with patch("app.infrastructure.database.engine.create_async_engine", return_value=mock_engine):
+        with patch(
+            "app.infrastructure.database.engine.create_async_engine", return_value=mock_engine
+        ):
             await engine.initialize()
             assert engine._engine is not None
             assert engine._session_factory is not None

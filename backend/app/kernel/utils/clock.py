@@ -8,7 +8,7 @@ logic testable by injecting a frozen or configurable clock.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 
 class Clock(ABC):
@@ -45,14 +45,14 @@ class SystemClock(Clock):
     """Wall-clock implementation that returns real UTC time."""
 
     def now(self) -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
 
 class FrozenClock(Clock):
     """Frozen clock for testing. Always returns the configured time."""
 
     def __init__(self, fixed_time: datetime | None = None) -> None:
-        self._fixed = fixed_time or datetime(2026, 1, 1, tzinfo=timezone.utc)
+        self._fixed = fixed_time or datetime(2026, 1, 1, tzinfo=UTC)
 
     def now(self) -> datetime:
         return self._fixed

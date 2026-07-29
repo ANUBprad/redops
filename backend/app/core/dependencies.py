@@ -32,9 +32,11 @@ def get_config_dependency() -> AppConfig:
 
 def get_redis_client(request: Request) -> aioredis.Redis:
     """Return the application Redis client from app state."""
-    return request.app.state.redis_client
+    client: aioredis.Redis = request.app.state.redis_client
+    return client
 
 
 def get_temporal_client(request: Request) -> TemporalClient:
     """Return the application Temporal client from app state."""
-    return request.app.state.temporal_client
+    client: TemporalClient = request.app.state.temporal_client
+    return client

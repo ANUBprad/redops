@@ -10,9 +10,15 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
-from app.infrastructure.event_bus.dead_letter import DeadLetterQueue
+from app.infrastructure.event_bus.dead_letter import (
+    DeadLetterQueue,
+    RedisFieldValue,
+    _StreamReply,
+    coerce_fields,
+    normalize_stream_entry,
+)
 from app.infrastructure.event_bus.serialization import JsonEventSerializer
 from app.kernel.events.event_bus import BaseEvent, EventBus, EventHandler
 from app.kernel.lifecycle.lifecycle import LifecycleService
@@ -47,7 +53,9 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
         self._config = config
         self._serializer = serializer or JsonEventSerializer()
         self._dead_letter_queue = dead_letter_queue or DeadLetterQueue(
-            redis, config, self._serializer,
+            redis,
+            config,
+            self._serializer,
         )
         self._subscriptions: dict[str, list[tuple[EventHandler, str | None]]] = {}
         self._consumer_tasks: dict[str, asyncio.Task[None]] = {}
@@ -89,8 +97,9 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
 
         """
         try:
-            return await self._redis.ping()  # type: ignore[no-any-return]
-        except Exception:  # noqa: BLE001
+            result: bool = await self._redis.ping()
+            return result
+        except Exception:
             return False
 
     def _stream_name(self, event_type: str) -> str:
@@ -113,22 +122,20 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
             correlation_id: Optional correlation ID for event tracing.
 
         """
-        payload = self._serializer.serialize(event)
+        payload: dict[str, str] = {
+            "payload": self._serializer.serialize(event),
+            "event_type": event.event_type,
+            "event_id": str(event.event_id),
+            "occurred_at": (
+                event.occurred_at.isoformat()
+                if hasattr(event, "occurred_at")
+                else datetime.now(UTC).isoformat()
+            ),
+            "correlation_id": correlation_id or "",
+        }
         stream = self._stream_name(event.event_type)
-        await self._redis.xadd(
-            stream,
-            {
-                "payload": payload,
-                "event_type": event.event_type,
-                "event_id": str(event.event_id),
-                "occurred_at": (
-                    event.occurred_at.isoformat()
-                    if hasattr(event, "occurred_at")
-                    else datetime.now(UTC).isoformat()
-                ),
-                "correlation_id": correlation_id or "",
-            },
-        )
+        fields = coerce_fields(payload)
+        await self._redis.xadd(stream, fields)
 
     async def publish_many(
         self,
@@ -144,22 +151,20 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
         """
         async with self._redis.pipeline() as pipe:
             for event in events:
-                payload = self._serializer.serialize(event)
+                payload: dict[str, str] = {
+                    "payload": self._serializer.serialize(event),
+                    "event_type": event.event_type,
+                    "event_id": str(event.event_id),
+                    "occurred_at": (
+                        event.occurred_at.isoformat()
+                        if hasattr(event, "occurred_at")
+                        else datetime.now(UTC).isoformat()
+                    ),
+                    "correlation_id": correlation_id or "",
+                }
                 stream = self._stream_name(event.event_type)
-                pipe.xadd(
-                    stream,
-                    {
-                        "payload": payload,
-                        "event_type": event.event_type,
-                        "event_id": str(event.event_id),
-                        "occurred_at": (
-                            event.occurred_at.isoformat()
-                            if hasattr(event, "occurred_at")
-                            else datetime.now(UTC).isoformat()
-                        ),
-                        "correlation_id": correlation_id or "",
-                    },
-                )
+                fields = coerce_fields(payload)
+                pipe.xadd(stream, fields)
             await pipe.execute()
 
     async def subscribe(
@@ -250,24 +255,40 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
 
         while self._running:
             try:
-                results = await self._redis.xreadgroup(
-                    groupname=consumer_group,
-                    consumername=consumer_name,
-                    streams={stream: ">"},
-                    count=self._config.batch_size,
-                    block=self._config.poll_timeout_ms,
+                raw_results: _StreamReply = cast(
+                    "_StreamReply",
+                    await self._redis.xreadgroup(
+                        groupname=consumer_group,
+                        consumername=consumer_name,
+                        streams={stream: ">"},
+                        count=self._config.batch_size,
+                        block=self._config.poll_timeout_ms,
+                    ),
                 )
 
-                if not results:
+                if not raw_results:
                     continue
 
-                for _stream_name, entries in results:
-                    for entry_id, data in entries:
-                        await self._process_entry(event_type, entry_id, data, subscriptions)
+                for first_raw in raw_results:
+                    raw_entries = first_raw[1]
+                    if raw_entries is None:
+                        continue
+                    for raw_entry_id, raw_data in raw_entries:
+                        cast_data = cast("dict[RedisFieldValue, RedisFieldValue]", raw_data)
+                        entry_id_str, normalized_data = normalize_stream_entry(
+                            raw_entry_id,
+                            cast_data,
+                        )
+                        await self._process_entry(
+                            event_type,
+                            entry_id_str,
+                            normalized_data,
+                            subscriptions,
+                        )
 
             except asyncio.CancelledError:
                 break
-            except Exception:  # noqa: BLE001
+            except Exception:
                 await asyncio.sleep(1)
 
     async def _process_entry(
@@ -289,7 +310,7 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
         payload_str: str = data.get("payload", "{}")
         try:
             event = self._serializer.deserialize(payload_str, event_type)
-        except Exception:  # noqa: BLE001
+        except Exception:
             event = None
 
         for handler, _group in subscriptions:
@@ -298,7 +319,7 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
                     await handler(event)
                 else:
                     await handler(data)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 delivery_count = int(data.get("delivery_count", 0)) + 1
                 if delivery_count >= self._config.max_delivery_count:
                     if event is not None:
@@ -308,9 +329,13 @@ class RedisStreamsEventBus(EventBus, LifecycleService):
                             last_error=str(exc),
                         )
                 else:
+                    retry_payload: dict[str, str] = {
+                        k: str(v) for k, v in {**data, "delivery_count": delivery_count}.items()
+                    }
+                    retry_fields = coerce_fields(retry_payload)
                     await self._redis.xadd(
                         self._stream_name(event_type),
-                        {**data, "delivery_count": delivery_count},  # type: ignore[dict-item]
+                        retry_fields,
                     )
                 continue
 

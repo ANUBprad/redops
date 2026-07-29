@@ -12,7 +12,7 @@ import random
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, TypeVar
+from typing import Any
 
 T = Any
 
@@ -53,7 +53,7 @@ class ExponentialBackoff(BackoffPolicy):
         d = self.base_delay * (self.multiplier ** (attempt - 1))
         d = min(d, self.max_delay)
         if self.jitter:
-            d += random.uniform(0, d * 0.1)  # noqa: S311
+            d += random.uniform(0, d * 0.1)
         return d
 
 
@@ -63,7 +63,7 @@ class FixedBackoff(BackoffPolicy):
 
     delay_seconds: float = 1.0
 
-    def delay(self, attempt: int) -> float:  # noqa: ARG002
+    def delay(self, attempt: int) -> float:
         return self.delay_seconds
 
 
@@ -71,7 +71,7 @@ class FixedBackoff(BackoffPolicy):
 class NoBackoff(BackoffPolicy):
     """No delay between retries (use with caution)."""
 
-    def delay(self, attempt: int) -> float:  # noqa: ARG002
+    def delay(self, attempt: int) -> float:
         return 0.0
 
 

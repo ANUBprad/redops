@@ -8,12 +8,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
 
-from app.core.config import AppConfig
-from app.core.dependencies import get_config
-from app.kernel.health.health import HealthRegistry, HealthResult, HealthStatus
+from app.core.config import AppConfig, get_config
+from app.kernel.health.health import HealthRegistry, HealthResult
 from app.schemas.health import (
     DependencyCheck,
     HealthCheckResponse,
+    HealthStatus,
     ReadinessCheckResponse,
 )
 

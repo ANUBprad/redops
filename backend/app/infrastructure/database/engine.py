@@ -40,7 +40,7 @@ class DatabaseEngine(LifecycleService):
 
         """
         if self._engine is None:
-            raise RuntimeError("Database engine not initialized")  # noqa: TRY003
+            raise RuntimeError("Database engine not initialized")
         return self._engine
 
     @property
@@ -52,7 +52,7 @@ class DatabaseEngine(LifecycleService):
 
         """
         if self._session_factory is None:
-            raise RuntimeError("Database engine not initialized")  # noqa: TRY003
+            raise RuntimeError("Database engine not initialized")
         return self._session_factory
 
     async def initialize(self) -> None:
@@ -103,5 +103,5 @@ class DatabaseEngine(LifecycleService):
                 )
                 row = result.fetchone()
                 return row is not None and row[0] == 1
-        except Exception:  # noqa: BLE001
+        except Exception:
             return False

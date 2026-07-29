@@ -28,7 +28,7 @@ async def start_worker(
         client=temporal_client,
         task_queue=config.temporal_task_queue,
         activities=[],  # Register activities here
-        workflows=[],   # Register workflows here
+        workflows=[],  # Register workflows here
     )
 
     await worker.run()

@@ -38,7 +38,7 @@ class Registration(Generic[T]):
 
     def dispose(self) -> None:
         if self._instance is not None and hasattr(self._instance, "dispose"):
-            self._instance.dispose()  # type: ignore[union-attr]
+            self._instance.dispose()
         self._instance = None
 
 
@@ -51,7 +51,8 @@ class Scope:
         with self._lock:
             if key not in self._instances:
                 self._instances[key] = factory()
-            return self._instances[key]
+            result: T = self._instances[key]
+            return result
 
     @contextlib.contextmanager
     def __call__(self) -> Any:
@@ -111,7 +112,8 @@ class DIContainer:
 
         self._resolution_stack.append(type_)
         try:
-            return registration.resolve(self)
+            result: T = registration.resolve(self)
+            return result
         finally:
             self._resolution_stack.pop()
 

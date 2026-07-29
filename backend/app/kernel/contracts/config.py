@@ -6,8 +6,7 @@ from typing import Any
 
 
 @dataclass(frozen=True)
-class BaseConfiguration(ABC):
-    ...
+class BaseConfiguration(ABC): ...
 
 
 @dataclass(frozen=True)

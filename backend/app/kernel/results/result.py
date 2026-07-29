@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from app.kernel.exceptions.errors import BaseError
 
 T = TypeVar("T")
 U = TypeVar("U")
 E = TypeVar("E", bound=BaseError)
-F = TypeVar("F", bound=BaseError)
 
 
 @dataclass(frozen=True)
@@ -64,7 +64,7 @@ def map(result: Result[T, E], fn: Callable[[T], U]) -> Result[U, E]:
             return result
 
 
-def bind(result: Result[T, E], fn: Callable[[T], Result[U, F]]) -> Result[U, E | F]:
+def bind(result: Result[T, E], fn: Callable[[T], Result[U, E]]) -> Result[U, E]:
     match result:
         case Success(value):
             return fn(value)

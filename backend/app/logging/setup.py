@@ -7,8 +7,6 @@ Enriches log events with request ID, correlation ID, service name, and environme
 from __future__ import annotations
 
 import logging
-import sys
-from typing import Any
 
 import structlog
 from structlog.processors import JSONRenderer, TimeStamper
@@ -17,7 +15,9 @@ from structlog.typing import EventDict, Processor
 from app.core.config import AppConfig
 
 
-def add_service_info(logger: structlog.BoundLogger, method_name: str, event_dict: EventDict) -> EventDict:  # noqa: ARG001
+def add_service_info(
+    logger: structlog.BoundLogger, method_name: str, event_dict: EventDict
+) -> EventDict:
     """Add static service metadata to every log event."""
     event_dict["service"] = "redops-eval"
     event_dict["environment"] = getattr(
@@ -75,4 +75,4 @@ def configure_logging(config: AppConfig) -> None:
         logging.getLogger(noisy_logger).setLevel(logging.WARNING)
 
     # Ensure structlog's stdlib integration is used
-    structlog.stdlib.recreate_defaults(log_level=config.app_log_level)
+    structlog.stdlib.recreate_defaults(log_level=getattr(logging, config.app_log_level, None))

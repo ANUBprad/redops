@@ -32,8 +32,8 @@ class LoggingEnricher:
 
     @staticmethod
     def add_correlation_id(
-        logger: structlog.BoundLogger,  # noqa: ARG004
-        method_name: str,  # noqa: ARG004
+        logger: structlog.BoundLogger,
+        method_name: str,
         event_dict: EventDict,
     ) -> EventDict:
         """Add the current correlation ID to the log event.
@@ -54,8 +54,8 @@ class LoggingEnricher:
 
     @staticmethod
     def add_request_id(
-        logger: structlog.BoundLogger,  # noqa: ARG004
-        method_name: str,  # noqa: ARG004
+        logger: structlog.BoundLogger,
+        method_name: str,
         event_dict: EventDict,
     ) -> EventDict:
         """Add the current request ID to the log event.
@@ -76,8 +76,8 @@ class LoggingEnricher:
 
     @staticmethod
     def add_workflow_context(
-        logger: structlog.BoundLogger,  # noqa: ARG004
-        method_name: str,  # noqa: ARG004
+        logger: structlog.BoundLogger,
+        method_name: str,
         event_dict: EventDict,
     ) -> EventDict:
         """Add the current workflow context to the log event.
@@ -100,7 +100,9 @@ class LoggingEnricher:
 
 
 def _add_service_info(
-    _logger: structlog.BoundLogger, _method_name: str, event_dict: EventDict,
+    _logger: structlog.BoundLogger,
+    _method_name: str,
+    event_dict: EventDict,
 ) -> EventDict:
     """Add static service metadata to every log event."""
     event_dict["service"] = "redops-eval"

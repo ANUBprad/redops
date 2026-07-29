@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -39,10 +38,12 @@ class TestFilesystemPluginDiscovery:
         discovery = FilesystemPluginDiscovery(
             plugin_dirs=[Path("/nonexistent/path")],
         )
-        plugins = []
+
         async def _run() -> list[type[Plugin]]:
             return await discovery.discover("test")
+
         import asyncio
+
         result = asyncio.run(_run())
         assert result == []
 
@@ -52,10 +53,12 @@ class TestEntryPointPluginDiscovery:
         discovery = EntryPointPluginDiscovery(
             entry_point_group="nonexistent.group",
         )
-        plugins = []
+
         async def _run() -> list[type[Plugin]]:
             return await discovery.discover("test")
+
         import asyncio
+
         result = asyncio.run(_run())
         assert result == []
 

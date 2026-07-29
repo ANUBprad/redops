@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from app.infrastructure.temporal.worker import ActivityRegistry, WorkflowRegistry
 
 
