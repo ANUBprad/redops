@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         EvaluationStatus,
         RunStatus,
     )
+    from app.evaluation.metrics.domain import MetricAggregation, MetricResult
     from app.kernel.entities.base import UUIDv7
 
 
@@ -237,4 +238,73 @@ class EventPublisher(ABC):
     @abstractmethod
     async def publish_many(self, events: Sequence[object]) -> None:
         """Publish multiple domain events."""
+        ...
+
+
+@dataclass
+class MetricResultQuery:
+    """Query parameters for listing metric results."""
+
+    run_id: str | None = None
+    item_id: str | None = None
+    metric_name: str | None = None
+    page: int = 1
+    page_size: int = 100
+
+
+@dataclass
+class PaginatedMetricResults:
+    """Paginated result for metric result listing."""
+
+    items: list[MetricResult] = field(default_factory=list)
+    total: int = 0
+    page: int = 1
+    page_size: int = 100
+
+    @property
+    def total_pages(self) -> int:
+        """Return the total number of pages."""
+        if self.page_size <= 0:
+            return 0
+        return -(-self.total // self.page_size)
+
+
+class MetricResultRepository(ABC):
+    """Repository for metric result persistence."""
+
+    @abstractmethod
+    async def save_many(self, results: Sequence[MetricResult]) -> None:
+        """Save multiple metric results in batch."""
+        ...
+
+    @abstractmethod
+    async def find_by_run_id(
+        self,
+        run_id: UUIDv7,
+        metric_name: str | None = None,
+    ) -> list[MetricResult]:
+        """Find metric results by run ID, optionally filtered by metric name."""
+        ...
+
+    @abstractmethod
+    async def find_by_item_id(
+        self,
+        run_id: UUIDv7,
+        item_id: UUIDv7,
+    ) -> list[MetricResult]:
+        """Find metric results for a specific item."""
+        ...
+
+    @abstractmethod
+    async def list(self, query: MetricResultQuery) -> PaginatedMetricResults:
+        """List metric results with filtering and pagination."""
+        ...
+
+    @abstractmethod
+    async def get_aggregation(
+        self,
+        run_id: UUIDv7,
+        metric_name: str,
+    ) -> MetricAggregation:
+        """Compute aggregated scores for a metric across all items in a run."""
         ...
