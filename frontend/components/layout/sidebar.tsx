@@ -6,6 +6,9 @@ import {
   Settings,
   Shield,
   Target,
+  TrendingUp,
+  Trophy,
+  GitCompare,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,7 +31,11 @@ const navItems: NavItem[] = [
   { label: "Runs", href: "/runs", icon: <PlayCircle className="h-5 w-5" /> },
   { label: "Metrics", href: "/metrics", icon: <BarChart3 className="h-5 w-5" /> },
   { label: "Red Team", href: "/redteam/definitions", icon: <Shield className="h-5 w-5" /> },
-  { label: "Reports", href: "/reports", icon: <FileText className="h-5 w-5" /> },
+  { label: "Analytics", href: "/analytics", icon: <TrendingUp className="h-5 w-5" /> },
+  { label: "Comparisons", href: "/analytics/comparisons", icon: <GitCompare className="h-5 w-5" /> },
+  { label: "Leaderboards", href: "/analytics/leaderboards", icon: <Trophy className="h-5 w-5" /> },
+  { label: "Trends", href: "/analytics/trends", icon: <BarChart3 className="h-5 w-5" /> },
+  { label: "Reports", href: "/analytics/reports", icon: <FileText className="h-5 w-5" /> },
   { label: "Settings", href: "/settings", icon: <Settings className="h-5 w-5" /> },
 ];
 

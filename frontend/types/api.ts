@@ -234,3 +234,164 @@ export interface Project {
   created_at: string;
   updated_at: string;
 }
+
+// ─── Analytics Types ────────────────────────────────────────────
+
+export interface ActivityEntry {
+  id: string;
+  type: string;
+  name: string;
+  status: string;
+  timestamp: string | null;
+  summary: string;
+}
+
+export interface DashboardSummary {
+  total_evaluations: number;
+  completed_runs: number;
+  success_rate: number;
+  average_score: number;
+  average_latency_ms: number;
+  average_cost: number;
+  total_token_usage: number;
+  average_safety_score: number;
+  attack_success_rate: number;
+  recent_activity: ActivityEntry[];
+}
+
+export interface TrendPoint {
+  timestamp: string;
+  value: number;
+  label: string;
+}
+
+export interface TrendSeries {
+  name: string;
+  points: TrendPoint[];
+  direction: "up" | "down" | "flat";
+  change_percent: number;
+}
+
+export interface ProviderCost {
+  provider: string;
+  total_cost: number;
+  run_count: number;
+  average_cost_per_run: number;
+}
+
+export interface ModelCost {
+  model: string;
+  provider: string;
+  total_cost: number;
+  run_count: number;
+  average_cost_per_run: number;
+}
+
+export interface CostAnalysis {
+  total_cost: number;
+  average_cost_per_run: number;
+  average_cost_per_item: number;
+  cost_by_provider: ProviderCost[];
+  cost_by_model: ModelCost[];
+  projected_monthly_cost: number;
+}
+
+export interface ProviderLatency {
+  provider: string;
+  average_latency_ms: number;
+  run_count: number;
+}
+
+export interface ModelLatency {
+  model: string;
+  provider: string;
+  average_latency_ms: number;
+  run_count: number;
+}
+
+export interface LatencyAnalysis {
+  average_latency_ms: number;
+  median_latency_ms: number;
+  p95_latency_ms: number;
+  p99_latency_ms: number;
+  min_latency_ms: number;
+  max_latency_ms: number;
+  latency_by_provider: ProviderLatency[];
+  latency_by_model: ModelLatency[];
+}
+
+export interface DimensionScore {
+  dimension: string;
+  score: number;
+  verdict: string;
+  sample_count: number;
+}
+
+export interface SafetyTrend {
+  average_safety_score: number;
+  violation_rate: number;
+  pass_rate: number;
+  safety_by_dimension: DimensionScore[];
+  total_attacks: number;
+  total_violations: number;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  entity_id: string;
+  entity_name: string;
+  entity_type: string;
+  score: number;
+  metric_name: string;
+  metadata: Record<string, string>;
+}
+
+export interface Leaderboard {
+  title: string;
+  ranking_by: string;
+  entries: LeaderboardEntry[];
+  generated_at: string | null;
+}
+
+export interface ComparedItem {
+  entity_id: string;
+  entity_name: string;
+  entity_type: string;
+}
+
+export interface MetricValue {
+  entity_id: string;
+  value: number;
+  formatted_value: string;
+}
+
+export interface ComparisonMetric {
+  metric_name: string;
+  values: MetricValue[];
+  best_entity_id: string;
+}
+
+export interface ComparisonResult {
+  title: string;
+  compared_items: ComparedItem[];
+  metrics: ComparisonMetric[];
+  summary: string;
+}
+
+export interface ReportSection {
+  title: string;
+  content: string;
+  statistics: Record<string, number>;
+}
+
+export interface GeneratedReport {
+  id: string;
+  report_type: string;
+  title: string;
+  description: string;
+  generated_at: string | null;
+  summary: string;
+  recommendations: string[];
+  statistics: Record<string, number>;
+  sections: ReportSection[];
+}

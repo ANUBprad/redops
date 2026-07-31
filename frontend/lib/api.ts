@@ -179,4 +179,70 @@ export const api = {
   completeAttackRun: (id: UUID) => request<unknown>(`/redteam/runs/${id}/complete`, { method: "POST" }),
   failAttackRun: (id: UUID, data: { error_message?: string }) => request<unknown>(`/redteam/runs/${id}/fail`, { method: "POST", body: JSON.stringify(data) }),
   cancelAttackRun: (id: UUID) => request<unknown>(`/redteam/runs/${id}/cancel`, { method: "POST" }),
+
+  // Analytics
+  getDashboardSummary: (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<unknown>(`/analytics/dashboard${query}`);
+  },
+  getHistoricalTrends: (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<unknown>(`/analytics/trends${query}`);
+  },
+  getCostAnalysis: (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<unknown>(`/analytics/cost${query}`);
+  },
+  getLatencyAnalysis: (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<unknown>(`/analytics/latency${query}`);
+  },
+  getSafetyTrend: (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<unknown>(`/analytics/safety${query}`);
+  },
+  getLeaderboard: (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<unknown>(`/analytics/leaderboard${query}`);
+  },
+  getComparison: (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<unknown>(`/analytics/comparison${query}`);
+  },
+  generateReport: (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<unknown>(`/analytics/reports/generate${query}`);
+  },
 };
