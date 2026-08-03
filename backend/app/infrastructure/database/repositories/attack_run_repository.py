@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -61,7 +63,11 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
         if query.evaluation_run_id:
             stmt = stmt.where(AttackRunModel.evaluation_run_id == query.evaluation_run_id)
         if query.category:
-            stmt = stmt.where(AttackRunModel.configuration["categories"].as_string().contains(query.category.value))
+            stmt = stmt.where(
+                AttackRunModel.configuration["categories"]
+                .as_string()
+                .contains(query.category.value)
+            )
 
         sort_col = _get_sort_column(query.sort_by)
         sort_attr = getattr(AttackRunModel, sort_col, AttackRunModel.created_at)
@@ -105,6 +111,19 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
         model.started_at = run.started_at
         model.completed_at = run.completed_at
 
+    async def find_by_date_range(
+        self,
+        since: datetime,
+        until: datetime,
+    ) -> Sequence[AttackRun]:
+        """Find attack runs created within a date range."""
+        stmt = select(AttackRunModel).where(
+            AttackRunModel.created_at >= since,
+            AttackRunModel.created_at <= until,
+        )
+        result = await self._session.execute(stmt)
+        return [self._to_domain(m) for m in result.scalars().all()]
+
     @staticmethod
     def _to_model(run: AttackRun) -> AttackRunModel:
         return AttackRunModel(
@@ -129,8 +148,12 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
     def _to_domain(model: AttackRunModel) -> AttackRun:
         return AttackRun(
             entity_id=UUIDv7(UUID(model.id)),
-            evaluation_run_id=UUIDv7(UUID(model.evaluation_run_id)) if model.evaluation_run_id else None,
-            attack_definition_ids=tuple(UUIDv7(UUID(did)) for did in (model.attack_definition_ids or [])),
+            evaluation_run_id=UUIDv7(UUID(model.evaluation_run_id))
+            if model.evaluation_run_id
+            else None,
+            attack_definition_ids=tuple(
+                UUIDv7(UUID(did)) for did in (model.attack_definition_ids or [])
+            ),
             configuration=_dict_to_config(model.configuration or {}),
             status=AttackStatus(model.status),
             items_total=model.items_total,

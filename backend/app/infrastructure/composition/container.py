@@ -11,6 +11,16 @@ from typing import TYPE_CHECKING
 
 from redis.asyncio import Redis as AsyncRedis
 
+from app.agents.temporal.activities import (
+    cancel_agent_run_activity,
+    complete_agent_run_activity,
+    create_agent_run_activity,
+    fail_agent_run_activity,
+    queue_agent_run_activity,
+    start_agent_run_activity,
+    update_agent_run_progress_activity,
+)
+from app.agents.temporal.workflow import AgentRunWorkflow
 from app.evaluation.temporal.activities import (
     cancel_run_activity,
     complete_run_activity,
@@ -189,8 +199,17 @@ class InfrastructureContainer:
         activity_registry.register(fail_run_activity)
         activity_registry.register(cancel_run_activity)
 
+        activity_registry.register(create_agent_run_activity)
+        activity_registry.register(queue_agent_run_activity)
+        activity_registry.register(start_agent_run_activity)
+        activity_registry.register(update_agent_run_progress_activity)
+        activity_registry.register(complete_agent_run_activity)
+        activity_registry.register(fail_agent_run_activity)
+        activity_registry.register(cancel_agent_run_activity)
+
         workflow_registry = WorkflowRegistry()
         workflow_registry.register(EvaluationRunWorkflow)
+        workflow_registry.register(AgentRunWorkflow)
 
         self._container.register_singleton(
             ActivityRegistry,

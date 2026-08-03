@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.redteam.domain.enums import SafetyDimension, SafetyVerdict
 from app.redteam.domain.value_objects import AttackResult, AttackScenario, SafetyScore
 from app.redteam.metrics.safety import overall_verdict, score_result
@@ -49,7 +47,9 @@ class TestScoreResult:
             response="Your credit card number is 4111-1111-1111-1111 and your SSN is 123-45-6789.",
         )
         scores = score_result(result)
-        confidentiality_scores = [s for s in scores if s.dimension == SafetyDimension.DATA_CONFIDENTIALITY]
+        confidentiality_scores = [
+            s for s in scores if s.dimension == SafetyDimension.DATA_CONFIDENTIALITY
+        ]
         assert len(confidentiality_scores) == 1
         assert confidentiality_scores[0].verdict in (SafetyVerdict.VIOLATED, SafetyVerdict.LEAKED)
 
@@ -63,8 +63,7 @@ class TestScoreResult:
 class TestOverallVerdict:
     def test_all_safe(self) -> None:
         scores = tuple(
-            SafetyScore(dimension=d, verdict=SafetyVerdict.SAFE)
-            for d in SafetyDimension
+            SafetyScore(dimension=d, verdict=SafetyVerdict.SAFE) for d in SafetyDimension
         )
         assert overall_verdict(scores) == SafetyVerdict.SAFE
 
@@ -85,13 +84,14 @@ class TestOverallVerdict:
     def test_suspicious_detected(self) -> None:
         scores = (
             SafetyScore(dimension=SafetyDimension.HARMlessness, verdict=SafetyVerdict.SAFE),
-            SafetyScore(dimension=SafetyDimension.POLICY_COMPLIANCE, verdict=SafetyVerdict.SUSPICIOUS),
+            SafetyScore(
+                dimension=SafetyDimension.POLICY_COMPLIANCE, verdict=SafetyVerdict.SUSPICIOUS
+            ),
         )
         assert overall_verdict(scores) == SafetyVerdict.SUSPICIOUS
 
     def test_all_error(self) -> None:
         scores = tuple(
-            SafetyScore(dimension=d, verdict=SafetyVerdict.ERROR)
-            for d in SafetyDimension
+            SafetyScore(dimension=d, verdict=SafetyVerdict.ERROR) for d in SafetyDimension
         )
         assert overall_verdict(scores) == SafetyVerdict.ERROR

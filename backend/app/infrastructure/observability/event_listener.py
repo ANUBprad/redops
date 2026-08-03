@@ -104,7 +104,9 @@ def _emit_attack_timeline(
     event_type: str,
     extra: dict[str, Any],
 ) -> None:
-    entry = TimelineEntry(run_id=UUIDv7.from_string(run_model.id), event_type=event_type, data=extra)
+    entry = TimelineEntry(
+        run_id=UUIDv7.from_string(run_model.id), event_type=event_type, data=extra
+    )
     session.add(
         RunEventModel(
             id=str(entry.entry_id),
@@ -158,11 +160,11 @@ def _register_flush_listener(sync_engine: Any) -> None:
                     event_type = _ATTACK_EVENT_MAP.get(new_status)
                     if event_type is None:
                         continue
-                    extra: dict[str, Any] = {
+                    attack_extra: dict[str, Any] = {
                         "items_completed": instance.items_completed,
                         "items_total": instance.items_total,
                     }
-                    _emit_attack_timeline(session, instance, event_type, extra)
+                    _emit_attack_timeline(session, instance, event_type, attack_extra)
 
             for instance in list(session.new):
                 if isinstance(instance, EvaluationRunModel):

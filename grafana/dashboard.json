@@ -1,0 +1,125 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "RedOps Eval Dashboard",
+    "tags": ["redops", "llm", "evaluation"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "API Requests / sec",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{status}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "title": "API Response Time (p95)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "title": "Active Evaluation Runs",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+        "targets": [
+          {
+            "expr": "redops_evaluation_runs_active",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "title": "Evaluations Completed Today",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+        "targets": [
+          {
+            "expr": "increase(redops_evaluation_runs_completed_total[24h])",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "title": "Attack Violations",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+        "targets": [
+          {
+            "expr": "redops_attack_violations_total",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "title": "Average Safety Score",
+        "type": "gauge",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+        "targets": [
+          {
+            "expr": "redops_safety_score_average",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "min": 0,
+          "max": 1
+        }
+      },
+      {
+        "title": "Token Usage by Provider",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+        "targets": [
+          {
+            "expr": "redops_token_usage_total",
+            "legendFormat": "{{provider}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "title": "Cost by Provider ($)",
+        "type": "bargauge",
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 12 },
+        "targets": [
+          {
+            "expr": "redops_cost_total",
+            "legendFormat": "{{provider}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "title": "Database Connections",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 12 },
+        "targets": [
+          {
+            "expr": "db_pool_connections_active",
+            "legendFormat": "active",
+            "refId": "A"
+          },
+          {
+            "expr": "db_pool_connections_idle",
+            "legendFormat": "idle",
+            "refId": "B"
+          }
+        ]
+      }
+    ],
+    "time": { "from": "now-6h", "to": "now" },
+    "refresh": "30s"
+  }
+}

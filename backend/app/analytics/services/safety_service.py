@@ -11,9 +11,10 @@ from app.analytics.domain.entities import (
 )
 
 if TYPE_CHECKING:
-    from app.redteam.domain.contracts.redteam_contracts import (
-        AttackRunRepository,
-    )
+    from collections.abc import Sequence
+
+    from app.redteam.contracts.repositories import AttackRunRepository
+    from app.redteam.domain.entities import AttackRun
 
 
 class SafetyService:
@@ -58,7 +59,7 @@ class SafetyService:
 
     async def _compute_dimension_scores(
         self,
-        attack_runs: list[object],
+        attack_runs: Sequence[AttackRun],
     ) -> tuple[DimensionScore, ...]:
         """Compute safety scores by dimension."""
         from app.redteam.domain.enums import SafetyDimension

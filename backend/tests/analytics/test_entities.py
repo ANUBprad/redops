@@ -6,23 +6,20 @@ from datetime import UTC, datetime
 
 from app.analytics.domain.entities import (
     ActivityEntry,
+    ComparedItem,
     ComparisonMetric,
     ComparisonResult,
-    ComparedItem,
     CostAnalysis,
     DashboardSummary,
     DateRange,
     DimensionScore,
     ExportFormat,
     GeneratedReport,
+    LatencyAnalysis,
     Leaderboard,
     LeaderboardEntry,
-    LatencyAnalysis,
     MetricValue,
-    ModelCost,
-    ModelLatency,
     ProviderCost,
-    ProviderLatency,
     ReportDefinition,
     ReportSection,
     ReportType,
@@ -104,9 +101,7 @@ class TestDashboardSummary:
         assert ds.recent_activity == ()
 
     def test_with_values(self) -> None:
-        activity = (
-            ActivityEntry(id="1", type="run", name="Test", status="completed"),
-        )
+        activity = (ActivityEntry(id="1", type="run", name="Test", status="completed"),)
         ds = DashboardSummary(
             total_evaluations=10,
             completed_runs=8,

@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-
     from app.kernel.entities.base import UUIDv7
     from app.redteam.domain.entities import AttackDefinition, AttackRun
     from app.redteam.domain.enums import (
@@ -71,43 +72,42 @@ class PaginatedAttackRuns:
 
 class AttackDefinitionRepository(ABC):
     @abstractmethod
-    async def save(self, definition: AttackDefinition) -> None:
-        ...
+    async def save(self, definition: AttackDefinition) -> None: ...
 
     @abstractmethod
-    async def find_by_id(self, definition_id: UUIDv7) -> AttackDefinition | None:
-        ...
+    async def find_by_id(self, definition_id: UUIDv7) -> AttackDefinition | None: ...
 
     @abstractmethod
-    async def list(self, query: AttackDefinitionQuery) -> PaginatedAttackDefinitions:
-        ...
+    async def list(self, query: AttackDefinitionQuery) -> PaginatedAttackDefinitions: ...
 
     @abstractmethod
-    async def delete(self, definition_id: UUIDv7) -> bool:
-        ...
+    async def delete(self, definition_id: UUIDv7) -> bool: ...
 
     @abstractmethod
-    async def exists(self, definition_id: UUIDv7) -> bool:
-        ...
+    async def exists(self, definition_id: UUIDv7) -> bool: ...
 
 
 class AttackRunRepository(ABC):
     @abstractmethod
-    async def save(self, run: AttackRun) -> None:
-        ...
+    async def save(self, run: AttackRun) -> None: ...
 
     @abstractmethod
-    async def find_by_id(self, run_id: UUIDv7) -> AttackRun | None:
-        ...
+    async def find_by_id(self, run_id: UUIDv7) -> AttackRun | None: ...
 
     @abstractmethod
-    async def list(self, query: AttackRunQuery) -> PaginatedAttackRuns:
-        ...
+    async def list(self, query: AttackRunQuery) -> PaginatedAttackRuns: ...
 
     @abstractmethod
-    async def exists(self, run_id: UUIDv7) -> bool:
-        ...
+    async def exists(self, run_id: UUIDv7) -> bool: ...
 
     @abstractmethod
-    async def persist_progress(self, run: AttackRun) -> None:
+    async def persist_progress(self, run: AttackRun) -> None: ...
+
+    @abstractmethod
+    async def find_by_date_range(
+        self,
+        since: datetime,
+        until: datetime,
+    ) -> Sequence[AttackRun]:
+        """Find attack runs created within a date range."""
         ...

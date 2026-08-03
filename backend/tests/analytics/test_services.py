@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 from app.analytics.domain.entities import (
     TrendDirection,
     TrendPoint,
-    TrendSeries,
 )
 from app.analytics.services.trends_service import TrendsService
 

@@ -64,9 +64,7 @@ class SqlAlchemyRunLogRepository(RunLogRepository):
         level: str | None = None,
     ) -> int:
         stmt = (
-            select(func.count())
-            .select_from(RunLogModel)
-            .where(RunLogModel.run_id == str(run_id))
+            select(func.count()).select_from(RunLogModel).where(RunLogModel.run_id == str(run_id))
         )
         if level:
             stmt = stmt.where(RunLogModel.level == level.upper())

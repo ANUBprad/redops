@@ -6,6 +6,8 @@ domain repository contracts for unit and integration testing.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from app.evaluation.domain.contracts.evaluation_contracts import (
@@ -18,8 +20,6 @@ from app.evaluation.domain.contracts.evaluation_contracts import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from app.evaluation.domain.entities.evaluation_entities import (
         EvaluationItem,
         EvaluationRun,
@@ -92,6 +92,27 @@ class InMemoryRunRepository(RunRepository):
     async def persist_progress(self, run: EvaluationRun) -> None:
         """Persist progress-only updates."""
         self._runs[str(run.id)] = run
+
+    async def find_by_date_range(
+        self,
+        since: datetime,
+        until: datetime,
+        provider: str | None = None,
+        model: str | None = None,
+    ) -> Sequence[EvaluationRun]:
+        """Find runs created within a date range."""
+        result = []
+        for run in self._runs.values():
+            if run.created_at is None:
+                continue
+            if not (since <= run.created_at <= until):
+                continue
+            if provider is not None and run.profile.provider_name != provider:
+                continue
+            if model is not None and run.profile.model_id != model:
+                continue
+            result.append(run)
+        return result
 
 
 class InMemoryItemRepository(ItemRepository):

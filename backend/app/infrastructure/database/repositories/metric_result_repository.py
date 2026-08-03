@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Sequence
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,11 +14,9 @@ from app.evaluation.domain.contracts.evaluation_contracts import (
     PaginatedMetricResults,
 )
 from app.evaluation.metrics.domain import MetricAggregation, MetricResult
+from app.infrastructure.database.models.evaluation_run import EvaluationRunModel
 from app.infrastructure.database.models.metric_result import MetricResultModel
 from app.kernel.entities.base import UUIDv7
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
 
 class SqlAlchemyMetricResultRepository(MetricResultRepository):
@@ -39,6 +38,7 @@ class SqlAlchemyMetricResultRepository(MetricResultRepository):
             metadata=model.metadata_json or {},
             execution_time_ms=model.execution_time_ms,
             error=model.error,
+            created_at=model.created_at,
         )
 
     @staticmethod
@@ -148,3 +148,28 @@ class SqlAlchemyMetricResultRepository(MetricResultRepository):
         """Compute aggregated scores for a metric across all items in a run."""
         results = await self.find_by_run_id(run_id, metric_name=metric_name)
         return MetricAggregation.from_results(metric_name, tuple(results))
+
+    async def find_by_date_range(
+        self,
+        since: datetime,
+        until: datetime,
+        metric_name: str | None = None,
+        provider: str | None = None,
+        model: str | None = None,
+    ) -> Sequence[MetricResult]:
+        """Find metric results created within a date range."""
+        stmt = select(MetricResultModel).where(
+            MetricResultModel.created_at >= since,
+            MetricResultModel.created_at <= until,
+        )
+        if metric_name is not None:
+            stmt = stmt.where(MetricResultModel.metric_name == metric_name)
+        if provider is not None or model is not None:
+            run_subq = select(EvaluationRunModel.id)
+            if provider is not None:
+                run_subq = run_subq.where(EvaluationRunModel.provider == provider)
+            if model is not None:
+                run_subq = run_subq.where(EvaluationRunModel.model == model)
+            stmt = stmt.where(MetricResultModel.run_id.in_(run_subq))
+        result = await self._session.execute(stmt)
+        return [self._to_domain(m) for m in result.scalars().all()]

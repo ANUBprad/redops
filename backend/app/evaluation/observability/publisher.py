@@ -85,12 +85,24 @@ class ObservabilityEventPublisher:
 
         data: dict[str, Any] = {}
         for attr in (
-            "item_id", "item_index", "metric_name", "score",
-            "aggregated_score", "error_code", "error_message",
-            "reason", "failure_reason", "retry_count",
-            "tokens_used", "cost_usd", "duration_ms",
-            "timeout_seconds", "checkpoint_number", "items_completed",
-            "items_total", "force",
+            "item_id",
+            "item_index",
+            "metric_name",
+            "score",
+            "aggregated_score",
+            "error_code",
+            "error_message",
+            "reason",
+            "failure_reason",
+            "retry_count",
+            "tokens_used",
+            "cost_usd",
+            "duration_ms",
+            "timeout_seconds",
+            "checkpoint_number",
+            "items_completed",
+            "items_total",
+            "force",
         ):
             val = getattr(event, attr, None)
             if val is not None:

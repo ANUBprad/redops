@@ -1,0 +1,13 @@
+apiVersion: v2
+name: redops
+description: RedOps Eval - LLM Evaluation & Red Teaming Platform
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - llm
+  - evaluation
+  - red-team
+  - ai-safety
+maintainers:
+  - name: RedOps Team

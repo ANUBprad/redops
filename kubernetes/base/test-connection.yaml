@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redops-test-connection
+  namespace: redops
+spec:
+  containers:
+    - name: test
+      image: curlimages/curl:latest
+      command: ['curl']
+      args: ['http://redops-api.redops.svc.cluster.local/health']
+  restartPolicy: Never

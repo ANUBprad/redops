@@ -18,9 +18,7 @@ class AgentDefinitionModel(Base):
     """
 
     __tablename__ = "agent_definitions"
-    __table_args__ = (
-        UniqueConstraint("project_id", "name", name="uq_agent_project_name"),
-    )
+    __table_args__ = (UniqueConstraint("project_id", "name", name="uq_agent_project_name"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     project_id: Mapped[str] = mapped_column(String(36), index=True)

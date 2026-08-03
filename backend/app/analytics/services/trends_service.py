@@ -69,6 +69,8 @@ class TrendsService:
 
         buckets: dict[str, list[float]] = defaultdict(list)
         for result in results:
+            if result.created_at is None:
+                continue
             bucket_key = self._bucket_key(result.created_at, granularity)
             buckets[bucket_key].append(result.normalized_score)
 

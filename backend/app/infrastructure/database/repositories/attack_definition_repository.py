@@ -49,9 +49,7 @@ class SqlAlchemyAttackDefinitionRepository(AttackDefinitionRepository):
             raise ConflictError(f"Attack definition '{definition.name}' conflicts") from exc
 
     async def find_by_id(self, definition_id: UUIDv7) -> AttackDefinition | None:
-        stmt = select(AttackDefinitionModel).where(
-            AttackDefinitionModel.id == str(definition_id)
-        )
+        stmt = select(AttackDefinitionModel).where(AttackDefinitionModel.id == str(definition_id))
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         return self._to_domain(model) if model else None
@@ -97,9 +95,7 @@ class SqlAlchemyAttackDefinitionRepository(AttackDefinitionRepository):
         )
 
     async def delete(self, definition_id: UUIDv7) -> bool:
-        stmt = select(AttackDefinitionModel).where(
-            AttackDefinitionModel.id == str(definition_id)
-        )
+        stmt = select(AttackDefinitionModel).where(AttackDefinitionModel.id == str(definition_id))
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         if not model:
@@ -108,9 +104,7 @@ class SqlAlchemyAttackDefinitionRepository(AttackDefinitionRepository):
         return True
 
     async def exists(self, definition_id: UUIDv7) -> bool:
-        stmt = select(AttackDefinitionModel).where(
-            AttackDefinitionModel.id == str(definition_id)
-        )
+        stmt = select(AttackDefinitionModel).where(AttackDefinitionModel.id == str(definition_id))
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 

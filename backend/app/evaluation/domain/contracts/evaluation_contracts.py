@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from app.evaluation.domain.entities.evaluation_definition import Evaluation
     from app.evaluation.domain.entities.evaluation_entities import (
         EvaluationItem,
@@ -130,6 +130,11 @@ class EvaluationRepository(ABC):
         """Check whether an evaluation with the given name exists in a project."""
         ...
 
+    @abstractmethod
+    async def count(self) -> int:
+        """Return the total number of evaluations."""
+        ...
+
 
 class RunRepository(ABC):
     """Repository for evaluation run persistence."""
@@ -172,6 +177,17 @@ class RunRepository(ABC):
     @abstractmethod
     async def persist_progress(self, run: EvaluationRun) -> None:
         """Persist progress-only updates (counters, tokens, cost)."""
+        ...
+
+    @abstractmethod
+    async def find_by_date_range(
+        self,
+        since: datetime,
+        until: datetime,
+        provider: str | None = None,
+        model: str | None = None,
+    ) -> Sequence[EvaluationRun]:
+        """Find runs created within a date range, optionally filtered."""
         ...
 
 
@@ -307,4 +323,16 @@ class MetricResultRepository(ABC):
         metric_name: str,
     ) -> MetricAggregation:
         """Compute aggregated scores for a metric across all items in a run."""
+        ...
+
+    @abstractmethod
+    async def find_by_date_range(
+        self,
+        since: datetime,
+        until: datetime,
+        metric_name: str | None = None,
+        provider: str | None = None,
+        model: str | None = None,
+    ) -> Sequence[MetricResult]:
+        """Find metric results created within a date range."""
         ...

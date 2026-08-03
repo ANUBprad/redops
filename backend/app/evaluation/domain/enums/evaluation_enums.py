@@ -124,7 +124,7 @@ class FailureReason(Enum):
     AUTHENTICATION_FAILED = "authentication_failed"
     INVALID_MODEL = "invalid_model"
     CONTEXT_WINDOW_EXCEEDED = "context_window_exceeded"
-    TOKEN_LIMIT_EXCEEDED = "token_limit_exceeded"  # noqa: S105
+    TOKEN_LIMIT_EXCEEDED = "token_limit_exceeded"
     INVALID_RESPONSE = "invalid_response"
     VALIDATION_ERROR = "validation_error"
     METRIC_COMPUTATION_ERROR = "metric_computation_error"

@@ -130,9 +130,7 @@ class UpdateAgentHandler:
             description=AgentDescription(value=command.description)
             if command.description is not None
             else None,
-            agent_type=AgentType(command.agent_type)
-            if command.agent_type is not None
-            else None,
+            agent_type=AgentType(command.agent_type) if command.agent_type is not None else None,
             model=command.model,
             provider=command.provider,
             capabilities=command.capabilities,

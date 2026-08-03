@@ -82,14 +82,18 @@ class TestActivities:
         mock_repo = MagicMock()
         run = _mock_run("created")
 
-        with patch(
-            "app.evaluation.temporal.activities._get_session",
-        ) as mock_ctx, patch(
-            "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
-            return_value=mock_repo,
-        ), patch(
-            "app.evaluation.temporal.activities.CreateEvaluationRunHandler",
-        ) as MockHandler:
+        with (
+            patch(
+                "app.evaluation.temporal.activities._get_session",
+            ) as mock_ctx,
+            patch(
+                "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
+                return_value=mock_repo,
+            ),
+            patch(
+                "app.evaluation.temporal.activities.CreateEvaluationRunHandler",
+            ) as MockHandler,
+        ):
             mock_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
             MockHandler.return_value.handle = AsyncMock(return_value=run)
@@ -114,14 +118,18 @@ class TestActivities:
         mock_repo = MagicMock()
         run = _mock_run("queued")
 
-        with patch(
-            "app.evaluation.temporal.activities._get_session",
-        ) as mock_ctx, patch(
-            "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
-            return_value=mock_repo,
-        ), patch(
-            "app.evaluation.temporal.activities.QueueEvaluationRunHandler",
-        ) as MockHandler:
+        with (
+            patch(
+                "app.evaluation.temporal.activities._get_session",
+            ) as mock_ctx,
+            patch(
+                "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
+                return_value=mock_repo,
+            ),
+            patch(
+                "app.evaluation.temporal.activities.QueueEvaluationRunHandler",
+            ) as MockHandler,
+        ):
             mock_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
             MockHandler.return_value.handle = AsyncMock(return_value=run)
@@ -137,14 +145,18 @@ class TestActivities:
         mock_repo = MagicMock()
         run = _mock_run("running")
 
-        with patch(
-            "app.evaluation.temporal.activities._get_session",
-        ) as mock_ctx, patch(
-            "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
-            return_value=mock_repo,
-        ), patch(
-            "app.evaluation.temporal.activities.StartEvaluationRunHandler",
-        ) as MockHandler:
+        with (
+            patch(
+                "app.evaluation.temporal.activities._get_session",
+            ) as mock_ctx,
+            patch(
+                "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
+                return_value=mock_repo,
+            ),
+            patch(
+                "app.evaluation.temporal.activities.StartEvaluationRunHandler",
+            ) as MockHandler,
+        ):
             mock_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
             MockHandler.return_value.handle = AsyncMock(return_value=run)
@@ -162,14 +174,18 @@ class TestActivities:
         mock_repo = MagicMock()
         run = _mock_run("running")
 
-        with patch(
-            "app.evaluation.temporal.activities._get_session",
-        ) as mock_ctx, patch(
-            "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
-            return_value=mock_repo,
-        ), patch(
-            "app.evaluation.temporal.activities.UpdateRunProgressHandler",
-        ) as MockHandler:
+        with (
+            patch(
+                "app.evaluation.temporal.activities._get_session",
+            ) as mock_ctx,
+            patch(
+                "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
+                return_value=mock_repo,
+            ),
+            patch(
+                "app.evaluation.temporal.activities.UpdateRunProgressHandler",
+            ) as MockHandler,
+        ):
             mock_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
             MockHandler.return_value.handle = AsyncMock(return_value=run)
@@ -187,14 +203,18 @@ class TestActivities:
         mock_repo = MagicMock()
         run = _mock_run("completed")
 
-        with patch(
-            "app.evaluation.temporal.activities._get_session",
-        ) as mock_ctx, patch(
-            "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
-            return_value=mock_repo,
-        ), patch(
-            "app.evaluation.temporal.activities.CompleteEvaluationRunHandler",
-        ) as MockHandler:
+        with (
+            patch(
+                "app.evaluation.temporal.activities._get_session",
+            ) as mock_ctx,
+            patch(
+                "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
+                return_value=mock_repo,
+            ),
+            patch(
+                "app.evaluation.temporal.activities.CompleteEvaluationRunHandler",
+            ) as MockHandler,
+        ):
             mock_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
             MockHandler.return_value.handle = AsyncMock(return_value=run)
@@ -210,14 +230,18 @@ class TestActivities:
         mock_repo = MagicMock()
         run = _mock_run("failed")
 
-        with patch(
-            "app.evaluation.temporal.activities._get_session",
-        ) as mock_ctx, patch(
-            "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
-            return_value=mock_repo,
-        ), patch(
-            "app.evaluation.temporal.activities.FailEvaluationRunHandler",
-        ) as MockHandler:
+        with (
+            patch(
+                "app.evaluation.temporal.activities._get_session",
+            ) as mock_ctx,
+            patch(
+                "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
+                return_value=mock_repo,
+            ),
+            patch(
+                "app.evaluation.temporal.activities.FailEvaluationRunHandler",
+            ) as MockHandler,
+        ):
             mock_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
             MockHandler.return_value.handle = AsyncMock(return_value=run)
@@ -235,14 +259,18 @@ class TestActivities:
         mock_repo = MagicMock()
         run = _mock_run("cancelled")
 
-        with patch(
-            "app.evaluation.temporal.activities._get_session",
-        ) as mock_ctx, patch(
-            "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
-            return_value=mock_repo,
-        ), patch(
-            "app.evaluation.temporal.activities.CancelEvaluationRunHandler",
-        ) as MockHandler:
+        with (
+            patch(
+                "app.evaluation.temporal.activities._get_session",
+            ) as mock_ctx,
+            patch(
+                "app.evaluation.temporal.activities.SqlAlchemyEvaluationRunRepository",
+                return_value=mock_repo,
+            ),
+            patch(
+                "app.evaluation.temporal.activities.CancelEvaluationRunHandler",
+            ) as MockHandler,
+        ):
             mock_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
             MockHandler.return_value.handle = AsyncMock(return_value=run)

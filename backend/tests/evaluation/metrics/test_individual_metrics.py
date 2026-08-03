@@ -246,7 +246,7 @@ class TestJsonValidityMetric:
         """Valid JSON array scores 1.0."""
         metric = JsonValidityMetric()
         result = await metric.evaluate(
-            MetricInput(response='[1, 2, 3]'),
+            MetricInput(response="[1, 2, 3]"),
         )
         assert result.is_success
         assert result.normalized_score == 1.0
@@ -281,9 +281,7 @@ class TestToolCallCorrectnessMetric:
         metric = ToolCallCorrectnessMetric()
         result = await metric.evaluate(
             MetricInput(
-                tool_calls=(
-                    {"name": "search", "arguments": {"query": "test"}},
-                ),
+                tool_calls=({"name": "search", "arguments": {"query": "test"}},),
             ),
         )
         assert result.is_success
@@ -317,9 +315,7 @@ class TestToolCallCorrectnessMetric:
         metric = ToolCallCorrectnessMetric()
         result = await metric.evaluate(
             MetricInput(
-                tool_calls=(
-                    {"name": "search", "arguments": '{"query": "test"}'},
-                ),
+                tool_calls=({"name": "search", "arguments": '{"query": "test"}'},),
             ),
         )
         assert result.is_success

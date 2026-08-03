@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum, unique
 from typing import Any
 
@@ -84,6 +85,7 @@ class MetricResult:
     metadata: dict[str, Any] = field(default_factory=dict)
     execution_time_ms: int = 0
     error: str | None = None
+    created_at: datetime | None = None
 
     @property
     def is_success(self) -> bool:

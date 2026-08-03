@@ -18,6 +18,7 @@ if TYPE_CHECKING:
         MetricResultRepository,
         RunRepository,
     )
+    from app.evaluation.domain.entities.evaluation_entities import EvaluationRun
 
 
 class ComparisonService:
@@ -52,13 +53,13 @@ class ComparisonService:
             r
             for r in runs
             if not entity_ids
-            or (entity_type == "model" and r.model in entity_ids)
-            or (entity_type == "provider" and r.provider in entity_ids)
+            or (entity_type == "model" and r.profile.model_id in entity_ids)
+            or (entity_type == "provider" and r.profile.provider_name in entity_ids)
         ]
 
-        grouped: dict[str, list[object]] = defaultdict(list)
+        grouped: dict[str, list[EvaluationRun]] = defaultdict(list)
         for run in filtered_runs:
-            key = run.model if entity_type == "model" else run.provider
+            key = run.profile.model_id if entity_type == "model" else run.profile.provider_name
             grouped[key].append(run)
 
         compared_items = tuple(
@@ -84,7 +85,7 @@ class ComparisonService:
 
     def _compute_comparison_metrics(
         self,
-        grouped: dict[str, list[object]],
+        grouped: dict[str, list[EvaluationRun]],
         entity_type: str,
     ) -> tuple[ComparisonMetric, ...]:
         """Compute comparison metrics across entities."""

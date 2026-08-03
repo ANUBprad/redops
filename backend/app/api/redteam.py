@@ -174,6 +174,7 @@ def _dt_str(dt: datetime) -> str:
 
 # --- Attack Definition Endpoints ---
 
+
 @redteam_router.post("/definitions", response_model=AttackDefinitionResponse, status_code=201)
 async def create_attack_definition(
     body: CreateAttackDefinitionRequest,
@@ -289,7 +290,9 @@ async def delete_attack_definition(
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
 
 
-@redteam_router.post("/definitions/{definition_id}/activate", response_model=AttackDefinitionResponse)
+@redteam_router.post(
+    "/definitions/{definition_id}/activate", response_model=AttackDefinitionResponse
+)
 async def activate_attack_definition(
     definition_id: str,
     current_user: CurrentUser = Depends(get_current_user),
@@ -305,7 +308,9 @@ async def activate_attack_definition(
     return _definition_to_response(definition)
 
 
-@redteam_router.post("/definitions/{definition_id}/archive", response_model=AttackDefinitionResponse)
+@redteam_router.post(
+    "/definitions/{definition_id}/archive", response_model=AttackDefinitionResponse
+)
 async def archive_attack_definition(
     definition_id: str,
     current_user: CurrentUser = Depends(get_current_user),
@@ -322,6 +327,7 @@ async def archive_attack_definition(
 
 
 # --- Attack Run Endpoints ---
+
 
 @redteam_router.post("/runs", response_model=AttackRunResponse, status_code=201)
 async def create_attack_run(

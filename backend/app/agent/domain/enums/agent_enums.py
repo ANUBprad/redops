@@ -29,7 +29,6 @@ _EDITABLE_STATES: frozenset[AgentStatus] = frozenset(
     {
         AgentStatus.ACTIVE,
         AgentStatus.INACTIVE,
-        AgentStatus.ERROR,
     }
 )
 

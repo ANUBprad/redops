@@ -83,11 +83,7 @@ class CorrectnessMetric(Metric):
 
         recall = 0.0 if not reference_tokens else common / len(reference_tokens)
 
-        f1 = (
-            0.0
-            if precision + recall == 0
-            else 2 * (precision * recall) / (precision + recall)
-        )
+        f1 = 0.0 if precision + recall == 0 else 2 * (precision * recall) / (precision + recall)
 
         return MetricResult(
             metric_name="correctness",

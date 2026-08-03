@@ -233,9 +233,7 @@ class SqlAlchemyAgentDefinitionRepository(AgentDefinitionRepository):
             id=str(agent.id),
             project_id=agent.project_id,
             name=str(agent.name.value),
-            description=agent.description.value
-            if agent.description is not None
-            else None,
+            description=agent.description.value if agent.description is not None else None,
             agent_type=agent.agent_type.value,
             model=agent.model,
             provider=agent.provider,
@@ -272,9 +270,7 @@ class SqlAlchemyAgentDefinitionRepository(AgentDefinitionRepository):
             provider=model.provider,
             capabilities=tuple(model.capabilities),
             config=model.config,
-            endpoint=AgentEndpoint(value=model.endpoint)
-            if model.endpoint is not None
-            else None,
+            endpoint=AgentEndpoint(value=model.endpoint) if model.endpoint is not None else None,
             status=AgentStatus(model.status),
             created_by=model.created_by,
         )

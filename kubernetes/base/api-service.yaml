@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redops-api
+  namespace: redops
+  labels:
+    app: redops-api
+spec:
+  selector:
+    app: redops-api
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+  type: ClusterIP

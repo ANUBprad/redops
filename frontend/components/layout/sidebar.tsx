@@ -7,8 +7,11 @@ import {
   Shield,
   Target,
   TrendingUp,
-  Trophy,
-  GitCompare,
+  Key,
+  Bell,
+  ClipboardList,
+  Calendar,
+  Building2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -26,16 +29,17 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
+  { label: "Organizations", href: "/organizations", icon: <Building2 className="h-5 w-5" /> },
   { label: "Projects", href: "/projects", icon: <FileText className="h-5 w-5" /> },
   { label: "Evaluations", href: "/evaluations", icon: <Target className="h-5 w-5" /> },
   { label: "Runs", href: "/runs", icon: <PlayCircle className="h-5 w-5" /> },
   { label: "Metrics", href: "/metrics", icon: <BarChart3 className="h-5 w-5" /> },
   { label: "Red Team", href: "/redteam/definitions", icon: <Shield className="h-5 w-5" /> },
   { label: "Analytics", href: "/analytics", icon: <TrendingUp className="h-5 w-5" /> },
-  { label: "Comparisons", href: "/analytics/comparisons", icon: <GitCompare className="h-5 w-5" /> },
-  { label: "Leaderboards", href: "/analytics/leaderboards", icon: <Trophy className="h-5 w-5" /> },
-  { label: "Trends", href: "/analytics/trends", icon: <BarChart3 className="h-5 w-5" /> },
-  { label: "Reports", href: "/analytics/reports", icon: <FileText className="h-5 w-5" /> },
+  { label: "Schedules", href: "/schedules", icon: <Calendar className="h-5 w-5" /> },
+  { label: "API Keys", href: "/api-keys", icon: <Key className="h-5 w-5" /> },
+  { label: "Notifications", href: "/notifications", icon: <Bell className="h-5 w-5" /> },
+  { label: "Audit Logs", href: "/audit", icon: <ClipboardList className="h-5 w-5" /> },
   { label: "Settings", href: "/settings", icon: <Settings className="h-5 w-5" /> },
 ];
 

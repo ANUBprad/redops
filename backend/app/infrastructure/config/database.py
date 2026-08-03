@@ -20,7 +20,7 @@ class DatabaseConfiguration(BaseConfiguration):
     host: str = "localhost"
     port: int = 5432
     user: str = "redops"
-    password: str = "redops"  # noqa: S105
+    password: str = "redops"
     database: str = "redops"
     min_pool_size: int = 5
     max_pool_size: int = 20

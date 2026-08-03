@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import func, select
@@ -221,6 +223,25 @@ class SqlAlchemyEvaluationRunRepository(RunRepository):
         """
         model = self._to_model(run)
         await self._session.merge(model)
+
+    async def find_by_date_range(
+        self,
+        since: datetime,
+        until: datetime,
+        provider: str | None = None,
+        model: str | None = None,
+    ) -> Sequence[EvaluationRun]:
+        """Find runs created within a date range, optionally filtered."""
+        stmt = select(EvaluationRunModel).where(
+            EvaluationRunModel.created_at >= since,
+            EvaluationRunModel.created_at <= until,
+        )
+        if provider is not None:
+            stmt = stmt.where(EvaluationRunModel.provider == provider)
+        if model is not None:
+            stmt = stmt.where(EvaluationRunModel.model == model)
+        result = await self._session.execute(stmt)
+        return [self._to_domain(m) for m in result.scalars().all()]
 
     @staticmethod
     def _to_model(run: EvaluationRun) -> EvaluationRunModel:

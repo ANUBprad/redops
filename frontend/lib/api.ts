@@ -245,4 +245,79 @@ export const api = {
     const query = qs.toString() ? `?${qs.toString()}` : "";
     return request<unknown>(`/analytics/reports/generate${query}`);
   },
+
+  // ─── Auth ────────────────────────────────────────────────────
+  login: (data: { email: string; password: string }) =>
+    request<{ access_token: string; refresh_token: string; expires_in: number }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  register: (data: { email: string; display_name: string; password: string }) =>
+    request<{ access_token: string; refresh_token: string; expires_in: number }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getMe: () => request<unknown>("/auth/me"),
+
+  // ─── Organizations ───────────────────────────────────────────
+  listOrganizations: () => request<unknown[]>("/organizations"),
+  createOrganization: (data: { name: string; slug: string; description?: string }) =>
+    request<unknown>("/organizations", { method: "POST", body: JSON.stringify(data) }),
+  getOrganization: (id: UUID) => request<unknown>(`/organizations/${id}`),
+  updateOrganization: (id: UUID, data: Record<string, unknown>) =>
+    request<unknown>(`/organizations/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  listMembers: (orgId: UUID) => request<unknown[]>(`/organizations/${orgId}/members`),
+  inviteMember: (orgId: UUID, data: { email: string; role: string }) =>
+    request<unknown>(`/organizations/${orgId}/members`, { method: "POST", body: JSON.stringify(data) }),
+  changeMemberRole: (orgId: UUID, userId: UUID, data: { role: string }) =>
+    request<unknown>(`/organizations/${orgId}/members/${userId}/role`, { method: "POST", body: JSON.stringify(data) }),
+  removeMember: (orgId: UUID, userId: UUID) =>
+    request<void>(`/organizations/${orgId}/members/${userId}`, { method: "DELETE" }),
+  listInvitations: (orgId: UUID) => request<unknown[]>(`/organizations/${orgId}/invitations`),
+
+  // ─── Projects ────────────────────────────────────────────────
+  listProjects: (orgId: UUID) => request<unknown[]>(`/orgs/${orgId}/projects`),
+  createProject: (orgId: UUID, data: { name: string; description?: string }) =>
+    request<unknown>(`/orgs/${orgId}/projects`, { method: "POST", body: JSON.stringify(data) }),
+  getProject: (orgId: UUID, projectId: UUID) => request<unknown>(`/orgs/${orgId}/projects/${projectId}`),
+
+  // ─── API Keys ────────────────────────────────────────────────
+  listApiKeys: () => request<unknown[]>("/api-keys"),
+  createApiKey: (data: { name: string; scopes?: string[]; expires_in_days?: number }) =>
+    request<unknown>("/api-keys", { method: "POST", body: JSON.stringify(data) }),
+  revokeApiKey: (id: UUID) => request<unknown>(`/api-keys/${id}/revoke`, { method: "POST" }),
+  rotateApiKey: (id: UUID) => request<unknown>(`/api-keys/${id}/rotate`, { method: "POST" }),
+  deleteApiKey: (id: UUID) => request<void>(`/api-keys/${id}`, { method: "DELETE" }),
+
+  // ─── Schedules ───────────────────────────────────────────────
+  listSchedules: () => request<unknown[]>("/schedules"),
+  createSchedule: (data: { name: string; schedule_type: string; cron_expression: string; task_config?: Record<string, unknown>; project_id?: string; timezone?: string }) =>
+    request<unknown>("/schedules", { method: "POST", body: JSON.stringify(data) }),
+  getSchedule: (id: UUID) => request<unknown>(`/schedules/${id}`),
+  pauseSchedule: (id: UUID) => request<unknown>(`/schedules/${id}/pause`, { method: "POST" }),
+  resumeSchedule: (id: UUID) => request<unknown>(`/schedules/${id}/resume`, { method: "POST" }),
+  deleteSchedule: (id: UUID) => request<void>(`/schedules/${id}`, { method: "DELETE" }),
+
+  // ─── Notifications ───────────────────────────────────────────
+  listNotifications: (orgId: UUID, params?: { offset?: number; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.offset) qs.set("offset", String(params.offset));
+    if (params?.limit) qs.set("limit", String(params.limit));
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<{ items: unknown[]; total: number }>(`/notifications/${orgId}${query}`);
+  },
+  sendNotification: (data: { channel: string; event: string; title: string; message: string; target?: string }) =>
+    request<unknown>("/notifications/send", { method: "POST", body: JSON.stringify(data) }),
+
+  // ─── Audit Logs ──────────────────────────────────────────────
+  listAuditLogs: (orgId: UUID, params?: { action?: string; resource_type?: string; user_id?: string; offset?: number; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.action) qs.set("action", params.action);
+    if (params?.resource_type) qs.set("resource_type", params.resource_type);
+    if (params?.user_id) qs.set("user_id", params.user_id);
+    if (params?.offset) qs.set("offset", String(params.offset));
+    if (params?.limit) qs.set("limit", String(params.limit));
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<{ items: unknown[]; total: number }>(`/audit/${orgId}${query}`);
+  },
 };

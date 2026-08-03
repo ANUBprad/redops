@@ -224,6 +224,12 @@ class SqlAlchemyEvaluationRepository(EvaluationRepository):
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
+    async def count(self) -> int:
+        """Return the total number of evaluations."""
+        stmt = select(func.count()).select_from(EvaluationModel)
+        result = await self._session.execute(stmt)
+        return result.scalar_one()
+
     @staticmethod
     def _to_model(evaluation: Evaluation) -> EvaluationModel:
         """Convert a domain Evaluation to an ORM model.

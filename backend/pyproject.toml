@@ -7,6 +7,7 @@ dependencies = [
     "fastapi[standard]>=0.115.0",
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
+    "pydantic[email]>=2.0",
     "sqlalchemy[asyncio]>=2.0",
     "asyncpg>=0.29",
     "alembic>=1.13",
@@ -16,9 +17,14 @@ dependencies = [
     "httpx>=0.27",
     "pyjwt>=2.8",
     "cryptography>=42.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-multipart>=0.0.9",
     "uvicorn[standard]>=0.30",
     "openai>=1.0",
     "anthropic>=0.20",
+    "opentelemetry-api>=1.25",
+    "opentelemetry-sdk>=1.25",
+    "prometheus-client>=0.20",
 ]
 
 [tool.setuptools.packages.find]
@@ -68,12 +74,14 @@ ignore = [
     "UP047",   # non-pep695-generic-function
     "UP042",   # replace-str-enum
     "E501",    # line-too-long (handled by line-length)
+    "B008",    # fastapi-depends-default (standard FastAPI DI pattern)
     "B024",    # abstract-base-class-without-abstract-method
     "BLE001",  # blind-except (used in broad exception handlers)
     "SIM105",  # suppressible-exception
     "SIM102",  # collapsible-if
     "PERF401", # manual-list-comprehension
     "S104",    # hardcoded-bind-all-interfaces
+    "S105",    # hardcoded-password-positive (false positives in tests/config)
     "S106",    # hardcoded-password-func-arg
     "S108",    # hardcoded-temp-file
     "S110",    # try-except-pass (intentional in some patterns)
@@ -109,7 +117,12 @@ ignore = [
     "PGH",     # blanket-type-ignore
 ]
 "tests/evaluation/orchestration/conftest.py" = ["F821"]
-"app/api/*" = ["B008"]
+"app/rbac/*" = ["B008"]
+"app/apikeys/*" = ["B008"]
+"app/scheduling/*" = ["B008"]
+"app/project/*" = ["B008"]
+"app/audit/*" = ["B008"]
+"app/notification/*" = ["B008"]
 
 [tool.mypy]
 strict = true
@@ -124,6 +137,10 @@ module = [
     "sqlalchemy.*",
     "alembic.*",
     "asyncpg.*",
+    "passlib.*",
+    "jwt.*",
+    "pyjwt.*",
+    "python_multipart.*",
 ]
 ignore_missing_imports = true
 

@@ -19,6 +19,11 @@ from app.infrastructure.composition.bootstrap import Bootstrap
 from app.infrastructure.composition.container import InfrastructureContainer
 from app.infrastructure.database.engine import DatabaseEngine
 from app.infrastructure.event_bus.redis_event_bus import RedisStreamsEventBus
+from app.infrastructure.middleware.security import (
+    RateLimitMiddleware,
+    RequestIdMiddleware,
+    SecurityHeadersMiddleware,
+)
 from app.infrastructure.observability.context import (
     CorrelationIdMiddleware,
     RequestContextMiddleware,
@@ -90,6 +95,9 @@ def create_application() -> FastAPI:
 
     app.add_middleware(CorrelationIdMiddleware)
     app.add_middleware(RequestContextMiddleware)
+    app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(RateLimitMiddleware, max_requests=200, window_seconds=60)
 
     app.include_router(api_router)
 

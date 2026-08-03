@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from app.analytics.application.commands import (
+    ExportReportQuery,
+    GenerateReportQuery,
     GetCostAnalysisQuery,
     GetDashboardSummaryQuery,
     GetHistoricalTrendsQuery,
@@ -10,8 +12,6 @@ from app.analytics.application.commands import (
     GetLeaderboardQuery,
     GetModelComparisonQuery,
     GetSafetyTrendQuery,
-    ExportReportQuery,
-    GenerateReportQuery,
 )
 
 

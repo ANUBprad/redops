@@ -395,3 +395,118 @@ export interface GeneratedReport {
   statistics: Record<string, number>;
   sections: ReportSection[];
 }
+
+// ─── Phase 7: Enterprise Platform Types ────────────────────────
+
+export interface Organization {
+  id: UUID;
+  name: string;
+  slug: string;
+  description: string | null;
+  owner_id: string;
+  is_active: boolean;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Membership {
+  id: UUID;
+  user_id: string;
+  organization_id: string;
+  role: string;
+  invited_by: string | null;
+  is_active: boolean;
+  joined_at: string;
+  created_at: string;
+}
+
+export interface Invitation {
+  id: UUID;
+  email: string;
+  organization_id: string;
+  role: string;
+  invited_by: string;
+  status: string;
+  expires_at: string;
+  created_at: string;
+}
+
+export interface Project {
+  id: UUID;
+  name: string;
+  description: string | null;
+  organization_id: string;
+  created_by: string | null;
+  is_active: boolean;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiKeyInfo {
+  id: UUID;
+  name: string;
+  prefix: string;
+  user_id: string;
+  organization_id: string | null;
+  scopes: string[];
+  expires_at: string | null;
+  last_used_at: string | null;
+  usage_count: number;
+  is_active: boolean;
+  rotated_from: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScheduleInfo {
+  id: UUID;
+  name: string;
+  schedule_type: string;
+  cron_expression: string;
+  task_config: Record<string, unknown>;
+  organization_id: string | null;
+  project_id: string | null;
+  created_by: string | null;
+  timezone: string;
+  status: string;
+  last_run_at: string | null;
+  next_run_at: string | null;
+  run_count: number;
+  failure_count: number;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuditLogEntry {
+  log_id: UUID;
+  user_id: string;
+  user_email: string;
+  action: string;
+  resource_type: string;
+  resource_id: string;
+  organization_id: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  metadata: Record<string, unknown>;
+  timestamp: string;
+  request_id: string | null;
+}
+
+export interface NotificationEntry {
+  notification_id: UUID;
+  organization_id: string;
+  user_id: string;
+  channel: string;
+  event: string;
+  title: string;
+  message: string;
+  metadata: Record<string, unknown>;
+  status: string;
+  target: string;
+  error_message: string | null;
+  retry_count: number;
+  timestamp: string;
+}

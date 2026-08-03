@@ -5,6 +5,16 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.domain.entities import (
+    ComparisonResult,
+    CostAnalysis,
+    DashboardSummary,
+    GeneratedReport,
+    LatencyAnalysis,
+    Leaderboard,
+    SafetyTrend,
+    TrendSeries,
+)
 from app.analytics.schemas.responses import (
     ActivityEntryResponse,
     ComparedItemResponse,
@@ -27,16 +37,6 @@ from app.analytics.schemas.responses import (
     TrendPointResponse,
     TrendSeriesResponse,
 )
-from app.analytics.domain.entities import (
-    ComparisonResult,
-    CostAnalysis,
-    DashboardSummary,
-    GeneratedReport,
-    LatencyAnalysis,
-    Leaderboard,
-    SafetyTrend,
-    TrendSeries,
-)
 from app.core.dependencies import CurrentUser, get_current_user, get_db_session
 from app.infrastructure.database.repositories.attack_run_repository import (
     SqlAlchemyAttackRunRepository,
@@ -55,14 +55,21 @@ from app.kernel.exceptions.errors import BaseError
 analytics_router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 
-def _get_repositories(session: AsyncSession) -> dict[str, object]:
+def _get_repositories(
+    session: AsyncSession,
+) -> tuple[
+    SqlAlchemyEvaluationRepository,
+    SqlAlchemyEvaluationRunRepository,
+    SqlAlchemyMetricResultRepository,
+    SqlAlchemyAttackRunRepository,
+]:
     """Create repositories from the database session."""
-    return {
-        "evaluation": SqlAlchemyEvaluationRepository(session),
-        "run": SqlAlchemyEvaluationRunRepository(session),
-        "metric": SqlAlchemyMetricResultRepository(session),
-        "attack_run": SqlAlchemyAttackRunRepository(session),
-    }
+    return (
+        SqlAlchemyEvaluationRepository(session),
+        SqlAlchemyEvaluationRunRepository(session),
+        SqlAlchemyMetricResultRepository(session),
+        SqlAlchemyAttackRunRepository(session),
+    )
 
 
 def _dashboard_to_response(summary: DashboardSummary) -> DashboardSummaryResponse:
@@ -286,14 +293,14 @@ async def get_dashboard_summary(
     session: AsyncSession = Depends(get_db_session),
 ) -> DashboardSummaryResponse:
     """Get the dashboard summary with aggregated statistics."""
-    repos = _get_repositories(session)
+    eval_repo, run_repo, metric_repo, attack_run_repo = _get_repositories(session)
     from app.analytics.services.dashboard_service import DashboardService
 
     service = DashboardService(
-        evaluation_repo=repos["evaluation"],  # type: ignore[arg-type]
-        run_repo=repos["run"],  # type: ignore[arg-type]
-        metric_repo=repos["metric"],  # type: ignore[arg-type]
-        attack_run_repo=repos["attack_run"],  # type: ignore[arg-type]
+        evaluation_repo=eval_repo,
+        run_repo=run_repo,
+        metric_repo=metric_repo,
+        attack_run_repo=attack_run_repo,
     )
     try:
         summary = await service.get_summary(project_id=project_id, days=days)
@@ -314,12 +321,12 @@ async def get_historical_trends(
     session: AsyncSession = Depends(get_db_session),
 ) -> TrendSeriesResponse:
     """Get historical metric trends."""
-    repos = _get_repositories(session)
+    _, run_repo, metric_repo, _ = _get_repositories(session)
     from app.analytics.services.trends_service import TrendsService
 
     service = TrendsService(
-        run_repo=repos["run"],  # type: ignore[arg-type]
-        metric_repo=repos["metric"],  # type: ignore[arg-type]
+        run_repo=run_repo,
+        metric_repo=metric_repo,
     )
     try:
         trend = await service.get_metric_trend(
@@ -345,10 +352,10 @@ async def get_cost_analysis(
     session: AsyncSession = Depends(get_db_session),
 ) -> CostAnalysisResponse:
     """Get cost analysis."""
-    repos = _get_repositories(session)
+    _, run_repo, _, _ = _get_repositories(session)
     from app.analytics.services.cost_service import CostService
 
-    service = CostService(run_repo=repos["run"])  # type: ignore[arg-type]
+    service = CostService(run_repo=run_repo)
     try:
         cost = await service.get_analysis(
             project_id=project_id,
@@ -371,10 +378,10 @@ async def get_latency_analysis(
     session: AsyncSession = Depends(get_db_session),
 ) -> LatencyAnalysisResponse:
     """Get latency analysis."""
-    repos = _get_repositories(session)
+    _, run_repo, _, _ = _get_repositories(session)
     from app.analytics.services.latency_service import LatencyService
 
-    service = LatencyService(run_repo=repos["run"])  # type: ignore[arg-type]
+    service = LatencyService(run_repo=run_repo)
     try:
         latency = await service.get_analysis(
             project_id=project_id,
@@ -396,10 +403,10 @@ async def get_safety_trend(
     session: AsyncSession = Depends(get_db_session),
 ) -> SafetyTrendResponse:
     """Get safety trend analysis."""
-    repos = _get_repositories(session)
+    _, _, _, attack_run_repo = _get_repositories(session)
     from app.analytics.services.safety_service import SafetyService
 
-    service = SafetyService(attack_run_repo=repos["attack_run"])  # type: ignore[arg-type]
+    service = SafetyService(attack_run_repo=attack_run_repo)
     try:
         safety = await service.get_safety_trend(
             project_id=project_id,
@@ -422,10 +429,10 @@ async def get_leaderboard(
     session: AsyncSession = Depends(get_db_session),
 ) -> LeaderboardResponse:
     """Get a leaderboard ranking."""
-    repos = _get_repositories(session)
+    _, run_repo, _, _ = _get_repositories(session)
     from app.analytics.services.leaderboard_service import LeaderboardService
 
-    service = LeaderboardService(run_repo=repos["run"])  # type: ignore[arg-type]
+    service = LeaderboardService(run_repo=run_repo)
     try:
         leaderboard = await service.get_leaderboard(
             ranking_by=ranking_by,
@@ -449,12 +456,12 @@ async def get_model_comparison(
     session: AsyncSession = Depends(get_db_session),
 ) -> ComparisonResultResponse:
     """Compare models or providers."""
-    repos = _get_repositories(session)
+    _, run_repo, metric_repo, _ = _get_repositories(session)
     from app.analytics.services.comparison_service import ComparisonService
 
     service = ComparisonService(
-        run_repo=repos["run"],  # type: ignore[arg-type]
-        metric_repo=repos["metric"],  # type: ignore[arg-type]
+        run_repo=run_repo,
+        metric_repo=metric_repo,
     )
     ids = tuple(i.strip() for i in entity_ids.split(",") if i.strip()) if entity_ids else ()
     try:
@@ -480,7 +487,7 @@ async def generate_report(
     session: AsyncSession = Depends(get_db_session),
 ) -> GeneratedReportResponse:
     """Generate an analytics report."""
-    repos = _get_repositories(session)
+    eval_repo, run_repo, metric_repo, attack_run_repo = _get_repositories(session)
     from app.analytics.services.comparison_service import ComparisonService
     from app.analytics.services.cost_service import CostService
     from app.analytics.services.dashboard_service import DashboardService
@@ -490,21 +497,21 @@ async def generate_report(
     from app.analytics.services.trends_service import TrendsService
 
     dashboard_svc = DashboardService(
-        evaluation_repo=repos["evaluation"],  # type: ignore[arg-type]
-        run_repo=repos["run"],  # type: ignore[arg-type]
-        metric_repo=repos["metric"],  # type: ignore[arg-type]
-        attack_run_repo=repos["attack_run"],  # type: ignore[arg-type]
+        evaluation_repo=eval_repo,
+        run_repo=run_repo,
+        metric_repo=metric_repo,
+        attack_run_repo=attack_run_repo,
     )
     trends_svc = TrendsService(
-        run_repo=repos["run"],  # type: ignore[arg-type]
-        metric_repo=repos["metric"],  # type: ignore[arg-type]
+        run_repo=run_repo,
+        metric_repo=metric_repo,
     )
-    cost_svc = CostService(run_repo=repos["run"])  # type: ignore[arg-type]
-    latency_svc = LatencyService(run_repo=repos["run"])  # type: ignore[arg-type]
-    safety_svc = SafetyService(attack_run_repo=repos["attack_run"])  # type: ignore[arg-type]
+    cost_svc = CostService(run_repo=run_repo)
+    latency_svc = LatencyService(run_repo=run_repo)
+    safety_svc = SafetyService(attack_run_repo=attack_run_repo)
     comparison_svc = ComparisonService(
-        run_repo=repos["run"],  # type: ignore[arg-type]
-        metric_repo=repos["metric"],  # type: ignore[arg-type]
+        run_repo=run_repo,
+        metric_repo=metric_repo,
     )
 
     report_svc = ReportService(

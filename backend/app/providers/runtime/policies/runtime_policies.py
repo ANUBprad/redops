@@ -143,7 +143,7 @@ class RateLimitAlgorithm(Enum):
     """Rate limiting algorithm."""
 
     SLIDING_WINDOW = "sliding_window"
-    TOKEN_BUCKET = "token_bucket"  # noqa: S105
+    TOKEN_BUCKET = "token_bucket"
     LEAKY_BUCKET = "leaky_bucket"
     FIXED_WINDOW = "fixed_window"
 

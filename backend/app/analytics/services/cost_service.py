@@ -14,6 +14,7 @@ from app.analytics.domain.entities import (
 
 if TYPE_CHECKING:
     from app.evaluation.domain.contracts.evaluation_contracts import RunRepository
+    from app.evaluation.domain.entities.evaluation_entities import EvaluationRun
 
 
 class CostService:
@@ -65,13 +66,13 @@ class CostService:
             projected_monthly_cost=round(projected, 6),
         )
 
-    def _compute_provider_costs(self, runs: list[object]) -> tuple[ProviderCost, ...]:
+    def _compute_provider_costs(self, runs: list[EvaluationRun]) -> tuple[ProviderCost, ...]:
         provider_data: dict[str, dict[str, float]] = defaultdict(
             lambda: {"cost": 0.0, "count": 0.0}
         )
         for run in runs:
-            p = getattr(run, "provider", "unknown")
-            provider_data[p]["cost"] += getattr(run, "cost", 0.0)
+            p = run.profile.provider_name
+            provider_data[p]["cost"] += run.cost
             provider_data[p]["count"] += 1
 
         result = []
@@ -87,36 +88,35 @@ class CostService:
             )
         return tuple(sorted(result, key=lambda x: x.total_cost, reverse=True))
 
-    def _compute_model_costs(self, runs: list[object]) -> tuple[ModelCost, ...]:
-        model_data: dict[str, dict[str, float | str]] = defaultdict(
-            lambda: {"cost": 0.0, "count": 0.0, "provider": ""}
-        )
+    def _compute_model_costs(self, runs: list[EvaluationRun]) -> tuple[ModelCost, ...]:
+        model_costs: dict[str, float] = defaultdict(float)
+        model_counts: dict[str, float] = defaultdict(float)
+        model_providers: dict[str, str] = {}
         for run in runs:
-            m = getattr(run, "model", "unknown")
-            model_data[m]["cost"] += getattr(run, "cost", 0.0)
-            model_data[m]["count"] += 1
-            model_data[m]["provider"] = getattr(run, "provider", "")
+            m = run.profile.model_id
+            model_costs[m] += run.cost
+            model_counts[m] += 1
+            model_providers[m] = run.profile.provider_name
 
         result = []
-        for mod, data in model_data.items():
-            count = int(data["count"])
+        for mod in model_costs:
+            count = int(model_counts[mod])
+            cost = model_costs[mod]
             result.append(
                 ModelCost(
                     model=mod,
-                    provider=str(data["provider"]),
-                    total_cost=round(float(data["cost"]), 6),
+                    provider=model_providers.get(mod, ""),
+                    total_cost=round(cost, 6),
                     run_count=count,
-                    average_cost_per_run=round(float(data["cost"]) / count, 6)
-                    if count > 0
-                    else 0.0,
+                    average_cost_per_run=round(cost / count, 6) if count > 0 else 0.0,
                 )
             )
         return tuple(sorted(result, key=lambda x: x.total_cost, reverse=True))
 
-    def _project_monthly_cost(self, runs: list[object], days: int) -> float:
+    def _project_monthly_cost(self, runs: list[EvaluationRun], days: int) -> float:
         """Project monthly cost based on recent data."""
         if not runs or days <= 0:
             return 0.0
-        total_cost = sum(getattr(r, "cost", 0.0) for r in runs)
+        total_cost = sum(r.cost for r in runs)
         daily_rate = total_cost / days
         return daily_rate * 30

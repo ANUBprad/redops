@@ -49,7 +49,10 @@ def upgrade() -> None:
         sa.Column("token_output", sa.Integer, nullable=False, server_default="0"),
         sa.Column("cost", sa.Float, nullable=False, server_default="0"),
         sa.Column(
-            "average_latency_ms", sa.Integer, nullable=False, server_default="0",
+            "average_latency_ms",
+            sa.Integer,
+            nullable=False,
+            server_default="0",
         ),
         sa.Column("failure_reason", sa.Text, nullable=True),
         sa.Column("config", sa.JSON, nullable=False, server_default="{}"),

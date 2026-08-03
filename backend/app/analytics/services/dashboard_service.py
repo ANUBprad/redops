@@ -19,7 +19,9 @@ if TYPE_CHECKING:
         MetricResultRepository,
         RunRepository,
     )
+    from app.evaluation.domain.entities.evaluation_entities import EvaluationRun
     from app.redteam.contracts.repositories import AttackRunRepository
+    from app.redteam.domain.entities import AttackRun
 
 
 class DashboardService:
@@ -106,8 +108,8 @@ class DashboardService:
 
     def _build_activity(
         self,
-        runs: list[object],
-        attacks: list[object],
+        runs: list[EvaluationRun],
+        attacks: list[AttackRun],
     ) -> tuple[ActivityEntry, ...]:
         """Build recent activity entries."""
         entries: list[ActivityEntry] = []

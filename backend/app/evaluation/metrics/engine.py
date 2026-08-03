@@ -166,9 +166,7 @@ class MetricEngine:
             Tuple of MetricResults in the same order as metric_names.
 
         """
-        tasks = [
-            self.evaluate_single(name, input_data) for name in metric_names
-        ]
+        tasks = [self.evaluate_single(name, input_data) for name in metric_names]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         output: list[MetricResult] = []

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -10,6 +11,17 @@ from app.analytics.domain.entities import Leaderboard, LeaderboardEntry
 
 if TYPE_CHECKING:
     from app.evaluation.domain.contracts.evaluation_contracts import RunRepository
+
+
+@dataclass
+class _ModelAccumulator:
+    """Internal accumulator for per-model leaderboard stats."""
+
+    latencies: list[float] = field(default_factory=list)
+    costs: list[float] = field(default_factory=list)
+    total: int = 0
+    completed: int = 0
+    provider: str = ""
 
 
 class LeaderboardService:
@@ -44,37 +56,26 @@ class LeaderboardService:
             provider=provider,
         )
 
-        model_data: dict[str, dict[str, object]] = defaultdict(
-            lambda: {
-                "scores": [],
-                "latencies": [],
-                "costs": [],
-                "total": 0,
-                "completed": 0,
-                "provider": "",
-            }
-        )
+        model_data: dict[str, _ModelAccumulator] = defaultdict(_ModelAccumulator)
 
         for run in runs:
-            m = run.model
+            m = run.profile.model_id
             data = model_data[m]
             if run.average_latency_ms > 0:
-                data["latencies"].append(run.average_latency_ms)
-            data["costs"].append(run.cost)
-            data["total"] = int(data["total"]) + run.items_total
-            data["completed"] = int(data["completed"]) + run.items_completed
-            data["provider"] = run.provider
+                data.latencies.append(run.average_latency_ms)
+            data.costs.append(run.cost)
+            data.total += run.items_total
+            data.completed += run.items_completed
+            data.provider = run.profile.provider_name
 
         entries: list[LeaderboardEntry] = []
         for model_name, data in model_data.items():
-            latencies = data["latencies"]  # type: ignore[arg-type]
-            costs = data["costs"]  # type: ignore[arg-type]
-            total = int(data["total"])
-            completed = int(data["completed"])
+            total = data.total
+            completed = data.completed
 
             avg_score = (completed / total * 100) if total > 0 else 0.0
-            avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
-            avg_cost = sum(costs) / len(costs) if costs else 0.0
+            avg_latency = sum(data.latencies) / len(data.latencies) if data.latencies else 0.0
+            avg_cost = sum(data.costs) / len(data.costs) if data.costs else 0.0
             reliability = (completed / total * 100) if total > 0 else 0.0
 
             if ranking_by == "latency":
@@ -93,7 +94,7 @@ class LeaderboardService:
                     entity_type="model",
                     score=round(sort_val, 2),
                     metric_name=ranking_by,
-                    metadata={"provider": str(data["provider"])},
+                    metadata={"provider": data.provider},
                 )
             )
 

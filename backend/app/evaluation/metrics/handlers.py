@@ -53,9 +53,7 @@ class ScoreItemHandler:
 
         metric_names = command.metric_names
         if not metric_names:
-            metric_names = tuple(
-                d.name for d in self._engine.list_definitions()
-            )
+            metric_names = tuple(d.name for d in self._engine.list_definitions())
 
         resolved = self._engine.resolve_metrics(metric_names)
         if not resolved:

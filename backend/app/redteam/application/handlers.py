@@ -92,9 +92,15 @@ class UpdateAttackDefinitionHandler:
                 description=definition.description,
                 category=definition.category,
                 severity=definition.severity,
-                prompt_template=template_kwargs.get("prompt_template", definition.template.prompt_template),
-                system_prompt_override=template_kwargs.get("system_prompt_override", definition.template.system_prompt_override),
-                expected_behavior=template_kwargs.get("expected_behavior", definition.template.expected_behavior),
+                prompt_template=template_kwargs.get(
+                    "prompt_template", definition.template.prompt_template
+                ),
+                system_prompt_override=template_kwargs.get(
+                    "system_prompt_override", definition.template.system_prompt_override
+                ),
+                expected_behavior=template_kwargs.get(
+                    "expected_behavior", definition.template.expected_behavior
+                ),
             )
         else:
             template = None
@@ -186,12 +192,12 @@ class CreateAttackRunHandler:
         self._repository = repository
 
     async def handle(self, command: CreateAttackRunCommand) -> AttackRun:
-        def_ids = tuple(
-            UUIDv7.from_string(did) for did in command.attack_definition_ids
-        )
+        def_ids = tuple(UUIDv7.from_string(did) for did in command.attack_definition_ids)
         config = _dict_to_config(command.configuration) if command.configuration else None
         run = AttackRun.create(
-            evaluation_run_id=UUIDv7.from_string(command.evaluation_run_id) if command.evaluation_run_id else None,
+            evaluation_run_id=UUIDv7.from_string(command.evaluation_run_id)
+            if command.evaluation_run_id
+            else None,
             attack_definition_ids=def_ids,
             configuration=config,
         )
@@ -294,7 +300,9 @@ def _dict_to_config(data: dict[str, Any] | None) -> AttackConfiguration | None:
         max_tokens=data.get("max_tokens", 2048),
         timeout_seconds=data.get("timeout_seconds", 60),
         system_prompt=data.get("system_prompt", ""),
-        attack_definitions=tuple(UUIDv7.from_string(aid) for aid in data.get("attack_definitions", [])),
+        attack_definitions=tuple(
+            UUIDv7.from_string(aid) for aid in data.get("attack_definitions", [])
+        ),
         categories=tuple(AttackCategory(c) for c in data.get("categories", [])),
         severities=tuple(AttackSeverity(s) for s in data.get("severities", [])),
         max_scenarios=data.get("max_scenarios", 0),

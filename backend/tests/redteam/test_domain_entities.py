@@ -18,14 +18,11 @@ from app.redteam.domain.events import (
     AttackDefinitionArchived,
     AttackDefinitionCreated,
     AttackDefinitionUpdated,
-    AttackRunCancelled,
     AttackRunCompleted,
     AttackRunCreated,
-    AttackRunFailed,
     AttackRunQueued,
     AttackRunStarted,
 )
-from app.redteam.domain.value_objects import AttackConfiguration, AttackTemplate
 
 
 class TestAttackDefinition:

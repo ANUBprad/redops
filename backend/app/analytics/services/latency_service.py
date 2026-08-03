@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Sequence
 from datetime import UTC, timedelta
 from typing import TYPE_CHECKING
 
@@ -14,6 +15,7 @@ from app.analytics.domain.entities import (
 
 if TYPE_CHECKING:
     from app.evaluation.domain.contracts.evaluation_contracts import RunRepository
+    from app.evaluation.domain.entities.evaluation_entities import EvaluationRun
 
 
 class LatencyService:
@@ -67,12 +69,14 @@ class LatencyService:
             latency_by_model=model_lat,
         )
 
-    def _compute_provider_latencies(self, runs: list[object]) -> tuple[ProviderLatency, ...]:
+    def _compute_provider_latencies(
+        self, runs: Sequence[EvaluationRun]
+    ) -> tuple[ProviderLatency, ...]:
         """Group latencies by provider."""
         provider_data: dict[str, list[int]] = defaultdict(list)
         for run in runs:
-            p = getattr(run, "provider", "unknown")
-            lat = getattr(run, "average_latency_ms", 0)
+            p = run.profile.provider_name
+            lat = run.average_latency_ms
             if lat > 0:
                 provider_data[p].append(lat)
 
@@ -87,23 +91,23 @@ class LatencyService:
             )
         return tuple(sorted(result, key=lambda x: x.average_latency_ms))
 
-    def _compute_model_latencies(self, runs: list[object]) -> tuple[ModelLatency, ...]:
+    def _compute_model_latencies(self, runs: Sequence[EvaluationRun]) -> tuple[ModelLatency, ...]:
         """Group latencies by model."""
-        model_data: dict[str, dict[str, object]] = defaultdict(lambda: {"lats": [], "provider": ""})
+        model_lats: dict[str, list[int]] = defaultdict(list)
+        model_providers: dict[str, str] = {}
         for run in runs:
-            m = getattr(run, "model", "unknown")
-            lat = getattr(run, "average_latency_ms", 0)
+            m = run.profile.model_id
+            lat = run.average_latency_ms
             if lat > 0:
-                model_data[m]["lats"].append(lat)
-                model_data[m]["provider"] = getattr(run, "provider", "")
+                model_lats[m].append(lat)
+                model_providers[m] = run.profile.provider_name
 
         result = []
-        for mod, data in model_data.items():
-            lats = data["lats"]  # type: ignore[arg-type]
+        for mod, lats in model_lats.items():
             result.append(
                 ModelLatency(
                     model=mod,
-                    provider=str(data["provider"]),
+                    provider=model_providers.get(mod, ""),
                     average_latency_ms=round(sum(lats) / len(lats), 1),
                     run_count=len(lats),
                 )

@@ -19,7 +19,6 @@ from app.agent.domain.value_objects.agent_vos import (
     AgentEndpoint,
     AgentName,
 )
-from app.kernel.entities.base import UUIDv7
 from app.kernel.exceptions.errors import ConflictError, ValidationError
 
 

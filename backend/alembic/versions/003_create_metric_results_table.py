@@ -38,7 +38,10 @@ def upgrade() -> None:
         sa.Column("reasoning", sa.Text, nullable=False, server_default=""),
         sa.Column("metadata", sa.JSON, nullable=False, server_default="{}"),
         sa.Column(
-            "execution_time_ms", sa.Integer, nullable=False, server_default="0",
+            "execution_time_ms",
+            sa.Integer,
+            nullable=False,
+            server_default="0",
         ),
         sa.Column("error", sa.Text, nullable=True),
         sa.Column(

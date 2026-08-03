@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.redteam.domain.enums import AttackCategory, AttackSeverity
+from app.redteam.domain.enums import AttackCategory
 from app.redteam.engine.categories import BuiltinAttackEngine
 from app.redteam.engine.orchestrator import AttackOrchestrator
 
@@ -43,7 +43,12 @@ class TestBuiltinAttackEngine:
         assert len(scenarios) > 0
 
         async def mock_provider(prompt: str, system_prompt: str | None = None) -> dict:
-            return {"text": "Hello world", "tokens_input": 10, "tokens_output": 5, "cost_usd": 0.001}
+            return {
+                "text": "Hello world",
+                "tokens_input": 10,
+                "tokens_output": 5,
+                "cost_usd": 0.001,
+            }
 
         result = await engine.execute_scenario(scenarios[0], mock_provider)
         assert result.is_success

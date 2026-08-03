@@ -62,12 +62,8 @@ class FaithfulnessMetric(Metric):
                 execution_time_ms=int((time.monotonic() - start) * 1000),
             )
 
-        response_sentences = [
-            s.strip() for s in input_data.response.split(".") if s.strip()
-        ]
-        context_sentences = [
-            s.strip() for s in input_data.context.split(".") if s.strip()
-        ]
+        response_sentences = [s.strip() for s in input_data.response.split(".") if s.strip()]
+        context_sentences = [s.strip() for s in input_data.context.split(".") if s.strip()]
 
         if not response_sentences:
             return MetricResult(

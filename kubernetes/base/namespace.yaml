@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: redops
+  labels:
+    app.kubernetes.io/name: redops
+    app.kubernetes.io/part-of: redops

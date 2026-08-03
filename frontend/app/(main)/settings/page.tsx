@@ -1,100 +1,113 @@
+"use client";
+
 import { useState } from "react";
-import { Save, Bell, Shield, Database } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export default function SettingsPage() {
-  const [notifications, setNotifications] = useState(true);
-  const [autoArchive, setAutoArchive] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">Configure your RedOps Eval workspace</p>
+      <h1 className="text-2xl font-bold">Settings</h1>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Notifications</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Email Notifications</span>
+              <Badge variant="default">Enabled</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Slack Notifications</span>
+              <Badge variant="secondary">Configure</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Webhook Notifications</span>
+              <Badge variant="secondary">Configure</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Security</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Two-Factor Authentication</span>
+              <Badge variant="secondary">Not configured</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Session Timeout</span>
+              <span className="text-sm text-muted-foreground">24 hours</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">API Key Rotation</span>
+              <Badge variant="default">90 days</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Data Retention</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Audit Log Retention</span>
+              <span className="text-sm text-muted-foreground">Indefinite</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Evaluation Data</span>
+              <span className="text-sm text-muted-foreground">Indefinite</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>RBAC</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Owner</span>
+              <span className="text-xs text-muted-foreground">Full access</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Admin</span>
+              <span className="text-xs text-muted-foreground">Manage members & resources</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Developer</span>
+              <span className="text-xs text-muted-foreground">Create & run evaluations</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Analyst</span>
+              <span className="text-xs text-muted-foreground">Read & export reports</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Viewer</span>
+              <span className="text-xs text-muted-foreground">Read-only access</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="notifications">Email notifications</Label>
-              <Switch checked={notifications} onCheckedChange={setNotifications} />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="auto-archive">Auto-archive completed runs</Label>
-              <Switch checked={autoArchive} onCheckedChange={setAutoArchive} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Security
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="dark-mode">Dark mode</Label>
-              <Switch checked={darkMode} onCheckedChange={setDarkMode} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="session-timeout">Session timeout</Label>
-              <Select defaultValue="30">
-                <option value="15">15 minutes</option>
-                <option value="30">30 minutes</option>
-                <option value="60">1 hour</option>
-                <option value="240">4 hours</option>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5" />
-              Data
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="retention">Data retention period</Label>
-              <Select defaultValue="90">
-                <option value="30">30 days</option>
-                <option value="90">90 days</option>
-                <option value="365">1 year</option>
-                <option value="0">Indefinite</option>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="flex justify-end gap-2">
-        <Button variant="outline">Reset</Button>
+      <div className="flex gap-2">
         <Button onClick={handleSave}>
-          <Save className="mr-2 h-4 w-4" />
-          {saveSuccess ? "Saved!" : "Save Changes"}
+          {saved ? "Saved!" : "Save Settings"}
         </Button>
+        <Button variant="outline">Reset</Button>
       </div>
     </div>
   );
