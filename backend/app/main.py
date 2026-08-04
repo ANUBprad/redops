@@ -9,6 +9,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from app.infrastructure.composition.application import create_application
+from app.infrastructure.observability.setup import setup_observability
 
 
 def create_app() -> FastAPI:
@@ -21,4 +22,6 @@ def create_app() -> FastAPI:
         A fully configured FastAPI application instance.
 
     """
-    return create_application()
+    app = create_application()
+    setup_observability(app)
+    return app

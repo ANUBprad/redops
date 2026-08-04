@@ -292,6 +292,9 @@ class EvaluationRun(AggregateRoot, VersionMixin):
         profile: EvaluationProfile,
         metadata: EvaluationMetadata | None = None,
         entity_id: UUIDv7 | None = None,
+        *,
+        evaluation_id: str | None = None,
+        workflow_id: str | None = None,
     ) -> None:
         """Initialize evaluation run.
 
@@ -301,13 +304,18 @@ class EvaluationRun(AggregateRoot, VersionMixin):
             profile: Resolved execution profile.
             metadata: Optional evaluation metadata.
             entity_id: Optional ID for reconstruction.
+            evaluation_id: Optional UUID of the parent Evaluation definition.
+            workflow_id: Optional Temporal workflow identifier.
 
         """
         super().__init__(entity_id=entity_id)
+        VersionMixin.__init__(self)
         self.evaluation_name = evaluation_name
         self.config = config
         self.profile = profile
         self.metadata = metadata or EvaluationMetadata()
+        self.evaluation_id = evaluation_id
+        self.workflow_id = workflow_id
         self._status = RunStatus.CREATED
         self.items_total = 0
         self.items_completed = 0
@@ -315,6 +323,11 @@ class EvaluationRun(AggregateRoot, VersionMixin):
         self.priority = config.priority
         self.started_at: datetime | None = None
         self.completed_at: datetime | None = None
+        self.cancelled_at: datetime | None = None
+        self.token_input: int = 0
+        self.token_output: int = 0
+        self.cost: float = 0.0
+        self.average_latency_ms: int = 0
         self._checkpoint: RunCheckpoint | None = None
         self._failure_summary: FailureSummary | None = None
         self._state_machine = RunStateMachine()
@@ -348,6 +361,18 @@ class EvaluationRun(AggregateRoot, VersionMixin):
         end = self.completed_at or datetime.now(UTC)
         delta = end - self.started_at
         return int(delta.total_seconds() * 1000)
+
+    @property
+    def progress(self) -> float:
+        """Return completion percentage (0.0 to 100.0)."""
+        if self.items_total == 0:
+            return 0.0
+        return (self.items_completed / self.items_total) * 100.0
+
+    @property
+    def total_tokens(self) -> int:
+        """Return total tokens consumed."""
+        return self.token_input + self.token_output
 
     def _transition_to(
         self,
@@ -560,6 +585,7 @@ class EvaluationRun(AggregateRoot, VersionMixin):
             self._raise_transition_error(target, result)
         if force:
             self.completed_at = datetime.now(UTC)
+        self.cancelled_at = datetime.now(UTC)
         self.raise_event(
             EvaluationCancelled(
                 correlation_id=str(self.id),
@@ -580,6 +606,43 @@ class EvaluationRun(AggregateRoot, VersionMixin):
         """Record an item failure."""
         self.items_failed += 1
         self.items_completed += 1
+        self.touch()
+
+    def record_token_usage(self, input_tokens: int, output_tokens: int) -> None:
+        """Accumulate token usage from an item.
+
+        Args:
+            input_tokens: Input tokens consumed.
+            output_tokens: Output tokens produced.
+
+        """
+        self.token_input += input_tokens
+        self.token_output += output_tokens
+        self.touch()
+
+    def record_cost(self, cost_usd: float) -> None:
+        """Accumulate cost from an item.
+
+        Args:
+            cost_usd: Cost in US dollars.
+
+        """
+        self.cost += cost_usd
+        self.touch()
+
+    def record_latency(self, latency_ms: int) -> None:
+        """Update running average latency.
+
+        Args:
+            latency_ms: Latency of the completed item in milliseconds.
+
+        """
+        completed = self.items_completed
+        if completed <= 0:
+            self.average_latency_ms = latency_ms
+        else:
+            total = self.average_latency_ms * completed + latency_ms
+            self.average_latency_ms = total // (completed + 1)
         self.touch()
 
     def save_checkpoint(self, checkpoint: RunCheckpoint) -> None:

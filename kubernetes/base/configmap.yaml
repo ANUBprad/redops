@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redops-config
+  namespace: redops
+data:
+  APP_ENV: "production"
+  APP_NAME: "redops-eval"
+  APP_VERSION: "0.1.0"
+  APP_DEBUG: "false"
+  APP_LOG_LEVEL: "INFO"
+  DB_HOST: "postgres.redops.svc.cluster.local"
+  DB_PORT: "5432"
+  DB_NAME: "redops"
+  REDIS_HOST: "redis.redops.svc.cluster.local"
+  REDIS_PORT: "6379"
+  TEMPORAL_HOST: "temporal-frontend.redops.svc.cluster.local"
+  TEMPORAL_PORT: "7233"
+  TEMPORAL_NAMESPACE: "default"
+  TEMPORAL_TASK_QUEUE: "redops-eval"

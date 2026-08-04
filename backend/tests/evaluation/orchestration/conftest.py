@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-
 import pytest
 
 from app.evaluation.domain.enums.evaluation_enums import EvaluationType, Priority
 from app.evaluation.domain.value_objects.evaluation_value_objects import (
     DatasetReference,
     EvaluationConfiguration,
-    EvaluationMetadata,
     EvaluationProfile,
     ExecutionBudget,
     ExecutionLimits,
@@ -76,17 +73,6 @@ def single_config(sample_profile: EvaluationProfile) -> EvaluationConfiguration:
         eval_type=EvaluationType.SINGLE,
         profile=sample_profile,
         metrics=("accuracy",),
-    )
-
-
-@pytest.fixture()
-def sample_metadata() -> EvaluationMetadata:
-    """Standard evaluation metadata."""
-    return EvaluationMetadata(
-        project_id="proj-001",
-        created_by="test-user",
-        tags=("smoke",),
-        description="A test evaluation",
     )
 
 
@@ -176,58 +162,3 @@ def cancelled_context(sample_run_id: UUIDv7) -> PipelineContext:
         cancellation_token=CancellationToken(cancelled=True, force=True),
         trace=TraceIdentifiers.from_correlation_id(str(sample_run_id)),
     )
-
-
-# ---------------------------------------------------------------------------
-# Mock Dependencies
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture()
-def mock_event_publisher() -> MagicMock:
-    """Mock EventPublisher."""
-    mock = MagicMock()
-    mock.publish = MagicMock()
-    mock.publish_many = MagicMock()
-    return mock
-
-
-@pytest.fixture()
-def mock_run_repository() -> MagicMock:
-    """Mock RunRepository."""
-    mock = MagicMock()
-    mock.save = MagicMock()
-    mock.find_by_id = MagicMock(return_value=None)
-    mock.find_by_status = MagicMock(return_value=[])
-    mock.delete = MagicMock(return_value=True)
-    return mock
-
-
-@pytest.fixture()
-def mock_item_repository() -> MagicMock:
-    """Mock ItemRepository."""
-    mock = MagicMock()
-    mock.save_many = MagicMock()
-    mock.find_by_run_id = MagicMock(return_value=[])
-    mock.find_pending_by_run_id = MagicMock(return_value=[])
-    return mock
-
-
-@pytest.fixture()
-def mock_checkpoint_repository() -> MagicMock:
-    """Mock CheckpointRepository."""
-    mock = MagicMock()
-    mock.save = MagicMock()
-    mock.find_latest = MagicMock(return_value=None)
-    mock.find_by_number = MagicMock(return_value=None)
-    mock.prune = MagicMock(return_value=0)
-    return mock
-
-
-@pytest.fixture()
-def mock_provider_registry() -> MagicMock:
-    """Mock ProviderRegistry."""
-    mock = MagicMock()
-    mock.is_registered = MagicMock(return_value=True)
-    mock.resolve = MagicMock(return_value=MagicMock())
-    return mock

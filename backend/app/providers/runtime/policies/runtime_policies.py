@@ -100,8 +100,8 @@ class TimeoutPolicy:
 
 
 @unique
-class FallbackStrategy(Enum):
-    """Fallback strategy."""
+class FallbackTarget(Enum):
+    """Fallback target scope."""
 
     PROVIDER = "provider"
     MODEL = "model"
@@ -130,7 +130,7 @@ class FallbackPolicy:
     """
 
     enabled: bool = True
-    strategy: FallbackStrategy = FallbackStrategy.PROVIDER
+    strategy: FallbackTarget = FallbackTarget.PROVIDER
     fallback_chain: tuple[FallbackEntry, ...] = ()
     max_fallback_attempts: int = 3
 
@@ -143,7 +143,7 @@ class RateLimitAlgorithm(Enum):
     """Rate limiting algorithm."""
 
     SLIDING_WINDOW = "sliding_window"
-    TOKEN_BUCKET = "token_bucket"  # noqa: S105
+    TOKEN_BUCKET = "token_bucket"
     LEAKY_BUCKET = "leaky_bucket"
     FIXED_WINDOW = "fixed_window"
 

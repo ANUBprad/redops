@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from app.evaluation.temporal.activities import configure_session_factory
 from app.infrastructure.database.engine import DatabaseEngine
 from app.infrastructure.event_bus.redis_event_bus import RedisStreamsEventBus
 from app.infrastructure.health.database import DatabaseHealthContributor
@@ -52,6 +53,7 @@ class InfrastructureServices:
     def _register_database_services(self) -> None:
         """Register database lifecycle services and health."""
         engine = self._container.resolve(DatabaseEngine)
+        configure_session_factory(engine.session_factory)
         self._service_registry.register("database", engine)
         self._health_registry.register(DatabaseHealthContributor(engine))
 

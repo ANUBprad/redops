@@ -4,8 +4,8 @@ import time
 
 from app.providers.runtime.circuit_breaker.runtime_circuit_breaker import (
     CircuitBreakerConfig,
-    CircuitState,
     RuntimeCircuitBreaker,
+    RuntimeCircuitState,
 )
 
 
@@ -14,14 +14,14 @@ class TestRuntimeCircuitBreaker:
 
     def test_starts_closed(self) -> None:
         cb = RuntimeCircuitBreaker()
-        assert cb.state == CircuitState.CLOSED
+        assert cb.state == RuntimeCircuitState.CLOSED
         assert cb.can_execute() is True
 
     def test_opens_after_threshold(self) -> None:
         cb = RuntimeCircuitBreaker(CircuitBreakerConfig(failure_threshold=3))
         for _ in range(3):
             cb.record_failure()
-        assert cb.state == CircuitState.OPEN
+        assert cb.state == RuntimeCircuitState.OPEN
         assert cb.can_execute() is False
 
     def test_half_open_after_recovery(self) -> None:
@@ -32,10 +32,10 @@ class TestRuntimeCircuitBreaker:
         cb = RuntimeCircuitBreaker(config)
         cb.record_failure()
         cb.record_failure()
-        assert cb.state == CircuitState.OPEN
+        assert cb.state == RuntimeCircuitState.OPEN
 
         time.sleep(0.15)
-        assert cb.state == CircuitState.HALF_OPEN
+        assert cb.state == RuntimeCircuitState.HALF_OPEN
         assert cb.can_execute() is True
 
     def test_closes_from_half_open(self) -> None:
@@ -47,12 +47,12 @@ class TestRuntimeCircuitBreaker:
         cb = RuntimeCircuitBreaker(config)
         cb.record_failure()
         time.sleep(0.1)
-        assert cb.state == CircuitState.HALF_OPEN
+        assert cb.state == RuntimeCircuitState.HALF_OPEN
 
         cb.record_success()
-        assert cb.state == CircuitState.HALF_OPEN
+        assert cb.state == RuntimeCircuitState.HALF_OPEN
         cb.record_success()
-        assert cb.state == CircuitState.CLOSED
+        assert cb.state == RuntimeCircuitState.CLOSED
 
     def test_reopens_from_half_open_on_failure(self) -> None:
         config = CircuitBreakerConfig(
@@ -62,24 +62,24 @@ class TestRuntimeCircuitBreaker:
         cb = RuntimeCircuitBreaker(config)
         cb.record_failure()
         time.sleep(0.1)
-        assert cb.state == CircuitState.HALF_OPEN
+        assert cb.state == RuntimeCircuitState.HALF_OPEN
 
         cb.record_failure()
-        assert cb.state == CircuitState.OPEN
+        assert cb.state == RuntimeCircuitState.OPEN
 
     def test_manual_reset(self) -> None:
         cb = RuntimeCircuitBreaker(CircuitBreakerConfig(failure_threshold=1))
         cb.record_failure()
-        assert cb.state == CircuitState.OPEN
+        assert cb.state == RuntimeCircuitState.OPEN
         cb.reset()
-        assert cb.state == CircuitState.CLOSED
+        assert cb.state == RuntimeCircuitState.CLOSED
 
     def test_snapshot(self) -> None:
         cb = RuntimeCircuitBreaker(CircuitBreakerConfig(failure_threshold=2))
         cb.record_failure()
         snapshot = cb.snapshot()
         assert snapshot.failure_count == 1
-        assert snapshot.state == CircuitState.CLOSED
+        assert snapshot.state == RuntimeCircuitState.CLOSED
         assert snapshot.total_rejected == 0
 
     def test_rejected_increment(self) -> None:
@@ -93,7 +93,7 @@ class TestRuntimeCircuitBreaker:
         cb.record_failure()
         cb.record_failure()
         cb.record_success()
-        assert cb.state == CircuitState.CLOSED
+        assert cb.state == RuntimeCircuitState.CLOSED
         assert cb._metrics.consecutive_successes == 1
 
     def test_failure_within_window_opens(self) -> None:
@@ -105,4 +105,4 @@ class TestRuntimeCircuitBreaker:
         cb = RuntimeCircuitBreaker(config)
         cb.record_failure()
         cb.record_failure()
-        assert cb.state == CircuitState.OPEN
+        assert cb.state == RuntimeCircuitState.OPEN

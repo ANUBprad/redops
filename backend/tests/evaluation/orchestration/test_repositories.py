@@ -12,13 +12,13 @@ from app.evaluation.domain.value_objects.evaluation_value_objects import (
     EvaluationConfiguration,
     EvaluationProfile,
 )
-from app.evaluation.orchestration.repositories import (
+from app.kernel.entities.base import UUIDv7
+from tests.evaluation.orchestration.repositories import (
     InMemoryCheckpointRepository,
     InMemoryEventPublisher,
     InMemoryItemRepository,
     InMemoryRunRepository,
 )
-from app.kernel.entities.base import UUIDv7
 
 
 def _make_run(name: str = "test", status: RunStatus = RunStatus.CREATED) -> EvaluationRun:

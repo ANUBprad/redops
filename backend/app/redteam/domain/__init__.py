@@ -1,0 +1,1 @@
+"""Red Team domain layer."""

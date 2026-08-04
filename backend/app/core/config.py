@@ -94,6 +94,24 @@ class AppConfig(BaseSettings):
     # SECURITY
     app_secret_key: str = Field(default="change-me", alias="APP_SECRET_KEY")
 
+    # JWT
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    jwt_access_token_ttl_seconds: int = Field(default=3600, alias="JWT_ACCESS_TOKEN_TTL")
+    jwt_refresh_token_ttl_seconds: int = Field(
+        default=2592000,
+        alias="JWT_REFRESH_TOKEN_TTL",
+    )  # 30 days
+
+    # OAUTH
+    github_client_id: str = Field(default="", alias="GITHUB_CLIENT_ID")
+    github_client_secret: str = Field(default="", alias="GITHUB_CLIENT_SECRET")
+    google_client_id: str = Field(default="", alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str = Field(default="", alias="GOOGLE_CLIENT_SECRET")
+    oauth_redirect_uri: str = Field(
+        default="http://localhost:8000/api/v1/auth/oauth/callback",
+        alias="OAUTH_REDIRECT_URI",
+    )
+
     @field_validator("app_log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:

@@ -1,10 +1,30 @@
-"""Immutable value objects for the Evaluation domain."""
+"""Immutable value objects for the Evaluation domain.
+
+Re-exports shared value objects from ai.core for backward compatibility.
+Evaluation-specific value objects remain defined here.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.evaluation.domain.enums.evaluation_enums import EvaluationType, Priority
+from app.ai.core.enums import Priority as Priority
+from app.ai.core.value_objects import ExecutionBudget as ExecutionBudget
+from app.ai.core.value_objects import ExecutionMetadata as EvaluationMetadata
+from app.ai.core.value_objects import ProviderProfile as EvaluationProfile
+from app.evaluation.domain.enums.evaluation_enums import EvaluationType
+
+__all__ = [
+    "DatasetReference",
+    "EvaluationConfiguration",
+    "EvaluationMetadata",
+    "EvaluationProfile",
+    "ExecutionBudget",
+    "ExecutionLimits",
+    "ExecutionPolicy",
+    "FailureSummary",
+    "Priority",
+]
 
 _MAX_TEMPERATURE: float = 2.0
 
@@ -25,36 +45,6 @@ class DatasetReference:
         if self.row_count < 0:
             msg = "Row count cannot be negative"
             raise ValueError(msg)
-
-
-@dataclass(frozen=True, slots=True)
-class ExecutionBudget:
-    """Budget constraints for an evaluation run."""
-
-    max_cost_usd: float | None = None
-    max_tokens: int | None = None
-    max_duration_seconds: int | None = None
-
-    def __post_init__(self) -> None:
-        """Validate budget invariants."""
-        if self.max_cost_usd is not None and self.max_cost_usd < 0:
-            msg = "Max cost cannot be negative"
-            raise ValueError(msg)
-        if self.max_tokens is not None and self.max_tokens < 0:
-            msg = "Max tokens cannot be negative"
-            raise ValueError(msg)
-        if self.max_duration_seconds is not None and self.max_duration_seconds <= 0:
-            msg = "Max duration must be positive"
-            raise ValueError(msg)
-
-    @property
-    def is_unlimited(self) -> bool:
-        """Return True if all budget dimensions are unlimited."""
-        return (
-            self.max_cost_usd is None
-            and self.max_tokens is None
-            and self.max_duration_seconds is None
-        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,36 +87,6 @@ class ExecutionPolicy:
 
 
 @dataclass(frozen=True, slots=True)
-class EvaluationProfile:
-    """Resolved execution profile for an evaluation run."""
-
-    provider_name: str
-    model_id: str
-    temperature: float = 0.0
-    max_tokens: int = 4096
-    timeout_seconds: int = 60
-    system_prompt: str | None = None
-
-    def __post_init__(self) -> None:
-        """Validate profile invariants."""
-        if not self.provider_name:
-            msg = "Provider name cannot be empty"
-            raise ValueError(msg)
-        if not self.model_id:
-            msg = "Model ID cannot be empty"
-            raise ValueError(msg)
-        if not (0.0 <= self.temperature <= _MAX_TEMPERATURE):
-            msg = "Temperature must be between 0.0 and 2.0"
-            raise ValueError(msg)
-        if self.max_tokens < 1:
-            msg = "Max tokens must be >= 1"
-            raise ValueError(msg)
-        if self.timeout_seconds <= 0:
-            msg = "Timeout must be positive"
-            raise ValueError(msg)
-
-
-@dataclass(frozen=True, slots=True)
 class EvaluationConfiguration:
     """Complete configuration for an evaluation."""
 
@@ -162,16 +122,6 @@ _DATASET_REQUIRED_TYPES: frozenset[EvaluationType] = frozenset(
         EvaluationType.COMPARISON,
     }
 )
-
-
-@dataclass(frozen=True, slots=True)
-class EvaluationMetadata:
-    """Metadata associated with an evaluation."""
-
-    project_id: str | None = None
-    created_by: str | None = None
-    tags: tuple[str, ...] = ()
-    description: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

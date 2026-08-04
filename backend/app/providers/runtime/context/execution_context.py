@@ -6,25 +6,14 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from app.ai.core.value_objects import ExecutionBudget as ExecutionBudget
 from app.kernel.entities.base import UUIDv7
 
-
-@dataclass(frozen=True, slots=True)
-class ExecutionBudget:
-    """Immutable execution budget for a request."""
-
-    max_cost_usd: float | None = None
-    max_tokens: int | None = None
-    max_duration_seconds: float | None = None
-
-    @property
-    def is_unlimited(self) -> bool:
-        """Return True if all budget dimensions are unlimited."""
-        return (
-            self.max_cost_usd is None
-            and self.max_tokens is None
-            and self.max_duration_seconds is None
-        )
+__all__ = [
+    "CancellationToken",
+    "ExecutionContext",
+    "ExecutionBudget",
+]
 
 
 @dataclass(frozen=True, slots=True)

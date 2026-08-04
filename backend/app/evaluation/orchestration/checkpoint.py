@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from app.ai.core.checkpoint import next_checkpoint_target, should_checkpoint
 from app.evaluation.domain.factories.evaluation_factories import RunCheckpointFactory
 
 if TYPE_CHECKING:
@@ -48,7 +49,7 @@ class CheckpointManager:
 
         """
         interval = run.config.limits.checkpoint_interval or _DEFAULT_CHECKPOINT_INTERVAL
-        if items_completed == 0 or items_completed % interval != 0:
+        if not should_checkpoint(items_completed, interval):
             return None
 
         existing = await checkpoint_repository.find_latest(run.id)
@@ -88,9 +89,7 @@ class CheckpointManager:
             True if checkpoint should be created.
 
         """
-        if items_completed == 0:
-            return False
-        return items_completed % checkpoint_interval == 0
+        return should_checkpoint(items_completed, checkpoint_interval)
 
     def next_checkpoint_target(
         self,
@@ -107,5 +106,4 @@ class CheckpointManager:
             The item count at which the next checkpoint will occur.
 
         """
-        current_batch = items_completed // checkpoint_interval
-        return (current_batch + 1) * checkpoint_interval
+        return next_checkpoint_target(items_completed, checkpoint_interval)
