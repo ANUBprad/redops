@@ -1,3 +1,5 @@
+"use client";
+
 import { redirect } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
 

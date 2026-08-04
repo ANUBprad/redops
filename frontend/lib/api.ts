@@ -148,6 +148,20 @@ export const api = {
   deactivateAgent: (id: UUID) => request<unknown>(`/agents/${id}/deactivate`, { method: "POST" }),
   archiveAgent: (id: UUID) => request<unknown>(`/agents/${id}/archive`, { method: "POST" }),
 
+  // Agent Runs
+  listAgentRuns: (params: Record<string, string | number | undefined>) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<PaginatedResponse<unknown>>(`/agent-runs${query}`);
+  },
+  getAgentRun: (id: UUID) => request<unknown>(`/agent-runs/${id}`),
+  createAgentRun: (data: Record<string, unknown>) => request<unknown>("/agent-runs", { method: "POST", body: JSON.stringify(data) }),
+  cancelAgentRun: (id: UUID, data: { reason?: string; force?: boolean }) => request<unknown>(`/agent-runs/${id}/cancel`, { method: "POST", body: JSON.stringify(data) }),
+  retryAgentRun: (id: UUID) => request<unknown>(`/agent-runs/${id}/retry`, { method: "POST" }),
+
   // Red Team - Attack Definitions
   listAttackDefinitions: (params: Record<string, string | number | undefined>) => {
     const qs = new URLSearchParams();

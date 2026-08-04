@@ -1,5 +1,8 @@
+"use client";
+
 import {
   BarChart3,
+  Bot,
   FileText,
   LayoutDashboard,
   PlayCircle,
@@ -33,6 +36,7 @@ const navItems: NavItem[] = [
   { label: "Projects", href: "/projects", icon: <FileText className="h-5 w-5" /> },
   { label: "Evaluations", href: "/evaluations", icon: <Target className="h-5 w-5" /> },
   { label: "Runs", href: "/runs", icon: <PlayCircle className="h-5 w-5" /> },
+  { label: "Agents", href: "/agents/runs", icon: <Bot className="h-5 w-5" /> },
   { label: "Metrics", href: "/metrics", icon: <BarChart3 className="h-5 w-5" /> },
   { label: "Red Team", href: "/redteam/definitions", icon: <Shield className="h-5 w-5" /> },
   { label: "Analytics", href: "/analytics", icon: <TrendingUp className="h-5 w-5" /> },

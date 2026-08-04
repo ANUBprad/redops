@@ -1,3 +1,5 @@
+"use client";
+
 import { Bell, Moon, Search, Sun, User } from "lucide-react";
 import { useTheme } from "@/providers/theme-provider";
 import { Button } from "@/components/ui/button";

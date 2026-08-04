@@ -510,3 +510,75 @@ export interface NotificationEntry {
   retry_count: number;
   timestamp: string;
 }
+
+// ─── Agent Run Types ─────────────────────────────────────────
+
+export type AgentRunStatus =
+  | "created"
+  | "queued"
+  | "starting"
+  | "running"
+  | "paused"
+  | "cancelling"
+  | "completed"
+  | "failed"
+  | "timedout"
+  | "cancelled";
+
+export type AgentRunPriority = "low" | "normal" | "high" | "critical";
+
+export interface AgentRunSummary {
+  id: UUID;
+  agent_definition_id: string | null;
+  agent_name: string;
+  provider: string;
+  model: string;
+  status: AgentRunStatus;
+  progress: number;
+  steps_total: number;
+  steps_completed: number;
+  steps_failed: number;
+  cost: number;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface AgentRunDetail {
+  id: UUID;
+  agent_definition_id: string | null;
+  agent_name: string;
+  workflow_id: string | null;
+  provider: string;
+  model: string;
+  status: AgentRunStatus;
+  priority: AgentRunPriority;
+  steps_total: number;
+  steps_completed: number;
+  steps_failed: number;
+  progress: number;
+  token_input: number;
+  token_output: number;
+  total_tokens: number;
+  cost: number;
+  average_latency_ms: number;
+  failure_reason: string | null;
+  version: number;
+  started_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateAgentRunPayload {
+  agent_name: string;
+  agent_definition_id?: string;
+  provider: string;
+  model: string;
+  tools?: string[];
+  max_steps?: number;
+  timeout_seconds?: number;
+  project_id?: string;
+  tags?: string[];
+}
