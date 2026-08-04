@@ -10,36 +10,19 @@ from dataclasses import dataclass, field
 from enum import Enum, unique
 from typing import TYPE_CHECKING
 
+from app.ai.core.enums import StepStatus as StepStatus
 from app.evaluation.execution.stages.types import StageType
 from app.kernel.entities.base import UUIDv7
 
+__all__ = [
+    "DependencyType",
+    "ExecutionStep",
+    "StepDependency",
+    "StepStatus",
+]
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-
-@unique
-class StepStatus(Enum):
-    """Status of a single execution step."""
-
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    SKIPPED = "skipped"
-
-    @property
-    def is_terminal(self) -> bool:
-        """Return True if this is a terminal state."""
-        return self in _STEP_TERMINAL_STATES
-
-
-_STEP_TERMINAL_STATES: frozenset[StepStatus] = frozenset(
-    {
-        StepStatus.COMPLETED,
-        StepStatus.FAILED,
-        StepStatus.SKIPPED,
-    }
-)
 
 
 @unique

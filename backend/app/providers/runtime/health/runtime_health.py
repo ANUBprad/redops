@@ -3,16 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum, unique
 
-
-@unique
-class HealthStatus(Enum):
-    """Health status values."""
-
-    HEALTHY = "healthy"
-    DEGRADED = "degraded"
-    UNHEALTHY = "unhealthy"
+from app.kernel.health.health import HealthStatus as HealthStatus
 
 
 @dataclass(frozen=True, slots=True)

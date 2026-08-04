@@ -132,6 +132,7 @@ class TestCancellationReason:
             "quota_exceeded",
             "budget_exceeded",
             "deployment_cancelled",
+            "timeout_exceeded",
         }
         assert {r.value for r in CancellationReason} == expected
 

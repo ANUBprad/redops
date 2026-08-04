@@ -100,8 +100,8 @@ class TimeoutPolicy:
 
 
 @unique
-class FallbackStrategy(Enum):
-    """Fallback strategy."""
+class FallbackTarget(Enum):
+    """Fallback target scope."""
 
     PROVIDER = "provider"
     MODEL = "model"
@@ -130,7 +130,7 @@ class FallbackPolicy:
     """
 
     enabled: bool = True
-    strategy: FallbackStrategy = FallbackStrategy.PROVIDER
+    strategy: FallbackTarget = FallbackTarget.PROVIDER
     fallback_chain: tuple[FallbackEntry, ...] = ()
     max_fallback_attempts: int = 3
 

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from app.ai.core.checkpoint import next_checkpoint_target, should_checkpoint
+
 if TYPE_CHECKING:
     from app.agents.domain.contracts.agent_contracts import AgentCheckpointRepository
     from app.agents.domain.entities.agent_entities import AgentRun
@@ -23,7 +25,7 @@ class AgentCheckpointManager:
     ) -> None:
         """Create checkpoint if the interval has been reached."""
         interval = run.config.checkpoint_interval or _DEFAULT_CHECKPOINT_INTERVAL
-        if steps_completed == 0 or steps_completed % interval != 0:
+        if not should_checkpoint(steps_completed, interval):
             return
 
         from app.agents.domain.value_objects.agent_value_objects import AgentCheckpoint
@@ -48,9 +50,7 @@ class AgentCheckpointManager:
         checkpoint_interval: int,
     ) -> bool:
         """Determine if a checkpoint should be created now."""
-        if steps_completed == 0:
-            return False
-        return steps_completed % checkpoint_interval == 0
+        return should_checkpoint(steps_completed, checkpoint_interval)
 
     def next_checkpoint_target(
         self,
@@ -58,5 +58,4 @@ class AgentCheckpointManager:
         checkpoint_interval: int,
     ) -> int:
         """Calculate the next checkpoint target."""
-        current_batch = steps_completed // checkpoint_interval
-        return (current_batch + 1) * checkpoint_interval
+        return next_checkpoint_target(steps_completed, checkpoint_interval)

@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 @unique
-class FallbackStrategy(Enum):
+class FallbackSelectionMode(Enum):
     """Fallback selection strategy."""
 
     ROUND_ROBIN = "round_robin"
@@ -87,7 +87,7 @@ class FallbackChain:
     def __init__(
         self,
         entries: list[FallbackEntry],
-        strategy: FallbackStrategy = FallbackStrategy.ROUND_ROBIN,
+        strategy: FallbackSelectionMode = FallbackSelectionMode.ROUND_ROBIN,
         custom_selector: Callable[[list[FallbackEntry], int], int] | None = None,
     ) -> None:
         """Initialize fallback chain."""
@@ -149,10 +149,10 @@ class FallbackChain:
 
     def _select_next(self) -> int:
         """Select next index based on strategy."""
-        if self._strategy == FallbackStrategy.ROUND_ROBIN:
+        if self._strategy == FallbackSelectionMode.ROUND_ROBIN:
             return self._state.current_index
 
-        if self._strategy == FallbackStrategy.CUSTOM and self._custom_selector:
+        if self._strategy == FallbackSelectionMode.CUSTOM and self._custom_selector:
             return self._custom_selector(self._entries, self._state.current_index)
 
         return self._state.current_index

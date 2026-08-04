@@ -4,15 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
-import { BarChart3, FileText, LayoutDashboard, PlayCircle, Shield, Target, TrendingUp, Trophy } from "lucide-react";
+import { BarChart3, Bot, FileText, LayoutDashboard, PlayCircle, Shield, Target, TrendingUp, Trophy } from "lucide-react";
 
 const commands = [
-  { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
-  { label: "Projects", href: "/projects", icon: <FileText className="h-4 w-4" /> },
+  { label: "Mission Control", href: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
   { label: "Evaluations", href: "/evaluations", icon: <Target className="h-4 w-4" /> },
-  { label: "Runs", href: "/runs", icon: <PlayCircle className="h-4 w-4" /> },
-  { label: "Metrics", href: "/metrics", icon: <BarChart3 className="h-4 w-4" /> },
+  { label: "Evaluation Runs", href: "/runs", icon: <PlayCircle className="h-4 w-4" /> },
+  { label: "Agent Runs", href: "/agents/runs", icon: <Bot className="h-4 w-4" /> },
   { label: "Red Team", href: "/redteam/definitions", icon: <Shield className="h-4 w-4" /> },
+  { label: "Metrics", href: "/metrics", icon: <BarChart3 className="h-4 w-4" /> },
   { label: "Analytics", href: "/analytics", icon: <TrendingUp className="h-4 w-4" /> },
   { label: "Leaderboards", href: "/analytics/leaderboards", icon: <Trophy className="h-4 w-4" /> },
   { label: "Reports", href: "/analytics/reports", icon: <FileText className="h-4 w-4" /> },

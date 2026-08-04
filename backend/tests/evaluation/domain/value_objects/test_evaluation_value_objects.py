@@ -193,35 +193,30 @@ class TestEvaluationProfile:
         assert profile.max_tokens == 4096
         assert profile.timeout_seconds == 60
 
-    def test_empty_provider_raises(self) -> None:
-        """Empty provider name raises ValueError."""
-        with pytest.raises(ValueError, match="Provider name cannot be empty"):
-            EvaluationProfile(provider_name="", model_id="gpt-4")
+    def test_empty_provider_allowed(self) -> None:
+        """Empty provider name is allowed in shared profile type."""
+        profile = EvaluationProfile(provider_name="", model_id="gpt-4")
+        assert profile.provider_name == ""
 
-    def test_empty_model_raises(self) -> None:
-        """Empty model ID raises ValueError."""
-        with pytest.raises(ValueError, match="Model ID cannot be empty"):
-            EvaluationProfile(provider_name="openai", model_id="")
+    def test_empty_model_allowed(self) -> None:
+        """Empty model ID is allowed in shared profile type."""
+        profile = EvaluationProfile(provider_name="openai", model_id="")
+        assert profile.model_id == ""
 
-    def test_temperature_too_high_raises(self) -> None:
-        """Temperature > 2.0 raises ValueError."""
-        with pytest.raises(ValueError, match="Temperature must be between 0.0 and 2.0"):
-            EvaluationProfile(provider_name="openai", model_id="gpt-4", temperature=2.1)
+    def test_extreme_temperature_allowed(self) -> None:
+        """Extreme temperatures are allowed in shared profile type."""
+        profile = EvaluationProfile(provider_name="openai", model_id="gpt-4", temperature=3.0)
+        assert profile.temperature == 3.0
 
-    def test_temperature_too_low_raises(self) -> None:
-        """Temperature < 0.0 raises ValueError."""
-        with pytest.raises(ValueError, match="Temperature must be between 0.0 and 2.0"):
-            EvaluationProfile(provider_name="openai", model_id="gpt-4", temperature=-0.1)
+    def test_zero_max_tokens_allowed(self) -> None:
+        """Zero max tokens is allowed in shared profile type."""
+        profile = EvaluationProfile(provider_name="openai", model_id="gpt-4", max_tokens=0)
+        assert profile.max_tokens == 0
 
-    def test_zero_max_tokens_raises(self) -> None:
-        """Zero max tokens raises ValueError."""
-        with pytest.raises(ValueError, match="Max tokens must be >= 1"):
-            EvaluationProfile(provider_name="openai", model_id="gpt-4", max_tokens=0)
-
-    def test_zero_timeout_raises(self) -> None:
-        """Zero timeout raises ValueError."""
-        with pytest.raises(ValueError, match="Timeout must be positive"):
-            EvaluationProfile(provider_name="openai", model_id="gpt-4", timeout_seconds=0)
+    def test_zero_timeout_allowed(self) -> None:
+        """Zero timeout is allowed in shared profile type."""
+        profile = EvaluationProfile(provider_name="openai", model_id="gpt-4", timeout_seconds=0)
+        assert profile.timeout_seconds == 0
 
 
 class TestEvaluationConfiguration:

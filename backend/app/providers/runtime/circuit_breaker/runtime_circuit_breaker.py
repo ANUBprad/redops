@@ -8,7 +8,7 @@ from enum import Enum, unique
 
 
 @unique
-class CircuitState(Enum):
+class RuntimeCircuitState(Enum):
     """Circuit breaker states."""
 
     CLOSED = "closed"
@@ -64,7 +64,7 @@ class CircuitBreakerMetrics:
 class CircuitBreakerSnapshot:
     """Immutable snapshot of circuit breaker state."""
 
-    state: CircuitState
+    state: RuntimeCircuitState
     failure_count: int
     success_count: int
     last_failure_time: datetime | None
@@ -90,11 +90,11 @@ class RuntimeCircuitBreaker:
     def __init__(self, config: CircuitBreakerConfig | None = None) -> None:
         """Initialize circuit breaker."""
         self._config = config or CircuitBreakerConfig()
-        self._state = CircuitState.CLOSED
+        self._state = RuntimeCircuitState.CLOSED
         self._metrics = CircuitBreakerMetrics()
 
     @property
-    def state(self) -> CircuitState:
+    def state(self) -> RuntimeCircuitState:
         """Return current circuit state."""
         self._evaluate_state()
         return self._state
@@ -102,45 +102,45 @@ class RuntimeCircuitBreaker:
     def can_execute(self) -> bool:
         """Check if execution is allowed."""
         self._evaluate_state()
-        if self._state == CircuitState.OPEN:
+        if self._state == RuntimeCircuitState.OPEN:
             self._metrics.total_rejected += 1
             return False
         return True
 
-    def record_success(self) -> CircuitState:
+    def record_success(self) -> RuntimeCircuitState:
         """Record a successful execution."""
         self._metrics.success_count += 1
         self._metrics.consecutive_successes += 1
 
         if (
-            self._state == CircuitState.HALF_OPEN
+            self._state == RuntimeCircuitState.HALF_OPEN
             and self._metrics.consecutive_successes >= self._config.success_threshold
         ):
-            self._transition_to(CircuitState.CLOSED)
+            self._transition_to(RuntimeCircuitState.CLOSED)
             self._metrics.reset()
 
         return self._state
 
-    def record_failure(self) -> CircuitState:
+    def record_failure(self) -> RuntimeCircuitState:
         """Record a failed execution."""
         now = datetime.now(UTC)
         self._metrics.failure_count += 1
         self._metrics.last_failure_time = now
         self._metrics.consecutive_successes = 0
 
-        if self._state == CircuitState.HALF_OPEN:  # noqa: SIM114
-            self._transition_to(CircuitState.OPEN)
+        if self._state == RuntimeCircuitState.HALF_OPEN:  # noqa: SIM114
+            self._transition_to(RuntimeCircuitState.OPEN)
         elif (
-            self._state == CircuitState.CLOSED
+            self._state == RuntimeCircuitState.CLOSED
             and self._metrics.failure_count >= self._config.failure_threshold
         ):
-            self._transition_to(CircuitState.OPEN)
+            self._transition_to(RuntimeCircuitState.OPEN)
 
         return self._state
 
     def reset(self) -> None:
         """Manually reset circuit breaker to CLOSED."""
-        self._transition_to(CircuitState.CLOSED)
+        self._transition_to(RuntimeCircuitState.CLOSED)
         self._metrics.reset()
 
     def snapshot(self) -> CircuitBreakerSnapshot:
@@ -157,7 +157,7 @@ class RuntimeCircuitBreaker:
 
     def _evaluate_state(self) -> None:
         """Evaluate and transition state if needed."""
-        if self._state != CircuitState.OPEN:
+        if self._state != RuntimeCircuitState.OPEN:
             return
 
         if self._metrics.last_state_change is None:
@@ -165,9 +165,9 @@ class RuntimeCircuitBreaker:
 
         elapsed = (datetime.now(UTC) - self._metrics.last_state_change).total_seconds()
         if elapsed >= self._config.recovery_timeout_seconds:
-            self._transition_to(CircuitState.HALF_OPEN)
+            self._transition_to(RuntimeCircuitState.HALF_OPEN)
 
-    def _transition_to(self, new_state: CircuitState) -> None:
+    def _transition_to(self, new_state: RuntimeCircuitState) -> None:
         """Transition to a new state."""
         self._state = new_state
         self._metrics.last_state_change = datetime.now(UTC)

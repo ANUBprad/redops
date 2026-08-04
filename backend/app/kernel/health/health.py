@@ -9,16 +9,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any
 
+from app.schemas.health import HealthStatus as HealthStatus
 
-class HealthStatus(Enum):
-    """Standardized health status values."""
-
-    HEALTHY = "healthy"
-    DEGRADED = "degraded"
-    UNHEALTHY = "unhealthy"
+__all__ = ["HealthStatus"]
 
 
 @dataclass

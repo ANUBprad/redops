@@ -1,20 +1,23 @@
-"""Value objects for the Agent Runtime engine."""
+"""Value objects for the Agent Runtime engine.
+
+Re-exports shared value objects from ai.core for backward compatibility.
+Agent-specific value objects remain defined here.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from app.ai.core.value_objects import ExecutionMetadata as AgentRunMetadata
+from app.ai.core.value_objects import ProviderProfile as AgentProfile
 
-@dataclass(frozen=True, slots=True)
-class AgentProfile:
-    """Agent provider and model configuration."""
-
-    provider_name: str = ""
-    model_id: str = ""
-    temperature: float = 0.0
-    max_tokens: int = 4096
-    timeout_seconds: int = 120
-    system_prompt: str | None = None
+__all__ = [
+    "AgentCheckpoint",
+    "AgentConfiguration",
+    "AgentProfile",
+    "AgentRunMetadata",
+    "AgentStepResult",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,16 +31,6 @@ class AgentConfiguration:
     max_retries: int = 3
     timeout_seconds: int = 300
     checkpoint_interval: int = 5
-
-
-@dataclass(frozen=True, slots=True)
-class AgentRunMetadata:
-    """Metadata attached to an agent run."""
-
-    project_id: str | None = None
-    created_by: str | None = None
-    tags: tuple[str, ...] = ()
-    description: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
