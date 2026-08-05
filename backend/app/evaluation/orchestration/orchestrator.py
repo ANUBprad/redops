@@ -32,6 +32,7 @@ from app.evaluation.orchestration.observer import EventPublishingObserver
 from app.evaluation.orchestration.planner import EvaluationPlanner
 
 if TYPE_CHECKING:
+    from app.evaluation.data.store import DatasetStore
     from app.evaluation.domain.contracts.evaluation_contracts import (
         CheckpointRepository,
         EventPublisher,
@@ -39,7 +40,9 @@ if TYPE_CHECKING:
         RunRepository,
     )
     from app.evaluation.domain.entities.evaluation_entities import EvaluationRun
+    from app.evaluation.metrics.engine import MetricEngine
     from app.kernel.entities.base import UUIDv7
+    from app.providers.cost.calculator import CostCalculator
     from app.providers.registry.registry import ProviderRegistry
     from app.providers.runtime.execution.runtime_coordinator import RuntimeCoordinator
 
@@ -60,16 +63,36 @@ class EvaluationOrchestrator:
         run_repository: RunRepository,
         item_repository: ItemRepository,
         checkpoint_repository: CheckpointRepository,
+        metric_engine: MetricEngine,
         runtime_coordinator: RuntimeCoordinator | None = None,
+        metric_result_repository: Any | None = None,
+        dataset_store: DatasetStore | None = None,
+        cost_calculator: CostCalculator | None = None,
     ) -> None:
-        """Initialize orchestrator with all required dependencies."""
+        """Initialize orchestrator with all required dependencies.
+
+        Args:
+            provider_registry: Registry used to resolve providers.
+            event_publisher: Publisher for run lifecycle events.
+            run_repository: Repository for evaluation runs.
+            item_repository: Repository for dataset items.
+            checkpoint_repository: Repository for checkpoints.
+            metric_engine: Engine that evaluates metrics.
+            runtime_coordinator: Optional runtime coordinator override.
+            metric_result_repository: Optional metric result persistence.
+            dataset_store: Optional store used to resolve dataset items.
+            cost_calculator: Optional cost calculator for real cost estimates.
+
+        """
         self._provider_registry = provider_registry
         self._event_publisher = event_publisher
         self._run_repository = run_repository
         self._item_repository = item_repository
         self._checkpoint_repository = checkpoint_repository
+        self._metric_engine = metric_engine
+        self._metric_result_repository = metric_result_repository
 
-        self._planner = EvaluationPlanner()
+        self._planner = EvaluationPlanner(dataset_store=dataset_store)
         self._observer = EventPublishingObserver(event_publisher)
         self._checkpoint_manager = CheckpointManager()
 
@@ -78,22 +101,18 @@ class EvaluationOrchestrator:
         else:
             self._runtime_coordinator = _create_runtime_coordinator()
 
+        if cost_calculator is not None:
+            self._cost_calculator = cost_calculator
+        else:
+            from app.providers.cost.defaults import build_default_cost_calculator
+
+            self._cost_calculator = build_default_cost_calculator()
+
         self._active_pipelines: dict[str, ExecutionPipeline] = {}
         self._active_contexts: dict[str, PipelineContext] = {}
 
     async def execute_run(self, run: EvaluationRun) -> ExecutionResult:
-        """Execute a complete evaluation run.
-
-        Steps:
-        1. Queue the run
-        2. Create pipeline context
-        3. Build execution plan
-        4. Construct pipeline
-        5. Start the run
-        6. Execute pipeline
-        7. Complete or fail the run
-        8. Emit final events
-        """
+        """Execute a complete evaluation run."""
         run_id_str = str(run.id)
 
         if run.status == RunStatus.CREATED:
@@ -220,12 +239,22 @@ class EvaluationOrchestrator:
         self,
         plan: Any,
     ) -> ExecutionPipeline:
-        """Build an ExecutionPipeline from a plan and stages."""
+        """Build an ExecutionPipeline from a plan and real stages."""
         stages = [
-            ProviderInvocationStage(self._provider_registry, self._runtime_coordinator),
-            MetricDispatchStage(),  # type: ignore[call-arg]
-            AggregationStage(),  # type: ignore[call-arg]
-            PersistenceStage(),  # type: ignore[call-arg]
+            ProviderInvocationStage(
+                self._provider_registry,
+                self._runtime_coordinator,
+                cost_calculator=self._cost_calculator,
+            ),
+            MetricDispatchStage(
+                self._metric_engine,
+                provider_registry=self._provider_registry,
+            ),
+            AggregationStage(self._metric_engine),
+            PersistenceStage(
+                metric_result_repository=getattr(self, "_metric_result_repository", None),
+                run_repository=self._run_repository,
+            ),
         ]
 
         stage_map = {s.stage_type: s for s in stages}
@@ -252,7 +281,7 @@ class EvaluationOrchestrator:
             run.items_completed = result.items_succeeded
             run.complete()
         elif result.outcome == ExecutionOutcome.CANCELLED:
-            pass  # Already in CANCELLING/CANCELLED state
+            pass
         else:
             run.items_completed = result.items_succeeded
             run.fail(

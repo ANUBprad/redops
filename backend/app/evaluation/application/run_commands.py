@@ -20,6 +20,9 @@ class CreateEvaluationRunCommand:
     created_by: str | None = None
     tags: tuple[str, ...] = ()
     workflow_id: str | None = None
+    system_prompt: str | None = None
+    prompt_template: str | None = None
+    dataset_items: tuple[dict[str, str], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

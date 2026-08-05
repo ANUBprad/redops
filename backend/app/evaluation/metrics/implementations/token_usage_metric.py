@@ -58,5 +58,6 @@ class TokenUsageMetric(Metric):
             normalized_score=max(0.0, min(score, 1.0)),
             reasoning=f"Used {tokens_output}/{max_tokens} tokens",
             metadata={"tokens_output": tokens_output, "max_tokens": max_tokens},
+            version=self.definition().version,
             execution_time_ms=int((time.monotonic() - start) * 1000),
         )

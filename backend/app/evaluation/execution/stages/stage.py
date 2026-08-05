@@ -81,12 +81,14 @@ class ExecutionStage(ABC):
         self,
         context: PipelineContext,
         steps: Sequence[ExecutionStep],
+        shared_state: dict[str, Any] | None = None,
     ) -> StageResult:
         """Execute the stage with the given context and steps.
 
         Args:
             context: The immutable pipeline context.
             steps: The steps assigned to this stage.
+            shared_state: Mutable dict for passing data between stages.
 
         Returns:
             The result of stage execution.

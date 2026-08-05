@@ -61,5 +61,6 @@ class JsonValidityMetric(Metric):
             normalized_score=score,
             reasoning=reasoning,
             metadata={"is_valid": is_valid},
+            version=self.definition().version,
             execution_time_ms=int((time.monotonic() - start) * 1000),
         )

@@ -21,10 +21,12 @@ from app.agents.temporal.activities import (
     update_agent_run_progress_activity,
 )
 from app.agents.temporal.workflow import AgentRunWorkflow
+from app.evaluation.metrics.engine import MetricEngine
 from app.evaluation.temporal.activities import (
     cancel_run_activity,
     complete_run_activity,
     create_run_activity,
+    execute_item_activity,
     fail_run_activity,
     queue_run_activity,
     start_run_activity,
@@ -56,6 +58,9 @@ from app.infrastructure.temporal.worker import (
 from app.kernel.container.di_container import DIContainer
 from app.kernel.health.health import HealthRegistry
 from app.kernel.registry.plugin import Plugin, PluginRegistry
+from app.providers.cost.calculator import CostCalculator
+from app.providers.cost.defaults import build_default_cost_calculator
+from app.providers.registry.registry import ProviderRegistry
 
 if TYPE_CHECKING:
     from app.core.config import AppConfig
@@ -85,6 +90,7 @@ class InfrastructureContainer:
         self._register_redis()
         self._register_event_bus()
         self._register_temporal()
+        self._register_evaluation()
         self._register_plugins()
         self._register_health()
         self._register_observability()
@@ -198,6 +204,7 @@ class InfrastructureContainer:
         activity_registry.register(complete_run_activity)
         activity_registry.register(fail_run_activity)
         activity_registry.register(cancel_run_activity)
+        activity_registry.register(execute_item_activity)
 
         activity_registry.register(create_agent_run_activity)
         activity_registry.register(queue_agent_run_activity)
@@ -238,6 +245,27 @@ class InfrastructureContainer:
                 client_factory=c.resolve(TemporalClientFactory),
                 config=c.resolve(TemporalConfiguration),
             ),
+        )
+
+    def _register_evaluation(self) -> None:
+        """Register evaluation engine singletons.
+
+        ProviderRegistry and MetricEngine start empty; concrete
+        providers and metrics register themselves at startup via
+        plugin discovery. The CostCalculator ships with real
+        default pricing so cost estimates are never faked.
+        """
+        self._container.register_singleton(
+            ProviderRegistry,
+            lambda _c: ProviderRegistry(),
+        )
+        self._container.register_singleton(
+            MetricEngine,
+            lambda _c: MetricEngine(),
+        )
+        self._container.register_singleton(
+            CostCalculator,
+            lambda _c: build_default_cost_calculator(),
         )
 
     def _register_plugins(self) -> None:

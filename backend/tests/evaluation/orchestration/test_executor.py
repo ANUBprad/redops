@@ -43,13 +43,23 @@ def _make_plan(
     )
 
 
+def _make_stage_instance(cls):
+    """Build a stage instance with required dependencies."""
+    mock_engine = MagicMock()
+    if cls in (MetricDispatchStage, AggregationStage):
+        return cls(metric_engine=mock_engine)
+    if cls is PersistenceStage:
+        return cls()
+    return cls()
+
+
 def _make_pipeline(plan: ExecutionPlan | None = None, stage_cls=None) -> ExecutionPipeline:
     """Build a minimal pipeline with given stage class."""
     plan = plan or _make_plan()
     cls = stage_cls or MetricDispatchStage
     return ExecutionPipeline(
         plan=plan,
-        stages=(cls(),),
+        stages=(_make_stage_instance(cls),),
         stage_order=(plan.stages[0] if plan.stages else StageType.METRIC_DISPATCH,),
     )
 
@@ -327,16 +337,16 @@ class TestPlaceholderStages:
         self, stage_cls, sample_context, total_steps: int = 2
     ) -> StageResult:
         """Run a placeholder stage with given number of steps."""
+        stage = _make_stage_instance(stage_cls)
         steps = [
             ExecutionStep.create(
-                stage_type=stage_cls().stage_type,
+                stage_type=stage.stage_type,
                 name=f"step_{i}",
                 item_index=i,
                 order=i,
             )
             for i in range(total_steps)
         ]
-        stage = stage_cls()
         return await stage.execute(sample_context, steps)
 
     async def test_metric_dispatch_success(self, sample_context) -> None:
@@ -346,16 +356,16 @@ class TestPlaceholderStages:
         assert result.items_succeeded == 2
 
     async def test_aggregation_success(self, sample_context) -> None:
-        """AggregationStage should succeed for all steps."""
+        """AggregationStage should succeed (empty shared state = no aggregations)."""
         result = await self._run_placeholder(AggregationStage, sample_context)
         assert result.outcome == ExecutionOutcome.SUCCESS
-        assert result.items_succeeded == 2
+        assert result.items_succeeded == 0
 
     async def test_persistence_success(self, sample_context) -> None:
-        """PersistenceStage should succeed for all steps."""
+        """PersistenceStage should succeed (empty shared state = no persisted results)."""
         result = await self._run_placeholder(PersistenceStage, sample_context)
         assert result.outcome == ExecutionOutcome.SUCCESS
-        assert result.items_succeeded == 2
+        assert result.items_succeeded == 0
 
     async def test_placeholder_zero_steps(self, sample_context) -> None:
         """Placeholder stage with 0 steps should still succeed."""
@@ -365,18 +375,18 @@ class TestPlaceholderStages:
 
     def test_placeholder_stage_type(self) -> None:
         """Each placeholder should have the correct stage type."""
-        assert MetricDispatchStage().stage_type == StageType.METRIC_DISPATCH
-        assert AggregationStage().stage_type == StageType.AGGREGATION
-        assert PersistenceStage().stage_type == StageType.PERSISTENCE
+        assert _make_stage_instance(MetricDispatchStage).stage_type == StageType.METRIC_DISPATCH
+        assert _make_stage_instance(AggregationStage).stage_type == StageType.AGGREGATION
+        assert _make_stage_instance(PersistenceStage).stage_type == StageType.PERSISTENCE
 
     def test_placeholder_supports_resume(self) -> None:
         """All placeholders should support resume."""
-        assert MetricDispatchStage().supports_resume() is True
-        assert AggregationStage().supports_resume() is True
-        assert PersistenceStage().supports_resume() is True
+        assert _make_stage_instance(MetricDispatchStage).supports_resume() is True
+        assert _make_stage_instance(AggregationStage).supports_resume() is True
+        assert _make_stage_instance(PersistenceStage).supports_resume() is True
 
     def test_placeholder_validate_returns_empty(self, sample_context) -> None:
         """Placeholder validation should return no issues."""
-        assert MetricDispatchStage().validate(sample_context) == []
-        assert AggregationStage().validate(sample_context) == []
-        assert PersistenceStage().validate(sample_context) == []
+        assert _make_stage_instance(MetricDispatchStage).validate(sample_context) == []
+        assert _make_stage_instance(AggregationStage).validate(sample_context) == []
+        assert _make_stage_instance(PersistenceStage).validate(sample_context) == []

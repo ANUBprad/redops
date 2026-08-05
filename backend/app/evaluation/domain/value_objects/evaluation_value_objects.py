@@ -99,6 +99,7 @@ class EvaluationConfiguration:
     limits: ExecutionLimits = field(default_factory=ExecutionLimits)
     policy: ExecutionPolicy = field(default_factory=ExecutionPolicy)
     priority: Priority = Priority.NORMAL
+    prompt_template: str | None = None
 
     def __post_init__(self) -> None:
         """Validate configuration invariants."""

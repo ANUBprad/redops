@@ -5,6 +5,23 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
+class DatasetItemRequest(BaseModel):
+    """A single dataset item supplied at run creation.
+
+    Attributes:
+        prompt: The prompt sent to the provider.
+        reference: Optional reference answer for reference-based metrics.
+        context: Optional context provided to the model.
+        id: Optional stable item identifier.
+
+    """
+
+    prompt: str = Field(..., min_length=1, description="Prompt sent to the provider")
+    reference: str | None = Field(default=None, description="Reference answer")
+    context: str | None = Field(default=None, description="Item context")
+    id: str | None = Field(default=None, description="Stable item identifier")
+
+
 class CreateEvaluationRunRequest(BaseModel):
     """Request body for creating an evaluation run."""
 
@@ -26,6 +43,18 @@ class CreateEvaluationRunRequest(BaseModel):
     tags: list[str] = Field(default_factory=list, description="Tags")
     workflow_id: str | None = Field(default=None, description="Temporal workflow ID")
     total_items: int = Field(default=0, ge=0, description="Total items to evaluate")
+    system_prompt: str | None = Field(
+        default=None,
+        description="System prompt prepended to provider calls",
+    )
+    prompt_template: str | None = Field(
+        default=None,
+        description="Prompt template with {variable} placeholders",
+    )
+    dataset_items: list[DatasetItemRequest] = Field(
+        default_factory=list,
+        description="Dataset items to evaluate",
+    )
 
 
 class CancelRunRequest(BaseModel):

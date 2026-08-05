@@ -9,7 +9,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from app.evaluation.temporal.activities import configure_session_factory
+from app.evaluation.metrics.engine import MetricEngine
+from app.evaluation.temporal.activities import (
+    configure_cost_calculator,
+    configure_metric_engine,
+    configure_provider_registry,
+    configure_session_factory,
+)
 from app.infrastructure.database.engine import DatabaseEngine
 from app.infrastructure.event_bus.redis_event_bus import RedisStreamsEventBus
 from app.infrastructure.health.database import DatabaseHealthContributor
@@ -17,6 +23,8 @@ from app.infrastructure.health.redis import RedisHealthContributor
 from app.infrastructure.health.temporal import TemporalHealthContributor
 from app.infrastructure.temporal.client import TemporalClientFactory
 from app.infrastructure.temporal.lifecycle import TemporalWorkerLifecycle
+from app.providers.cost.calculator import CostCalculator
+from app.providers.registry.registry import ProviderRegistry
 
 if TYPE_CHECKING:
     from app.kernel.container.di_container import DIContainer
@@ -46,6 +54,7 @@ class InfrastructureServices:
     def register_all(self) -> None:
         """Register all infrastructure services and health contributors."""
         self._register_database_services()
+        self._register_evaluation_services()
         self._register_event_bus_services()
         self._register_temporal_services()
         self._register_health_contributors()
@@ -56,6 +65,22 @@ class InfrastructureServices:
         configure_session_factory(engine.session_factory)
         self._service_registry.register("database", engine)
         self._health_registry.register(DatabaseHealthContributor(engine))
+
+    def _register_evaluation_services(self) -> None:
+        """Configure evaluation dependencies for temporal activities.
+
+        The provider registry, metric engine, and cost calculator
+        are resolved from the DI container and shared with the
+        Temporal item execution activities so the worker executes
+        real provider calls with real cost estimation.
+        """
+        provider_registry = self._container.resolve(ProviderRegistry)
+        metric_engine = self._container.resolve(MetricEngine)
+        cost_calculator = self._container.resolve(CostCalculator)
+
+        configure_provider_registry(provider_registry)
+        configure_metric_engine(metric_engine)
+        configure_cost_calculator(cost_calculator)
 
     def _register_event_bus_services(self) -> None:
         """Register event bus lifecycle services and health."""

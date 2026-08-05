@@ -63,5 +63,7 @@ class CostMetric(Metric):
             normalized_score=max(0.0, min(score, 1.0)),
             reasoning=f"Cost: ${cost_usd:.6f} (threshold: ${max_cost})",
             metadata={"cost_usd": cost_usd, "max_cost_usd": max_cost},
+            version=self.definition().version,
+            cost_usd=cost_usd,
             execution_time_ms=int((time.monotonic() - start) * 1000),
         )

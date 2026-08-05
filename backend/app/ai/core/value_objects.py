@@ -53,6 +53,8 @@ class ExecutionMetadata:
     created_by: str | None = None
     tags: tuple[str, ...] = ()
     description: str | None = None
+    judge_provider: str | None = None
+    judge_model: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

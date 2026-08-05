@@ -93,5 +93,6 @@ class ToolCallCorrectnessMetric(Metric):
                 "total_calls": len(tool_calls),
                 "errors": errors,
             },
+            version=self.definition().version,
             execution_time_ms=int((time.monotonic() - start) * 1000),
         )

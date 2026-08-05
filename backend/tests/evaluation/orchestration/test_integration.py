@@ -163,6 +163,7 @@ def _make_orchestrator(
     event_publisher: MagicMock | None = None,
     run_repository: MagicMock | None = None,
     runtime_coordinator: RuntimeCoordinator | None = None,
+    metric_engine: MagicMock | None = None,
 ) -> EvaluationOrchestrator:
     """Build an EvaluationOrchestrator with real components where possible."""
     return EvaluationOrchestrator(
@@ -171,6 +172,7 @@ def _make_orchestrator(
         run_repository=run_repository or _make_run_repository(),
         item_repository=MagicMock(),
         checkpoint_repository=MagicMock(),
+        metric_engine=metric_engine or MagicMock(),
         runtime_coordinator=runtime_coordinator or RuntimeCoordinator(),
     )
 

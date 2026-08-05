@@ -1,17 +1,20 @@
 """EvaluationPipelineExecutor and stage executors.
 
-Concrete implementations of the PipelineExecutor and ExecutionStage
-contracts for evaluation execution.
+Contains the real implementations of MetricDispatch, Aggregation,
+and Persistence stages that actually execute metrics, compute
+aggregations, and persist results.
 """
 
 from __future__ import annotations
 
+import logging
 import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from app.evaluation.execution.contracts.executor import PipelineExecutor
 from app.evaluation.execution.pipeline.step import ExecutionStep, StepStatus
+from app.evaluation.execution.prompt_builder import PromptTemplate
 from app.evaluation.execution.results.results import (
     ExecutionOutcome,
     ExecutionResult,
@@ -20,19 +23,36 @@ from app.evaluation.execution.results.results import (
 )
 from app.evaluation.execution.stages.stage import ExecutionStage, ValidationIssue
 from app.evaluation.execution.stages.types import StageType
-from app.providers.models.enums import MessageRole
+from app.evaluation.metrics.domain import MetricInput, MetricResult
+from app.evaluation.metrics.engine import MetricEngine
+from app.providers.cost.calculator import CostCalculator
+from app.providers.cost.defaults import build_default_cost_calculator
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from app.evaluation.execution.context.context import PipelineContext
+    from app.evaluation.metrics.domain import MetricAggregation
     from app.providers.contracts.base import BaseProvider
     from app.providers.contracts.chat import ChatProvider
     from app.providers.registry.registry import ProviderRegistry
-    from app.providers.runtime.execution.runtime_coordinator import (
-        ExecutionRequest,
-        RuntimeCoordinator,
-    )
+    from app.providers.runtime.execution.runtime_coordinator import RuntimeCoordinator
+
+logger = logging.getLogger(__name__)
+
+_EXECUTION_METADATA_KEYS: frozenset[str] = frozenset(
+    {
+        "model",
+        "request_id",
+        "tokens_input",
+        "tokens_output",
+        "tokens_cached",
+        "cost_usd",
+        "cost_estimated",
+        "latency_ms",
+        "finish_reason",
+    }
+)
 
 
 class EvaluationPipelineExecutor(PipelineExecutor):
@@ -52,6 +72,8 @@ class EvaluationPipelineExecutor(PipelineExecutor):
         outcome = ExecutionOutcome.SUCCESS
         error_msg: str | None = None
 
+        shared_state: dict[str, Any] = {}
+
         for stage in pipeline.stages:
             if context.is_cancelled:
                 outcome = ExecutionOutcome.CANCELLED
@@ -61,7 +83,7 @@ class EvaluationPipelineExecutor(PipelineExecutor):
             steps = pipeline.plan.steps_for_stage(stage_type) if pipeline.plan else []
 
             try:
-                result = await stage.execute(context, steps)
+                result = await stage.execute(context, steps, shared_state=shared_state)
                 stage_results.append(result)
                 items_succeeded += result.items_succeeded
                 items_failed += result.items_failed
@@ -104,11 +126,12 @@ def _build_step_result(
     duration_ms: int = 0,
     error: str | None = None,
     response: str = "",
+    metadata: dict[str, str] | None = None,
 ) -> StepResult:
     """Build a StepResult with common fields."""
-    metadata: dict[str, str] = {}
+    result_metadata: dict[str, str] = metadata or {}
     if response:
-        metadata["response"] = response
+        result_metadata["response"] = response
     return StepResult(
         step_id=step.step_id,
         step_name=step.name,
@@ -117,52 +140,8 @@ def _build_step_result(
         outcome=outcome,
         duration_ms=duration_ms,
         error=error,
-        metadata=metadata,
+        metadata=result_metadata,
     )
-
-
-def _make_placeholder(
-    stage_type: StageType,
-    stage_name: str,
-) -> type[ExecutionStage]:
-    """Create a lightweight placeholder ExecutionStage subclass."""
-
-    class _Stage(ExecutionStage):
-        def __init__(self) -> None:
-            super().__init__(stage_type=stage_type, name=stage_name)
-
-        def validate(self, context: PipelineContext) -> list[ValidationIssue]:
-            return []
-
-        async def execute(
-            self,
-            context: PipelineContext,
-            steps: Sequence[ExecutionStep],
-        ) -> StageResult:
-            start = time.monotonic()
-            results = [
-                _build_step_result(s, stage_type, StepStatus.COMPLETED, ExecutionOutcome.SUCCESS)
-                for s in steps
-            ]
-            elapsed = int((time.monotonic() - start) * 1000)
-            return StageResult(
-                stage_type=stage_type,
-                stage_name=stage_name,
-                outcome=ExecutionOutcome.SUCCESS,
-                step_results=tuple(results),
-                duration_ms=elapsed,
-                items_processed=len(results),
-                items_succeeded=len(results),
-                completed_at=datetime.now(UTC),
-            )
-
-        async def rollback(self, context: PipelineContext, result: StageResult) -> None:
-            pass
-
-        def supports_resume(self) -> bool:
-            return True
-
-    return _Stage
 
 
 class ProviderInvocationStage(ExecutionStage):
@@ -172,14 +151,15 @@ class ProviderInvocationStage(ExecutionStage):
         self,
         provider_registry: ProviderRegistry,
         runtime_coordinator: RuntimeCoordinator,
+        *,
+        cost_calculator: CostCalculator | None = None,
     ) -> None:
-        """Initialize with provider registry and runtime coordinator."""
         super().__init__(stage_type=StageType.PROVIDER_INVOCATION, name="Provider Invocation")
         self._provider_registry = provider_registry
         self._runtime_coordinator = runtime_coordinator
+        self._cost_calculator = cost_calculator or build_default_cost_calculator()
 
     def validate(self, context: PipelineContext) -> list[ValidationIssue]:
-        """Validate provider availability."""
         issues: list[ValidationIssue] = []
         provider_name = context.provider_selection.provider_name
         if provider_name and not self._provider_registry.is_registered(provider_name):
@@ -195,12 +175,14 @@ class ProviderInvocationStage(ExecutionStage):
         self,
         context: PipelineContext,
         steps: Sequence[ExecutionStep],
+        shared_state: dict[str, Any] | None = None,
     ) -> StageResult:
-        """Execute provider invocations for all steps."""
         start = time.monotonic()
         step_results: list[StepResult] = []
         succeeded = 0
         failed = 0
+        provider_responses: dict[int, str] = {}
+        item_executions: dict[int, dict[str, str]] = {}
 
         for step in steps:
             if context.is_cancelled:
@@ -218,11 +200,24 @@ class ProviderInvocationStage(ExecutionStage):
             step_results.append(result)
             if result.is_success:
                 succeeded += 1
+                if step.item_index is not None:
+                    provider_responses[step.item_index] = result.metadata.get("response", "")
+                    item_executions[step.item_index] = {
+                        key: value
+                        for key, value in result.metadata.items()
+                        if key in _EXECUTION_METADATA_KEYS
+                    }
             else:
                 failed += 1
 
+        if shared_state is not None:
+            shared_state["provider_responses"] = provider_responses
+            shared_state["item_executions"] = item_executions
+
         elapsed = int((time.monotonic() - start) * 1000)
-        outcome = ExecutionOutcome.FAILURE if failed > 0 else ExecutionOutcome.SUCCESS
+        outcome = (
+            ExecutionOutcome.FAILURE if failed > 0 and succeeded == 0 else ExecutionOutcome.SUCCESS
+        )
 
         return StageResult(
             stage_type=StageType.PROVIDER_INVOCATION,
@@ -236,48 +231,100 @@ class ProviderInvocationStage(ExecutionStage):
             completed_at=datetime.now(UTC),
         )
 
-    async def rollback(
-        self,
-        context: PipelineContext,
-        result: StageResult,
-    ) -> None:
-        """No rollback needed for provider invocations."""
+    async def rollback(self, context: PipelineContext, result: StageResult) -> None:
+        pass
 
     def supports_resume(self) -> bool:
-        """Provider invocation supports resume via checkpoints."""
         return True
+
+    def _prompt_template_for(self, context: PipelineContext) -> PromptTemplate:
+        """Build the prompt template from the run configuration.
+
+        Args:
+            context: The pipeline context.
+
+        Returns:
+            A PromptTemplate using the configured template and system prompt.
+
+        """
+        template = context.config.prompt_template if context.config else None
+        system_prompt = context.profile.system_prompt if context.profile else None
+        return PromptTemplate(
+            template=template or "{prompt}",
+            system_prompt=system_prompt,
+        )
+
+    def _build_request(
+        self,
+        context: PipelineContext,
+        step: ExecutionStep,
+    ) -> Any:
+        """Build an ExecutionRequest with real item content.
+
+        Args:
+            context: The pipeline context.
+            step: The step whose metadata carries item content.
+
+        Returns:
+            An ExecutionRequest with rendered system/user messages.
+
+        """
+        from app.providers.runtime.execution.runtime_coordinator import (
+            ExecutionRequest,
+        )
+
+        prompt = step.metadata.get("prompt", "") or f"Item {step.item_index}"
+        variables = {
+            "prompt": prompt,
+            "reference": step.metadata.get("reference", ""),
+            "context": step.metadata.get("context", ""),
+            "id": step.metadata.get("item_id", ""),
+        }
+        template = self._prompt_template_for(context)
+        messages: list[dict[str, str]] = []
+        if template.system_prompt:
+            messages.append({"role": "system", "content": template.system_prompt})
+        messages.append({"role": "user", "content": template.render_variables(variables)})
+
+        return ExecutionRequest(
+            provider_name=context.provider_selection.provider_name,
+            model_id=context.provider_selection.model_id,
+            messages=messages,
+            request_id=str(step.step_id),
+            timeout_seconds=float(step.timeout_seconds or 60),
+        )
 
     async def _execute_step(
         self,
         context: PipelineContext,
         step: ExecutionStep,
     ) -> StepResult:
-        """Execute a single provider invocation step."""
         step_start = time.monotonic()
+        captured: dict[str, Any] = {}
         try:
-            from app.providers.runtime.execution.runtime_coordinator import (
-                ExecutionRequest,
-            )
-
-            request = ExecutionRequest(
-                provider_name=context.provider_selection.provider_name,
-                model_id=context.provider_selection.model_id,
-                messages=[{"role": "user", "content": f"Item {step.item_index}"}],
-                request_id=str(step.step_id),
-                timeout_seconds=float(step.timeout_seconds or 60),
-            )
+            request = self._build_request(context, step)
 
             provider = self._provider_registry.resolve(
                 context.provider_selection.provider_name,
             )
 
-            async def _handler(req: ExecutionRequest) -> str:
-                return await self._invoke_provider(provider, req)
+            async def _handler(req: Any) -> str:
+                from app.providers.models.responses import ChatResponse
+
+                response: ChatResponse = await self._invoke_provider(provider, req)
+                captured["chat_response"] = response
+                return response.content
 
             runtime_result = await self._runtime_coordinator.execute(request, _handler)
             elapsed = int((time.monotonic() - step_start) * 1000)
 
             if runtime_result.success:
+                metadata = self._build_execution_metadata(
+                    context,
+                    step,
+                    captured,
+                    elapsed,
+                )
                 return _build_step_result(
                     step,
                     StageType.PROVIDER_INVOCATION,
@@ -285,6 +332,7 @@ class ProviderInvocationStage(ExecutionStage):
                     ExecutionOutcome.SUCCESS,
                     elapsed,
                     response=runtime_result.response,
+                    metadata=metadata,
                 )
 
             return _build_step_result(
@@ -307,18 +355,94 @@ class ProviderInvocationStage(ExecutionStage):
                 str(exc),
             )
 
+    def _build_execution_metadata(
+        self,
+        context: PipelineContext,
+        step: ExecutionStep,
+        captured: dict[str, Any],
+        latency_ms: int,
+    ) -> dict[str, str]:
+        """Build step metadata carrying real usage, cost, and latency.
+
+        Args:
+            context: The pipeline context.
+            step: The executed step.
+            captured: ChatResponse captured by the invocation handler.
+            latency_ms: Measured invocation latency in milliseconds.
+
+        Returns:
+            A string-keyed metadata dict consumed by metric dispatch.
+
+        """
+        metadata: dict[str, str] = {}
+        chat_response = captured.get("chat_response")
+        if chat_response is None:
+            return metadata
+
+        usage = getattr(chat_response, "usage", None)
+        tokens_input = getattr(usage, "input_tokens", 0) if usage is not None else 0
+        tokens_output = getattr(usage, "output_tokens", 0) if usage is not None else 0
+        tokens_cached = getattr(usage, "cached_tokens", 0) if usage is not None else 0
+
+        cost_usd = 0.0
+        cost_estimated = True
+        try:
+            from app.providers.tokenization.usage import TokenUsage
+
+            cost_usd = self._cost_calculator.estimate_cost(
+                context.provider_selection.provider_name,
+                context.provider_selection.model_id,
+                TokenUsage(
+                    input_tokens=tokens_input,
+                    output_tokens=tokens_output,
+                    cached_tokens=tokens_cached,
+                ),
+            )
+        except KeyError:
+            cost_estimated = False
+
+        model_id = getattr(chat_response, "model", "") or context.provider_selection.model_id
+        request_id = getattr(chat_response, "request_id", None) or ""
+        finish_reason = getattr(chat_response, "finish_reason", None)
+        finish_reason_value = (
+            getattr(finish_reason, "value", "") if finish_reason is not None else ""
+        )
+
+        metadata["model"] = model_id
+        metadata["request_id"] = str(request_id)
+        metadata["tokens_input"] = str(tokens_input)
+        metadata["tokens_output"] = str(tokens_output)
+        metadata["tokens_cached"] = str(tokens_cached)
+        metadata["cost_usd"] = f"{max(cost_usd, 0.0):.6f}"
+        metadata["cost_estimated"] = "true" if cost_estimated else "false"
+        metadata["latency_ms"] = str(latency_ms)
+        metadata["finish_reason"] = finish_reason_value
+        metadata["prompt"] = step.metadata.get("prompt", "")
+        metadata["reference"] = step.metadata.get("reference", "")
+        metadata["context"] = step.metadata.get("context", "")
+        return metadata
+
     async def _invoke_provider(
         self,
         provider: BaseProvider,
-        request: ExecutionRequest,
-    ) -> str:
-        """Invoke the provider with proper Message objects."""
+        request: Any,
+    ) -> Any:
+        from app.providers.models.enums import MessageRole
         from app.providers.models.messages import Message, TextContent
 
         chat_provider: ChatProvider = provider  # type: ignore[assignment]
 
+        role_map: dict[str, MessageRole] = {
+            "system": MessageRole.SYSTEM,
+            "user": MessageRole.USER,
+            "assistant": MessageRole.ASSISTANT,
+            "tool": MessageRole.TOOL,
+        }
         messages = [
-            Message(role=MessageRole.USER, content=[TextContent(text=msg["content"])])
+            Message(
+                role=role_map.get(msg.get("role", "user"), MessageRole.USER),
+                content=[TextContent(text=msg["content"])],
+            )
             for msg in request.messages
         ]
 
@@ -327,18 +451,311 @@ class ProviderInvocationStage(ExecutionStage):
             model=request.model_id,
         )
 
-        return response.content
+        return response
 
 
-MetricDispatchStage: type[ExecutionStage] = _make_placeholder(
-    StageType.METRIC_DISPATCH,
-    "Metric Dispatch",
-)
-AggregationStage: type[ExecutionStage] = _make_placeholder(
-    StageType.AGGREGATION,
-    "Aggregation",
-)
-PersistenceStage: type[ExecutionStage] = _make_placeholder(
-    StageType.PERSISTENCE,
-    "Persistence",
-)
+class MetricDispatchStage(ExecutionStage):
+    """Stage that runs metrics against provider responses."""
+
+    def __init__(
+        self,
+        metric_engine: MetricEngine,
+        *,
+        provider_registry: ProviderRegistry | None = None,
+    ) -> None:
+        super().__init__(stage_type=StageType.METRIC_DISPATCH, name="Metric Dispatch")
+        self._metric_engine = metric_engine
+        self._provider_registry = provider_registry
+
+    def validate(self, context: PipelineContext) -> list[ValidationIssue]:
+        return []
+
+    async def execute(
+        self,
+        context: PipelineContext,
+        steps: Sequence[ExecutionStep],
+        shared_state: dict[str, Any] | None = None,
+    ) -> StageResult:
+        start = time.monotonic()
+        step_results: list[StepResult] = []
+        succeeded = 0
+        failed = 0
+
+        provider_responses: dict[int, str] = (shared_state or {}).get("provider_responses", {})
+        item_executions: dict[int, dict[str, str]] = (shared_state or {}).get("item_executions", {})
+        metric_names = context.metric_selection.metric_names
+
+        for step in steps:
+            if context.is_cancelled:
+                step_results.append(
+                    _build_step_result(
+                        step,
+                        StageType.METRIC_DISPATCH,
+                        StepStatus.SKIPPED,
+                        ExecutionOutcome.CANCELLED,
+                    )
+                )
+                continue
+
+            item_index = step.item_index or 0
+            response_text = provider_responses.get(item_index, "")
+
+            step_start = time.monotonic()
+            try:
+                input_data = MetricInput(
+                    prompt=step.metadata.get("prompt", ""),
+                    response=response_text,
+                    reference=step.metadata.get("reference", ""),
+                    context=step.metadata.get("context", ""),
+                    metadata=self._build_metric_metadata(
+                        context,
+                        step,
+                        item_index,
+                        item_executions,
+                    ),
+                )
+
+                results: list[MetricResult] = []
+                resolved = self._metric_engine.resolve_metrics(metric_names)
+                for metric_name in resolved:
+                    try:
+                        result = await self._metric_engine.evaluate_single(metric_name, input_data)
+                        results.append(result)
+                    except Exception as exc:
+                        results.append(
+                            MetricResult(
+                                metric_name=metric_name,
+                                score=0.0,
+                                normalized_score=0.0,
+                                error=str(exc),
+                            )
+                        )
+
+                if shared_state is not None:
+                    if "metric_results" not in shared_state:
+                        shared_state["metric_results"] = {}
+                    shared_state["metric_results"][item_index] = results
+
+                elapsed = int((time.monotonic() - step_start) * 1000)
+                step_results.append(
+                    _build_step_result(
+                        step,
+                        StageType.METRIC_DISPATCH,
+                        StepStatus.COMPLETED,
+                        ExecutionOutcome.SUCCESS,
+                        elapsed,
+                        metadata={"metrics_evaluated": str(len(results))},
+                    )
+                )
+                succeeded += 1
+
+            except Exception as exc:
+                elapsed = int((time.monotonic() - step_start) * 1000)
+                step_results.append(
+                    _build_step_result(
+                        step,
+                        StageType.METRIC_DISPATCH,
+                        StepStatus.FAILED,
+                        ExecutionOutcome.FAILURE,
+                        elapsed,
+                        str(exc),
+                    )
+                )
+                failed += 1
+
+        elapsed = int((time.monotonic() - start) * 1000)
+        outcome = (
+            ExecutionOutcome.FAILURE if failed > 0 and succeeded == 0 else ExecutionOutcome.SUCCESS
+        )
+
+        return StageResult(
+            stage_type=StageType.METRIC_DISPATCH,
+            stage_name=self.name,
+            outcome=outcome,
+            step_results=tuple(step_results),
+            duration_ms=elapsed,
+            items_processed=succeeded + failed,
+            items_succeeded=succeeded,
+            items_failed=failed,
+            completed_at=datetime.now(UTC),
+        )
+
+    def _build_metric_metadata(
+        self,
+        context: PipelineContext,
+        step: ExecutionStep,
+        item_index: int,
+        item_executions: dict[int, dict[str, str]],
+    ) -> dict[str, Any]:
+        """Build MetricInput metadata from execution and judge config.
+
+        Args:
+            context: The pipeline context.
+            step: The executed step.
+            item_index: The zero-based item index.
+            item_executions: Real token/cost/latency data from the
+                provider invocation stage, keyed by item index.
+
+        Returns:
+            Metadata consumed by metric implementations.
+
+        """
+        metadata: dict[str, Any] = {}
+        metadata.update(item_executions.get(item_index, {}))
+        metadata.update(step.metadata if step.metadata else {})
+
+        judge_provider_name = context.metadata.judge_provider if context.metadata else None
+        judge_model = context.metadata.judge_model if context.metadata else ""
+
+        judge_provider = None
+        if judge_provider_name and self._provider_registry is not None:
+            judge_provider = self._provider_registry.resolve(judge_provider_name)
+
+        metadata["_judge_provider"] = judge_provider
+        metadata["_judge_provider_name"] = judge_provider_name or ""
+        metadata["_judge_model"] = judge_model
+        return metadata
+
+    async def rollback(self, context: PipelineContext, result: StageResult) -> None:
+        pass
+
+    def supports_resume(self) -> bool:
+        return True
+
+
+class AggregationStage(ExecutionStage):
+    """Stage that computes aggregated metric scores."""
+
+    def __init__(self, metric_engine: MetricEngine) -> None:
+        super().__init__(stage_type=StageType.AGGREGATION, name="Aggregation")
+        self._metric_engine = metric_engine
+
+    def validate(self, context: PipelineContext) -> list[ValidationIssue]:
+        return []
+
+    async def execute(
+        self,
+        context: PipelineContext,
+        steps: Sequence[ExecutionStep],
+        shared_state: dict[str, Any] | None = None,
+    ) -> StageResult:
+        start = time.monotonic()
+
+        metric_results_by_item: dict[int, list[MetricResult]] = (shared_state or {}).get(
+            "metric_results", {}
+        )
+
+        aggregations: dict[str, MetricAggregation] = {}
+        metric_names = set()
+
+        for item_results in metric_results_by_item.values():
+            for result in item_results:
+                metric_names.add(result.metric_name)
+
+        for metric_name in metric_names:
+            all_results: list[MetricResult] = []
+            for item_index in sorted(metric_results_by_item.keys()):
+                for result in metric_results_by_item[item_index]:
+                    if result.metric_name == metric_name:
+                        all_results.append(result)
+
+            if all_results:
+                aggregation = self._metric_engine.aggregate(metric_name, tuple(all_results))
+                aggregations[metric_name] = aggregation
+
+        if shared_state is not None:
+            shared_state["aggregations"] = aggregations
+
+        elapsed = int((time.monotonic() - start) * 1000)
+
+        return StageResult(
+            stage_type=StageType.AGGREGATION,
+            stage_name=self.name,
+            outcome=ExecutionOutcome.SUCCESS,
+            duration_ms=elapsed,
+            items_processed=len(aggregations),
+            items_succeeded=len(aggregations),
+            completed_at=datetime.now(UTC),
+        )
+
+    async def rollback(self, context: PipelineContext, result: StageResult) -> None:
+        pass
+
+    def supports_resume(self) -> bool:
+        return True
+
+
+class PersistenceStage(ExecutionStage):
+    """Stage that persists results to the database."""
+
+    def __init__(
+        self,
+        metric_result_repository: Any | None = None,
+        run_repository: Any | None = None,
+        run_event_repository: Any | None = None,
+    ) -> None:
+        super().__init__(stage_type=StageType.PERSISTENCE, name="Persistence")
+        self._metric_result_repo = metric_result_repository
+        self._run_repo = run_repository
+        self._run_event_repo = run_event_repository
+
+    def validate(self, context: PipelineContext) -> list[ValidationIssue]:
+        return []
+
+    async def execute(
+        self,
+        context: PipelineContext,
+        steps: Sequence[ExecutionStep],
+        shared_state: dict[str, Any] | None = None,
+    ) -> StageResult:
+        start = time.monotonic()
+
+        metric_results_by_item: dict[int, list[MetricResult]] = (shared_state or {}).get(
+            "metric_results", {}
+        )
+
+        persisted_count = 0
+        if self._metric_result_repo is not None:
+            for item_index, results in metric_results_by_item.items():
+                for result in results:
+                    try:
+                        await self._metric_result_repo.save(
+                            run_id=str(context.run_id),
+                            item_id=str(item_index),
+                            metric_name=result.metric_name,
+                            score=result.score,
+                            normalized_score=result.normalized_score,
+                            raw_output=result.raw_output,
+                            reasoning=result.reasoning,
+                            metadata=result.metadata,
+                            execution_time_ms=result.execution_time_ms,
+                            error=result.error,
+                            confidence=result.confidence,
+                            version=result.version,
+                            cost_usd=result.cost_usd,
+                        )
+                        persisted_count += 1
+                    except Exception:
+                        logger.exception(
+                            "Failed to persist metric result: metric=%s item_index=%s",
+                            result.metric_name,
+                            item_index,
+                        )
+
+        elapsed = int((time.monotonic() - start) * 1000)
+
+        return StageResult(
+            stage_type=StageType.PERSISTENCE,
+            stage_name=self.name,
+            outcome=ExecutionOutcome.SUCCESS,
+            duration_ms=elapsed,
+            items_processed=persisted_count,
+            items_succeeded=persisted_count,
+            completed_at=datetime.now(UTC),
+        )
+
+    async def rollback(self, context: PipelineContext, result: StageResult) -> None:
+        pass
+
+    def supports_resume(self) -> bool:
+        return True

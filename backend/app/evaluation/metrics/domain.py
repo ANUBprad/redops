@@ -86,6 +86,9 @@ class MetricResult:
     execution_time_ms: int = 0
     error: str | None = None
     created_at: datetime | None = None
+    confidence: float = 0.0
+    version: str = "1.0.0"
+    cost_usd: float = 0.0
 
     @property
     def is_success(self) -> bool:
