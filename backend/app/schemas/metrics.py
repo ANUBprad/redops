@@ -50,6 +50,9 @@ class MetricResultResponse(BaseModel):
     metadata: dict[str, object] = Field(default_factory=dict)
     execution_time_ms: int = Field(default=0, description="Execution time in ms")
     error: str | None = Field(default=None, description="Error message if failed")
+    confidence: float = Field(default=0.0, description="Judge confidence [0.0, 1.0]")
+    version: str = Field(default="1.0.0", description="Metric version")
+    cost_usd: float = Field(default=0.0, description="Cost in USD for this evaluation")
 
 
 class MetricAggregationResponse(BaseModel):

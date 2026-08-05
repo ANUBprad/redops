@@ -18,6 +18,7 @@ def _make_orchestrator(
     item_repository=None,
     checkpoint_repository=None,
     provider_registry=None,
+    metric_engine=None,
 ) -> EvaluationOrchestrator:
     """Build an EvaluationOrchestrator with mock dependencies."""
     return EvaluationOrchestrator(
@@ -26,6 +27,7 @@ def _make_orchestrator(
         run_repository=run_repository or MagicMock(),
         item_repository=item_repository or MagicMock(),
         checkpoint_repository=checkpoint_repository or MagicMock(),
+        metric_engine=metric_engine or MagicMock(),
     )
 
 

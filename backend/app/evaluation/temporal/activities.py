@@ -8,7 +8,7 @@ session via the configured session factory.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from temporalio import activity
 
@@ -38,6 +38,9 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 _session_factory: async_sessionmaker[AsyncSession] | None = None
+_provider_registry: Any = None
+_metric_engine: Any = None
+_cost_calculator: Any = None
 
 
 def configure_session_factory(factory: async_sessionmaker[AsyncSession]) -> None:
@@ -47,6 +50,33 @@ def configure_session_factory(factory: async_sessionmaker[AsyncSession]) -> None
     """
     global _session_factory
     _session_factory = factory
+
+
+def configure_provider_registry(registry: Any) -> None:
+    """Set the provider registry for item execution activities."""
+    global _provider_registry
+    _provider_registry = registry
+
+
+def configure_metric_engine(engine: Any) -> None:
+    """Set the metric engine for item execution activities."""
+    global _metric_engine
+    _metric_engine = engine
+
+
+def configure_cost_calculator(calculator: Any) -> None:
+    """Set the cost calculator for item execution activities."""
+    global _cost_calculator
+    _cost_calculator = calculator
+
+
+def _get_cost_calculator() -> Any:
+    """Return the configured cost calculator or a default one."""
+    if _cost_calculator is None:
+        from app.providers.cost.defaults import build_default_cost_calculator
+
+        return build_default_cost_calculator()
+    return _cost_calculator
 
 
 def _get_session() -> AsyncSession:
@@ -121,6 +151,52 @@ class CancelRunInput:
     run_id: str
     reason: str = "user_cancelled"
     force: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class ExecuteItemInput:
+    """Input for the execute_item activity.
+
+    Attributes:
+        run_id: The evaluation run identifier.
+        item_index: Zero-based index of the item in the dataset.
+        provider_name: Provider identifier.
+        model_id: Model identifier.
+        metric_names: Metrics to evaluate for this item.
+        prompt: The exact item prompt to send to the provider.
+        reference: Optional reference answer for the item.
+        context: Optional context for the item.
+        item_id: Optional stable item identifier.
+        prompt_template: Optional template with ``{variable}`` placeholders.
+        system_prompt: Optional system prompt for the provider call.
+
+    """
+
+    run_id: str
+    item_index: int
+    provider_name: str
+    model_id: str
+    metric_names: tuple[str, ...] = ()
+    prompt: str = ""
+    reference: str = ""
+    context: str = ""
+    item_id: str = ""
+    prompt_template: str | None = None
+    system_prompt: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ExecuteItemResult:
+    """Result returned by execute_item activity."""
+
+    item_index: int
+    response: str = ""
+    cost_usd: float = 0.0
+    tokens_input: int = 0
+    tokens_output: int = 0
+    latency_ms: int = 0
+    failed: bool = False
+    error: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -276,3 +352,73 @@ async def cancel_run_activity(input: CancelRunInput) -> RunResult:
         run = await handler.handle(command)
         await session.commit()
     return RunResult(run_id=str(run.id), status=run.status.value)
+
+
+@activity.defn
+async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
+    """Execute a single evaluation item against the provider.
+
+    Builds the real prompt for the item, invokes the configured
+    chat provider through the shared provider registry, and returns
+    a result carrying real token usage, estimated cost, and latency.
+    """
+    import time
+
+    activity.logger.info(
+        "Executing item run_id=%s item_index=%d provider=%s",
+        input.run_id,
+        input.item_index,
+        input.provider_name,
+    )
+    start = time.monotonic()
+
+    try:
+        from app.evaluation.data.dataset import DatasetItem
+        from app.evaluation.execution.item_executor import ItemExecutor
+        from app.evaluation.execution.prompt_builder import PromptTemplate
+        from app.providers.registry.registry import ProviderRegistry
+
+        registry: Any = _provider_registry if _provider_registry is not None else ProviderRegistry()
+        provider = registry.resolve(input.provider_name)
+
+        item = DatasetItem(
+            prompt=input.prompt or f"Evaluate item {input.item_index}",
+            reference=input.reference or None,
+            context=input.context or None,
+            id=input.item_id or None,
+        )
+
+        template = PromptTemplate(
+            template=input.prompt_template or "{prompt}",
+            system_prompt=input.system_prompt,
+        )
+        executor = ItemExecutor(_get_cost_calculator(), prompt_template=template)
+
+        result = await executor.execute(
+            provider,
+            provider_name=input.provider_name,
+            model_id=input.model_id,
+            item=item,
+            item_index=input.item_index,
+        )
+
+        elapsed_ms = int((time.monotonic() - start) * 1000)
+
+        return ExecuteItemResult(
+            item_index=input.item_index,
+            response=result.response,
+            cost_usd=result.cost_usd,
+            tokens_input=result.tokens_input,
+            tokens_output=result.tokens_output,
+            latency_ms=elapsed_ms,
+            failed=result.failed,
+            error=result.error,
+        )
+    except Exception as exc:
+        elapsed_ms = int((time.monotonic() - start) * 1000)
+        return ExecuteItemResult(
+            item_index=input.item_index,
+            failed=True,
+            error=str(exc),
+            latency_ms=elapsed_ms,
+        )

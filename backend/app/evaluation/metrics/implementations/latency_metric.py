@@ -55,6 +55,7 @@ class LatencyMetric(Metric):
                 normalized_score=1.0,
                 reasoning="No latency recorded (instantaneous or unavailable)",
                 metadata={"latency_ms": latency_ms},
+                version=self.definition().version,
                 execution_time_ms=int((time.monotonic() - start) * 1000),
             )
 
@@ -70,5 +71,6 @@ class LatencyMetric(Metric):
             normalized_score=normalized,
             reasoning=f"Latency: {latency_ms}ms (threshold: {threshold}ms)",
             metadata={"latency_ms": latency_ms, "threshold_ms": threshold},
+            version=self.definition().version,
             execution_time_ms=int((time.monotonic() - start) * 1000),
         )

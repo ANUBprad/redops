@@ -62,6 +62,7 @@ class CreateEvaluationRunHandler:
         profile = EvaluationProfile(
             provider_name=command.provider,
             model_id=command.model,
+            system_prompt=command.system_prompt,
         )
 
         config = EvaluationConfiguration(
@@ -69,6 +70,7 @@ class CreateEvaluationRunHandler:
             eval_type=EvaluationType(command.eval_type),
             profile=profile,
             metrics=command.metrics or ("accuracy",),
+            prompt_template=command.prompt_template,
         )
 
         metadata = EvaluationMetadata(

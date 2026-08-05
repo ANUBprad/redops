@@ -33,6 +33,7 @@ from app.kernel.exceptions.errors import BaseError
 from app.schemas.evaluation_run import (
     CancelRunRequest,
     CreateEvaluationRunRequest,
+    DatasetItemRequest,
     RunListResponse,
     RunResponse,
     RunSummaryResponse,
@@ -48,6 +49,26 @@ run_router = APIRouter(prefix="/runs", tags=["runs"])
 def _get_repository(session: AsyncSession) -> SqlAlchemyEvaluationRunRepository:
     """Create a repository from the database session."""
     return SqlAlchemyEvaluationRunRepository(session)
+
+
+def _item_to_payload(item: DatasetItemRequest) -> dict[str, str]:
+    """Convert an API dataset item to a workflow payload.
+
+    Args:
+        item: The API dataset item.
+
+    Returns:
+        A string-keyed payload with only the populated fields.
+
+    """
+    payload: dict[str, str] = {"prompt": item.prompt}
+    if item.reference is not None:
+        payload["reference"] = item.reference
+    if item.context is not None:
+        payload["context"] = item.context
+    if item.id is not None:
+        payload["item_id"] = item.id
+    return payload
 
 
 def _run_to_response(run: EvaluationRun) -> RunResponse:
@@ -134,17 +155,29 @@ async def create_run(
         created_by=current_user.user_id,
         tags=tuple(body.tags),
         workflow_id=body.workflow_id,
+        system_prompt=body.system_prompt,
+        prompt_template=body.prompt_template,
+        dataset_items=tuple(_item_to_payload(item) for item in body.dataset_items),
     )
     try:
         run = await handler.handle(command)
         await session.flush()
+
+        dataset_items = tuple(_item_to_payload(item) for item in body.dataset_items)
+        total_items = body.total_items or len(dataset_items)
 
         workflow_id = f"evaluation-run-{run.id}"
         await temporal_client.start_workflow(
             EvaluationRunWorkflow.run,
             EvaluationRunWorkflowInput(
                 run_id=str(run.id),
-                total_items=body.total_items,
+                total_items=total_items,
+                provider_name=body.provider,
+                model_id=body.model,
+                metric_names=tuple(body.metrics),
+                dataset_items=dataset_items,
+                prompt_template=body.prompt_template,
+                system_prompt=body.system_prompt,
             ),
             id=workflow_id,
             task_queue="redops-evaluations",

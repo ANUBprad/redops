@@ -11,6 +11,7 @@ from app.api.health import health_router
 from app.api.metrics import metrics_router
 from app.api.observability import observability_router
 from app.api.redteam import redteam_router
+from app.api.replay import router as replay_router
 from app.apikeys.api import apikeys_router
 from app.audit.api.router import audit_router
 from app.identity.api.router import identity_router
@@ -36,3 +37,4 @@ api_router.include_router(redteam_router)
 api_router.include_router(analytics_router)
 api_router.include_router(audit_router)
 api_router.include_router(notification_router)
+api_router.include_router(replay_router)

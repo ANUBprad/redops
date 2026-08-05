@@ -39,6 +39,9 @@ class SqlAlchemyMetricResultRepository(MetricResultRepository):
             execution_time_ms=model.execution_time_ms,
             error=model.error,
             created_at=model.created_at,
+            confidence=model.confidence,
+            version=model.version,
+            cost_usd=model.cost_usd,
         )
 
     @staticmethod
@@ -55,6 +58,9 @@ class SqlAlchemyMetricResultRepository(MetricResultRepository):
             metadata_json=result.metadata,
             execution_time_ms=result.execution_time_ms,
             error=result.error,
+            confidence=result.confidence,
+            version=result.version,
+            cost_usd=result.cost_usd,
         )
 
     async def save_many(self, results: Sequence[MetricResult]) -> None:

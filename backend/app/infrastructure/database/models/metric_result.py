@@ -37,6 +37,9 @@ class MetricResultModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         default=lambda: datetime.now(UTC),
     )
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    version: Mapped[str] = mapped_column(String(20), default="1.0.0")
+    cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
 
     __table_args__ = (
         Index(
