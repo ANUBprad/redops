@@ -1633,3 +1633,218 @@ Working tree:
 clean / remaining unrelated changes
 
 Then continue with the next phase.
+
+---
+
+## Mandatory Git Commit & Push Policy
+
+Repository:
+https://github.com/ANUBprad/redops
+
+### Absolute Rule
+
+EVERY code/data/documentation/configuration modification made by the CLI MUST be committed and pushed to GitHub immediately after the modification is completed and verified.
+
+This applies regardless of size.
+
+Examples include:
+
+- one-line code changes
+- bug fixes
+- refactors
+- configuration changes
+- dependency changes
+- schema/migration changes
+- test changes
+- documentation changes
+- README changes
+- `opencode.md` changes
+- cleanup/deletion of obsolete code
+- frontend changes
+- backend changes
+- infrastructure changes
+- Docker/Kubernetes/Helm changes
+- any other intentional repository modification
+
+There is NO minimum-change threshold.
+
+A change does NOT need to wait for a larger phase or batch of changes.
+
+### Required Workflow
+
+For EVERY completed modification:
+
+1. Inspect the change:
+
+```bash
+git status
+git diff --stat
+git diff
+```
+
+2. Run the smallest relevant verification for the modification.
+
+3. Stage ONLY the files belonging to that modification:
+
+```bash
+git add <specific-files>
+```
+
+4. Inspect the staged diff:
+
+```bash
+git diff --cached --stat
+git diff --cached
+```
+
+5. Create a focused legitimate commit:
+
+```bash
+git commit -m "<appropriate conventional commit message>"
+```
+
+6. Immediately push the commit to the RedOps GitHub repository:
+
+```bash
+git push origin HEAD:develop
+```
+
+7. Verify:
+
+```bash
+git status
+git log -1 --oneline
+git branch -vv
+```
+
+8. Report the commit hash and push result.
+
+### No Batching
+
+DO NOT accumulate multiple completed modifications and push them later.
+
+If three independent modifications are completed separately, they should normally produce three focused commits and three immediate pushes.
+
+Example:
+
+Modification A
+→ verify
+→ commit
+→ push
+
+Modification B
+→ verify
+→ commit
+→ push
+
+Modification C
+→ verify
+→ commit
+→ push
+
+Do NOT wait until an entire phase is finished if a smaller modification has already been completed and is ready to commit.
+
+### Commit Quality
+
+Commits must remain legitimate and meaningful.
+
+DO NOT create:
+
+- empty commits
+- no-op commits
+- artificial commits
+- commits containing unrelated changes
+- commits solely to increase GitHub activity
+
+The purpose of this policy is immediate synchronization of REAL work, not artificial commit generation.
+
+### Generated Files
+
+NEVER commit generated/cache/environment files unless explicitly required by the repository:
+
+- `.next/`
+- `node_modules/`
+- `__pycache__/`
+- `*.pyc`
+- `.pytest_cache/`
+- `.ruff_cache/`
+- `.mypy_cache/`
+- `*.tsbuildinfo`
+- virtual environments
+- `.env`
+- logs
+- temporary files
+- IDE/editor generated files
+
+Ensure appropriate `.gitignore` rules exist when necessary.
+
+### Unrelated Existing Changes
+
+Before staging anything, inspect `git status`.
+
+NEVER use:
+
+```bash
+git add .
+```
+
+blindly when unrelated changes may exist.
+
+NEVER reset, restore, clean, or discard user changes merely to make the commit easier.
+
+Preserve unrelated work.
+
+Stage only the files belonging to the modification that was just completed.
+
+### Push Failure
+
+If the commit succeeds but the push fails:
+
+1. DO NOT create another commit merely because the push failed.
+2. Diagnose the push failure.
+3. Retry the push after resolving the issue.
+4. Do not claim the work is synchronized until the remote push succeeds.
+
+### Branch
+
+Use the repository's current authorized development branch.
+
+For the current RedOps workflow, the development branch is:
+
+develop
+
+The normal push command is:
+
+```bash
+git push origin HEAD:develop
+```
+
+Do not silently push to another branch.
+
+### Completion Requirement
+
+A modification is NOT considered fully completed until:
+
+- the change is implemented
+- relevant verification passes
+- a focused commit exists
+- the commit is pushed successfully to GitHub
+- the remote synchronization is verified
+
+After every modification, report:
+
+```
+Commit: <hash>
+Message: <commit message>
+Push: SUCCESS/FAILED
+Remote: origin/develop
+Working tree: <status>
+```
+
+Then continue with the next task.
+
+### Exception
+
+If the user explicitly says NOT to commit or NOT to push a particular change, follow that explicit instruction for that change only.
+
+Otherwise, the commit-and-push policy above is mandatory.
