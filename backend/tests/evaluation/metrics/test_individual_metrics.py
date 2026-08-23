@@ -20,6 +20,7 @@ from app.evaluation.metrics.implementations.token_usage_metric import TokenUsage
 from app.evaluation.metrics.implementations.tool_call_correctness_metric import (
     ToolCallCorrectnessMetric,
 )
+from app.providers.models.responses import EmbeddingResponse, Usage
 
 
 def _make_mock_embedding_provider() -> MagicMock:
@@ -29,11 +30,16 @@ def _make_mock_embedding_provider() -> MagicMock:
     return provider
 
 
-def _make_embedding_response(vectors: list[tuple[float, ...]] | None = None) -> MagicMock:
-    """Create a mock EmbeddingResponse."""
-    resp = MagicMock()
-    resp.embeddings = vectors or [(1.0, 0.0, 0.0)]
-    return resp
+def _make_embedding_response(vectors: list[tuple[float, ...]] | None = None) -> EmbeddingResponse:
+    """Create an EmbeddingResponse carrying the first vector, as providers do."""
+    embedding = (vectors or [(1.0, 0.0, 0.0)])[0]
+    return EmbeddingResponse(
+        model="test-model",
+        provider="test",
+        usage=Usage(),
+        embedding=embedding,
+        dimensions=len(embedding),
+    )
 
 
 def _make_mock_judge_provider() -> MagicMock:

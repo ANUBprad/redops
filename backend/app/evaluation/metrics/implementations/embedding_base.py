@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 from typing import Any
 
@@ -35,9 +36,11 @@ class EmbeddingMetric(Metric):
             options=EmbeddingOptions(),
         )
 
-        if response.embeddings:
-            return response.embeddings[0]
-        return ()
+        embedding = response.embedding
+        if not isinstance(embedding, tuple):
+            msg = "Embedding provider did not return a valid embedding vector"
+            raise RuntimeError(msg)
+        return embedding
 
     @staticmethod
     def _cosine_similarity(a: tuple[float, ...], b: tuple[float, ...]) -> float:
@@ -45,9 +48,9 @@ class EmbeddingMetric(Metric):
         if not a or not b or len(a) != len(b):
             return 0.0
 
-        dot_product = sum(x * y for x, y in zip(a, b, strict=True))
-        norm_a = sum(x * x for x in a) ** 0.5
-        norm_b = sum(x * x for x in b) ** 0.5
+        dot_product = math.sumprod(a, b)
+        norm_a = math.sqrt(math.sumprod(a, a))
+        norm_b = math.sqrt(math.sumprod(b, b))
 
         if norm_a == 0 or norm_b == 0:
             return 0.0
@@ -61,6 +64,7 @@ class EmbeddingMetric(Metric):
         start: float,
         reasoning: str = "",
         metadata: dict[str, Any] | None = None,
+        error: str | None = None,
     ) -> MetricResult:
         """Build a MetricResult from an embedding score."""
         return MetricResult(
@@ -71,4 +75,5 @@ class EmbeddingMetric(Metric):
             metadata=metadata or {},
             version=self.definition().version,
             execution_time_ms=int((time.monotonic() - start) * 1000),
+            error=error,
         )
