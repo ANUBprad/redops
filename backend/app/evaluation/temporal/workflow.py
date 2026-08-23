@@ -20,6 +20,7 @@ with workflow.unsafe.imports_passed_through():
         ExecuteItemInput,
         ExecuteItemResult,
         FailRunInput,
+        PersistMetricResultsInput,
         ProgressInput,
         RunIdInput,
         StartRunInput,
@@ -27,6 +28,7 @@ with workflow.unsafe.imports_passed_through():
         complete_run_activity,
         execute_item_activity,
         fail_run_activity,
+        persist_metric_results_activity,
         queue_run_activity,
         start_run_activity,
         update_progress_activity,
@@ -172,6 +174,17 @@ class EvaluationRunWorkflow:
 
                 if item_result.failed:
                     items_failed += 1
+                elif item_result.metrics:
+                    await workflow.execute_activity(
+                        persist_metric_results_activity,
+                        PersistMetricResultsInput(
+                            run_id=input.run_id,
+                            item_id=item_result.item_id,
+                            results=item_result.metrics,
+                        ),
+                        start_to_close_timeout=activity_start_to_close,
+                        schedule_to_close_timeout=activity_schedule_to_close,
+                    )
 
                 await workflow.execute_activity(
                     update_progress_activity,

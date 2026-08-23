@@ -29,6 +29,7 @@ from app.evaluation.temporal.activities import (
     create_run_activity,
     execute_item_activity,
     fail_run_activity,
+    persist_metric_results_activity,
     queue_run_activity,
     start_run_activity,
     update_progress_activity,
@@ -208,6 +209,7 @@ class InfrastructureContainer:
         activity_registry.register(fail_run_activity)
         activity_registry.register(cancel_run_activity)
         activity_registry.register(execute_item_activity)
+        activity_registry.register(persist_metric_results_activity)
 
         activity_registry.register(create_agent_run_activity)
         activity_registry.register(queue_agent_run_activity)

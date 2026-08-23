@@ -8,6 +8,7 @@ session via the configured session factory.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import field as dataclasses_field
 from typing import TYPE_CHECKING, Any
 
 from temporalio import activity
@@ -186,6 +187,27 @@ class ExecuteItemInput:
 
 
 @dataclass(frozen=True, slots=True)
+class MetricResultPayload:
+    """Serializable metric evaluation result.
+
+    Transport shape between the item execution activity and the
+    metric result persistence activity.
+    """
+
+    metric_name: str
+    score: float = 0.0
+    normalized_score: float = 0.0
+    raw_output: str = ""
+    reasoning: str = ""
+    metadata: dict[str, Any] = dataclasses_field(default_factory=dict)
+    execution_time_ms: int = 0
+    error: str | None = None
+    confidence: float = 0.0
+    version: str = "1.0.0"
+    cost_usd: float = 0.0
+
+
+@dataclass(frozen=True, slots=True)
 class ExecuteItemResult:
     """Result returned by execute_item activity."""
 
@@ -197,11 +219,22 @@ class ExecuteItemResult:
     latency_ms: int = 0
     failed: bool = False
     error: str | None = None
+    item_id: str = ""
+    metrics: tuple[MetricResultPayload, ...] = ()
 
 
 # ---------------------------------------------------------------------------
 # Activity results
 # ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class PersistMetricResultsInput:
+    """Input for the persist_metric_results activity."""
+
+    run_id: str
+    item_id: str
+    results: tuple[MetricResultPayload, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -359,8 +392,10 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
     """Execute a single evaluation item against the provider.
 
     Builds the real prompt for the item, invokes the configured
-    chat provider through the shared provider registry, and returns
-    a result carrying real token usage, estimated cost, and latency.
+    chat provider through the shared provider registry, evaluates
+    the requested metrics against the generated response, and
+    returns a result carrying real token usage, estimated cost,
+    latency, and metric scores.
     """
     import time
 
@@ -403,6 +438,17 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
         )
 
         elapsed_ms = int((time.monotonic() - start) * 1000)
+        item_id = input.item_id or str(input.item_index)
+        metrics: tuple[MetricResultPayload, ...] = ()
+        if result.is_success:
+            metrics = await _evaluate_metrics(
+                engine=_metric_engine,
+                run_id=input.run_id,
+                item_id=item_id,
+                metric_names=input.metric_names,
+                execution=result,
+                judge_provider=provider,
+            )
 
         return ExecuteItemResult(
             item_index=input.item_index,
@@ -413,6 +459,8 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
             latency_ms=elapsed_ms,
             failed=result.failed,
             error=result.error,
+            item_id=item_id,
+            metrics=metrics,
         )
     except Exception as exc:
         elapsed_ms = int((time.monotonic() - start) * 1000)
@@ -422,3 +470,112 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
             error=str(exc),
             latency_ms=elapsed_ms,
         )
+
+
+async def _evaluate_metrics(
+    *,
+    engine: Any,
+    run_id: str,
+    item_id: str,
+    metric_names: tuple[str, ...],
+    execution: Any,
+    judge_provider: Any,
+) -> tuple[MetricResultPayload, ...]:
+    """Evaluate the selected metrics against an executed item.
+
+    The resolved chat provider is injected as the LLM judge so
+    judge-backed metrics perform a real second LLM call. Embedding-
+    backed metrics without a registered embedding provider produce
+    explicit error results rather than fake scores.
+    """
+    if engine is None or not metric_names:
+        return ()
+
+    from app.evaluation.metrics.domain import MetricInput
+
+    resolved = engine.resolve_metrics(metric_names)
+    if not resolved:
+        activity.logger.warning(
+            "No requested metrics are registered run_id=%s requested=%s",
+            run_id,
+            list(metric_names),
+        )
+        return ()
+
+    metadata = execution.to_metric_metadata()
+    metadata.update(
+        {
+            "run_id": run_id,
+            "item_id": item_id,
+            "_judge_provider": judge_provider,
+            "_judge_provider_name": execution.provider_name,
+            "_judge_model": execution.model_id,
+        }
+    )
+    metric_input = MetricInput(
+        prompt=execution.prompt,
+        response=execution.response,
+        reference=execution.reference or "",
+        context=execution.context or "",
+        metadata=metadata,
+    )
+
+    results = await engine.evaluate_batch(resolved, metric_input)
+    return tuple(_to_payload(r) for r in results)
+
+
+def _to_payload(result: Any) -> MetricResultPayload:
+    """Convert a domain MetricResult to its serializable payload."""
+    return MetricResultPayload(
+        metric_name=result.metric_name,
+        score=result.score,
+        normalized_score=result.normalized_score,
+        raw_output=result.raw_output,
+        reasoning=result.reasoning,
+        metadata=dict(result.metadata),
+        execution_time_ms=result.execution_time_ms,
+        error=result.error,
+        confidence=result.confidence,
+        version=result.version,
+        cost_usd=result.cost_usd,
+    )
+
+
+@activity.defn
+async def persist_metric_results_activity(input: PersistMetricResultsInput) -> int:
+    """Persist metric results for a single evaluated item."""
+    if not input.results:
+        return 0
+
+    from app.evaluation.metrics.domain import MetricResult
+    from app.infrastructure.database.repositories.metric_result_repository import (
+        SqlAlchemyMetricResultRepository,
+    )
+
+    activity.logger.info(
+        "Persisting metric results run_id=%s item_id=%s count=%d",
+        input.run_id,
+        input.item_id,
+        len(input.results),
+    )
+
+    def to_domain(payload: MetricResultPayload) -> MetricResult:
+        return MetricResult(
+            metric_name=payload.metric_name,
+            score=payload.score,
+            normalized_score=payload.normalized_score,
+            raw_output=payload.raw_output,
+            reasoning=payload.reasoning,
+            metadata={**payload.metadata, "run_id": input.run_id, "item_id": input.item_id},
+            execution_time_ms=payload.execution_time_ms,
+            error=payload.error,
+            confidence=payload.confidence,
+            version=payload.version,
+            cost_usd=payload.cost_usd,
+        )
+
+    async with _get_session() as session:
+        repo = SqlAlchemyMetricResultRepository(session)
+        await repo.save_many([to_domain(p) for p in input.results])
+        await session.commit()
+    return len(input.results)
