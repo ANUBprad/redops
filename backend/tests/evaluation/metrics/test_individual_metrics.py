@@ -43,19 +43,24 @@ def _make_embedding_response(vectors: list[tuple[float, ...]] | None = None) -> 
 
 
 def _make_mock_judge_provider() -> MagicMock:
-    """Create a mock LLM judge provider returning a score."""
+    """Create a mock LLM judge provider returning a structured verdict."""
+    import json
+
     from app.providers.models.enums import FinishReason
     from app.providers.models.responses import ChatResponse, Usage
 
+    verdict = json.dumps(
+        {"score": 0.9, "confidence": 0.8, "reasoning": "Good response."},
+    )
     provider = MagicMock()
     provider.chat = AsyncMock(
         return_value=ChatResponse(
-            content="Score: 0.9\nReasoning: Good response.",
+            content=verdict,
             model="gpt-4",
             provider="openai",
             usage=Usage(input_tokens=20, output_tokens=10, total_tokens=30),
             finish_reason=FinishReason.STOP,
-        )
+        ),
     )
     return provider
 

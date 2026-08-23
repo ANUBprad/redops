@@ -90,22 +90,37 @@ class JudgeEngine:
             return JudgeResponse(
                 score=0.0,
                 confidence=0.0,
-                reasoning=f"Judge call failed: {exc}",
+                reasoning=f"Judge LLM call failed: {exc}",
                 rubric_version=request.rubric.version
                 if request.rubric
                 else effective_config.rubric_version,
                 judge_model=effective_config.model,
                 judge_prompt_version=JUDGE_PROMPT_VERSION,
                 execution_time_ms=elapsed,
+                error=f"Judge LLM call failed: {exc}",
             )
 
         elapsed = int((time.monotonic() - start) * 1000)
 
-        parsed = self._parse_response(raw_output)
-
+        parsed, parse_error = self._parse_response(raw_output)
         rubric_version = (
             request.rubric.version if request.rubric else effective_config.rubric_version
         )
+
+        if parse_error is not None:
+            return JudgeResponse(
+                score=0.0,
+                confidence=0.0,
+                reasoning=parse_error,
+                rubric_version=rubric_version,
+                judge_model=effective_config.model,
+                judge_prompt_version=JUDGE_PROMPT_VERSION,
+                raw_output=raw_output,
+                execution_time_ms=elapsed,
+                tokens_input=usage.get("tokens_input", 0),
+                tokens_output=usage.get("tokens_output", 0),
+                error=parse_error,
+            )
 
         return JudgeResponse(
             score=parsed["score"],
@@ -116,7 +131,7 @@ class JudgeEngine:
             judge_prompt_version=JUDGE_PROMPT_VERSION,
             raw_output=raw_output,
             execution_time_ms=elapsed,
-            cost_usd=usage.get("cost_usd", 0.0),
+            cost_usd=self._estimate_cost(effective_provider, effective_config, usage),
             tokens_input=usage.get("tokens_input", 0),
             tokens_output=usage.get("tokens_output", 0),
         )
@@ -178,46 +193,78 @@ class JudgeEngine:
 
         return response.content, usage_info
 
-    def _parse_response(self, raw_output: str) -> dict[str, Any]:
-        """Parse the LLM response into structured fields."""
+    def _parse_response(self, raw_output: str) -> tuple[dict[str, Any], str | None]:
+        """Parse the LLM response into structured fields.
+
+        Returns:
+            Tuple of (parsed fields, parse error). The error is None
+            only when the output is a JSON object carrying numeric
+            score and confidence fields. Malformed output never
+            produces a fabricated default score.
+
+        """
         text = raw_output.strip()
 
         json_match = re.search(r"\{[^{}]*\}", text, re.DOTALL)
-        if json_match:
-            try:
-                parsed = json.loads(json_match.group())
-                return {
-                    "score": max(0.0, min(1.0, float(parsed.get("score", 0.0)))),
-                    "confidence": max(0.0, min(1.0, float(parsed.get("confidence", 0.0)))),
-                    "reasoning": str(parsed.get("reasoning", "No reasoning provided")),
-                }
-            except (json.JSONDecodeError, ValueError, TypeError):
-                pass
+        if not json_match:
+            return {}, "Judge returned no parsable JSON object"
 
-        score = self._extract_score_fallback(text)
-        return {
-            "score": score,
-            "confidence": 0.5,
-            "reasoning": text[:500] if text else "Failed to parse judge response",
-        }
+        try:
+            parsed = json.loads(json_match.group())
+        except json.JSONDecodeError:
+            return {}, "Judge returned malformed JSON"
 
-    def _extract_score_fallback(self, text: str) -> float:
-        """Extract a score from unstructured text as fallback."""
-        patterns = [
-            r"score[:\s]*(\d+\.?\d*)",
-            r"rating[:\s]*(\d+\.?\d*)",
-            r"(\d+\.?\d*)\s*/\s*1",
-            r"(\d+\.?\d*)\s*out of\s*1",
-        ]
-        for pattern in patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                try:
-                    val = float(match.group(1))
-                    if 0.0 <= val <= 1.0:
-                        return val
-                    if 0.0 <= val <= 10.0:
-                        return val / 10.0
-                except ValueError:
-                    continue
-        return 0.0
+        if not isinstance(parsed, dict):
+            return {}, "Judge output was not a JSON object"
+
+        try:
+            score = float(parsed["score"])
+            confidence = float(parsed["confidence"])
+        except (KeyError, TypeError, ValueError):
+            return {}, "Judge output missing numeric 'score' or 'confidence'"
+
+        reasoning = parsed.get("reasoning", "No reasoning provided")
+        if not isinstance(reasoning, str):
+            reasoning = str(reasoning)
+
+        return (
+            {
+                "score": max(0.0, min(1.0, score)),
+                "confidence": max(0.0, min(1.0, confidence)),
+                "reasoning": reasoning,
+            },
+            None,
+        )
+
+    def _estimate_cost(
+        self,
+        provider: ChatProvider,
+        config: JudgeConfig,
+        usage: dict[str, Any],
+    ) -> float:
+        """Estimate the judge call cost from token usage.
+
+        Unknown provider/model pricing yields 0.0 — the judge call
+        still succeeded; only accounting is unavailable.
+
+        """
+        from app.providers.cost.defaults import build_default_cost_calculator
+        from app.providers.tokenization.usage import TokenUsage
+
+        provider_name = getattr(provider, "provider_name", "")
+        model_id = config.model
+        if not provider_name or not model_id:
+            return 0.0
+
+        calculator = build_default_cost_calculator()
+        try:
+            return calculator.estimate_cost(
+                provider_name,
+                model_id,
+                TokenUsage(
+                    input_tokens=int(usage.get("tokens_input", 0)),
+                    output_tokens=int(usage.get("tokens_output", 0)),
+                ),
+            )
+        except KeyError:
+            return 0.0

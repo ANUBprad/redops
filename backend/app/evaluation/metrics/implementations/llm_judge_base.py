@@ -99,6 +99,25 @@ class LLMJudgeMetric(Metric):
 
         judge_response = await engine.judge(request, provider=provider, config=config)
 
+        if judge_response.error is not None:
+            return MetricResult(
+                metric_name=metric_def.name,
+                score=0.0,
+                normalized_score=0.0,
+                raw_output=judge_response.raw_output,
+                reasoning=judge_response.reasoning,
+                metadata={
+                    "rubric_version": judge_response.rubric_version,
+                    "judge_model": judge_response.judge_model,
+                    "judge_prompt_version": judge_response.judge_prompt_version,
+                    "tokens_input": judge_response.tokens_input,
+                    "tokens_output": judge_response.tokens_output,
+                },
+                version=metric_def.version,
+                execution_time_ms=int((time.monotonic() - start) * 1000),
+                error=judge_response.error,
+            )
+
         return MetricResult(
             metric_name=metric_def.name,
             score=judge_response.score,
