@@ -38,6 +38,17 @@ class LatencyMetric(Metric):
         """Evaluate latency using metadata latency_ms value."""
         start = time.monotonic()
 
+        if "latency_ms" not in input_data.metadata:
+            return MetricResult(
+                metric_name="latency",
+                score=0.0,
+                normalized_score=0.0,
+                reasoning="latency_ms not provided in metadata",
+                version=self.definition().version,
+                execution_time_ms=int((time.monotonic() - start) * 1000),
+                error="latency_ms not provided in metadata",
+            )
+
         latency_ms = input_data.metadata.get("latency_ms", 0)
         if not isinstance(latency_ms, (int, float)):
             return MetricResult(
@@ -45,6 +56,7 @@ class LatencyMetric(Metric):
                 score=0.0,
                 normalized_score=0.0,
                 error="Invalid latency_ms in metadata",
+                version=self.definition().version,
                 execution_time_ms=int((time.monotonic() - start) * 1000),
             )
 

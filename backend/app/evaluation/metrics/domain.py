@@ -33,6 +33,20 @@ class MetricScale(Enum):
     RANKING = "ranking"
 
 
+@unique
+class ScoreDirection(Enum):
+    """Directionality of a metric's raw score.
+
+    Applies to the metric-native ``score`` value. The
+    ``normalized_score`` is ALWAYS higher-is-better regardless of
+    direction: normalization folds lower-is-better raw values
+    (latency, cost) into [0.0, 1.0] where 1.0 is best.
+    """
+
+    HIGHER_IS_BETTER = "higher_is_better"
+    LOWER_IS_BETTER = "lower_is_better"
+
+
 @dataclass(frozen=True, slots=True)
 class MetricDefinition:
     """Declarative definition of a metric's capabilities."""
@@ -46,6 +60,8 @@ class MetricDefinition:
     requires_context: bool = False
     default_weight: float = 1.0
     tags: tuple[str, ...] = ()
+    direction: ScoreDirection = ScoreDirection.HIGHER_IS_BETTER
+    default_threshold: float | None = None
 
     @property
     def is_quality_metric(self) -> bool:
@@ -74,6 +90,27 @@ class MetricInput:
 class MetricResult:
     """Result of a single metric evaluation.
 
+    Score contract
+    --------------
+    - ``score`` is the metric-native raw value in the metric's own
+      units (cosine similarity, milliseconds, USD, token counts, ...).
+      Its directionality is declared by the metric's definition
+      (``MetricDefinition.direction``).
+    - ``normalized_score`` is ALWAYS in [0.0, 1.0] and ALWAYS
+      higher-is-better, regardless of raw direction.
+    - ``error`` set => this result carries NO meaningful score. The
+      score/normalized_score values are placeholders and MUST be
+      excluded from aggregation (``is_success`` False).
+    - ``confidence`` is only meaningful for probabilistic metrics
+      (LLM judges); deterministic metrics leave it 0.0.
+    - ``version`` must equal ``definition().version`` of the metric
+      that produced the result.
+    - Execution metadata uses reserved keys when applicable:
+      ``model``, ``provider``, ``tokens_input``, ``tokens_output``,
+      ``embedding_model``, ``judge_model``, ``rubric_version``,
+      ``judge_prompt_version``, plus persistence routing keys
+      ``run_id``/``item_id``.
+
     Persisted to the database for retrieval and aggregation.
     """
 
@@ -99,6 +136,23 @@ class MetricResult:
     def is_valid_score(self) -> bool:
         """Return True if the normalized score is in [0.0, 1.0]."""
         return 0.0 <= self.normalized_score <= 1.0
+
+    def passed_against(self, threshold: float | None = None) -> bool | None:
+        """Evaluate the normalized score against a pass threshold.
+
+        Args:
+            threshold: Minimum acceptable normalized score. Falls back
+                to ``None`` semantics when not provided.
+
+        Returns:
+            True/False when a threshold applies and the result is
+            successful; None when no threshold applies or the result
+            carries an error.
+
+        """
+        if self.error is not None or threshold is None:
+            return None
+        return self.normalized_score >= threshold
 
 
 @dataclass(frozen=True, slots=True)

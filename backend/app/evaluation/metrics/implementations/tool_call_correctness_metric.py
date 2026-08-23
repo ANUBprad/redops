@@ -41,11 +41,13 @@ class ToolCallCorrectnessMetric(Metric):
         if not tool_calls:
             return MetricResult(
                 metric_name="tool_call_correctness",
-                score=1.0,
-                normalized_score=1.0,
-                reasoning="No tool calls to validate",
+                score=0.0,
+                normalized_score=0.0,
+                reasoning="No tool_calls provided in input",
                 metadata={"tool_call_count": 0},
+                version=self.definition().version,
                 execution_time_ms=int((time.monotonic() - start) * 1000),
+                error="No tool_calls provided in input",
             )
 
         valid_count = 0

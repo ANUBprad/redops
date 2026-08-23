@@ -38,6 +38,17 @@ class TokenUsageMetric(Metric):
         """Evaluate token usage from metadata."""
         start = time.monotonic()
 
+        if "tokens_output" not in input_data.metadata:
+            return MetricResult(
+                metric_name="token_usage",
+                score=0.0,
+                normalized_score=0.0,
+                reasoning="tokens_output not provided in metadata",
+                version=self.definition().version,
+                execution_time_ms=int((time.monotonic() - start) * 1000),
+                error="tokens_output not provided in metadata",
+            )
+
         tokens_output = input_data.metadata.get("tokens_output", 0)
         if not isinstance(tokens_output, (int, float)):
             return MetricResult(
@@ -45,6 +56,7 @@ class TokenUsageMetric(Metric):
                 score=0.0,
                 normalized_score=0.0,
                 error="Invalid tokens_output in metadata",
+                version=self.definition().version,
                 execution_time_ms=int((time.monotonic() - start) * 1000),
             )
 

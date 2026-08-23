@@ -117,10 +117,11 @@ class TestRelevanceMetric:
 
     @pytest.mark.asyncio
     async def test_empty_response(self) -> None:
-        """Empty response returns error."""
+        """Empty response returns an explicit error result."""
         metric = RelevanceMetric()
         result = await metric.evaluate(MetricInput(prompt="test"))
-        assert result.is_success
+        assert not result.is_success
+        assert result.error
         assert result.normalized_score == 0.0
 
 
@@ -186,10 +187,11 @@ class TestGroundednessMetric:
 
     @pytest.mark.asyncio
     async def test_missing_context(self) -> None:
-        """Missing context returns error."""
+        """Missing context returns an explicit error result."""
         metric = GroundednessMetric()
         result = await metric.evaluate(MetricInput(response="test"))
-        assert result.is_success
+        assert not result.is_success
+        assert result.error
         assert result.normalized_score == 0.0
 
 
@@ -364,11 +366,12 @@ class TestToolCallCorrectnessMetric:
 
     @pytest.mark.asyncio
     async def test_no_tool_calls(self) -> None:
-        """No tool calls score 1.0 (nothing to validate)."""
+        """No tool call data yields an explicit error, not a vacuous pass."""
         metric = ToolCallCorrectnessMetric()
         result = await metric.evaluate(MetricInput())
-        assert result.is_success
-        assert result.normalized_score == 1.0
+        assert not result.is_success
+        assert result.error
+        assert result.normalized_score == 0.0
 
     @pytest.mark.asyncio
     async def test_invalid_tool_call(self) -> None:

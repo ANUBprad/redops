@@ -36,17 +36,19 @@ class AnswerRelevanceMetric(EmbeddingMetric):
                 0.0,
                 start,
                 reasoning="Missing prompt or response",
+                error="Missing prompt or response",
             )
 
         try:
-            prompt_emb = await self._get_embedding(input_data.prompt, input_data)
-            response_emb = await self._get_embedding(input_data.response, input_data)
+            prompt_emb, model = await self._get_embedding(input_data.prompt, input_data)
+            response_emb, _ = await self._get_embedding(input_data.response, input_data)
         except RuntimeError as exc:
             return self._build_embedding_result(
                 "answer_relevance",
                 0.0,
                 start,
                 reasoning=str(exc),
+                error=str(exc),
             )
 
         relevance = self._cosine_similarity(prompt_emb, response_emb)
@@ -56,5 +58,8 @@ class AnswerRelevanceMetric(EmbeddingMetric):
             relevance,
             start,
             reasoning=f"Prompt-response relevance: {relevance:.4f}",
-            metadata={"method": "cosine_similarity"},
+            metadata={
+                "method": "cosine_similarity",
+                "embedding_model": model,
+            },
         )

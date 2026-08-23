@@ -19,8 +19,17 @@ class EmbeddingMetric(Metric):
     similarity scores. Subclasses define what is being compared.
     """
 
-    async def _get_embedding(self, text: str, input_data: Any) -> tuple[float, ...]:
-        """Get embedding vector for text."""
+    async def _get_embedding(
+        self,
+        text: str,
+        input_data: Any,
+    ) -> tuple[tuple[float, ...], str]:
+        """Get embedding vector for text.
+
+        Returns:
+            Tuple of (embedding vector, model identifier used).
+
+        """
         provider = input_data.metadata.get("_embedding_provider")
         model = input_data.metadata.get("_embedding_model", "text-embedding-3-small")
 
@@ -40,7 +49,7 @@ class EmbeddingMetric(Metric):
         if not isinstance(embedding, tuple):
             msg = "Embedding provider did not return a valid embedding vector"
             raise RuntimeError(msg)
-        return embedding
+        return embedding, response.model or model
 
     @staticmethod
     def _cosine_similarity(a: tuple[float, ...], b: tuple[float, ...]) -> float:
