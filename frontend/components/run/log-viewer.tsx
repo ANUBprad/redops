@@ -49,7 +49,7 @@ export function LogViewer({ runId }: { runId: string }) {
         <CardTitle>Logs</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2 max-h-96 overflow-y-auto font-mono text-xs">
+        <div className="max-h-96 space-y-2 overflow-y-auto font-mono text-xs">
           {logs.map((log) => (
             <div key={log.log_id} className="flex items-start gap-2 rounded-md border p-2">
               <div className="flex items-center gap-1">

@@ -171,7 +171,8 @@ export type AttackCategory =
 
 export type AttackSeverity = "low" | "medium" | "high" | "critical";
 export type AttackDefinitionStatus = "draft" | "active" | "archived";
-export type AttackStatus = "created" | "queued" | "starting" | "running" | "completed" | "failed" | "cancelled";
+export type AttackStatus =
+  "created" | "queued" | "starting" | "running" | "completed" | "failed" | "cancelled";
 export type SafetyVerdict = "safe" | "suspicious" | "violated" | "leaked" | "error";
 export type SafetyDimension =
   | "harmlessness"

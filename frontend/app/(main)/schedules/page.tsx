@@ -6,17 +6,27 @@ import type { ScheduleInfo } from "@/types/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function SchedulesPage() {
   const [schedules, setSchedules] = useState<ScheduleInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.listSchedules().then((data) => {
-      setSchedules(data as ScheduleInfo[]);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    api
+      .listSchedules()
+      .then((data) => {
+        setSchedules(data as ScheduleInfo[]);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   return (

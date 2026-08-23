@@ -35,7 +35,6 @@ const safetyData = [
 ];
 
 export default function ReportsPage() {
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -160,7 +159,9 @@ export default function ReportsPage() {
               <Shield className="h-8 w-8 text-yellow-500" />
               <div className="flex-1">
                 <p className="font-medium">Claude Jailbreak Attempt</p>
-                <p className="text-sm text-muted-foreground">Suspicious patterns detected in 3 scenarios</p>
+                <p className="text-sm text-muted-foreground">
+                  Suspicious patterns detected in 3 scenarios
+                </p>
               </div>
               <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
                 Suspicious

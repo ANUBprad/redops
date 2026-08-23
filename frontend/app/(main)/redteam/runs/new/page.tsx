@@ -25,7 +25,10 @@ export default function NewAttackRunPage() {
   });
 
   const handleSubmit = () => {
-    const ids = definitionIds.split(",").map((id) => id.trim()).filter(Boolean);
+    const ids = definitionIds
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
     createMutation.mutate({
       attack_definition_ids: ids,
       configuration: {},
@@ -36,7 +39,9 @@ export default function NewAttackRunPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">New Attack Run</h1>
-        <p className="text-muted-foreground">Select attack definitions to run against your target</p>
+        <p className="text-muted-foreground">
+          Select attack definitions to run against your target
+        </p>
       </div>
 
       <Card>

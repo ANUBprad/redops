@@ -2,19 +2,18 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Search } from "lucide-react";
 
-const Command = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "flex h-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground",
-      className,
-    )}
-    {...props}
-  />
-));
+const Command = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "bg-popover text-popover-foreground flex h-full flex-col overflow-hidden rounded-md",
+        className,
+      )}
+      {...props}
+    />
+  ),
+);
 Command.displayName = "Command";
 
 const CommandInput = React.forwardRef<
@@ -35,40 +34,25 @@ const CommandInput = React.forwardRef<
 ));
 CommandInput.displayName = "CommandInput";
 
-const CommandList = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("overflow-y-auto overflow-x-hidden", className)}
-    {...props}
-  />
-));
+const CommandList = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("overflow-y-auto overflow-x-hidden", className)} {...props} />
+  ),
+);
 CommandList.displayName = "CommandList";
 
-const CommandEmpty = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("py-6 text-center text-sm", className)}
-    {...props}
-  />
-));
+const CommandEmpty = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("py-6 text-center text-sm", className)} {...props} />
+  ),
+);
 CommandEmpty.displayName = "CommandEmpty";
 
-const CommandGroup = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("py-1 overflow-y-auto", className)}
-    {...props}
-  />
-));
+const CommandGroup = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("overflow-y-auto py-1", className)} {...props} />
+  ),
+);
 CommandGroup.displayName = "CommandGroup";
 
 const CommandItem = React.forwardRef<
@@ -78,7 +62,7 @@ const CommandItem = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "flex items-center px-2 py-2 text-sm cursor-pointer rounded-sm",
+      "flex cursor-pointer items-center rounded-sm px-2 py-2 text-sm",
       "hover:bg-accent hover:text-accent-foreground",
       className,
     )}

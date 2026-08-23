@@ -33,9 +33,7 @@ export default function ComparisonsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Model Comparison</h1>
-        <p className="text-muted-foreground">
-          Compare models and providers across metrics
-        </p>
+        <p className="text-muted-foreground">Compare models and providers across metrics</p>
       </div>
 
       <Card>
@@ -46,10 +44,7 @@ export default function ComparisonsPage() {
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
               <Label>Entity Type</Label>
-              <Select
-                value={entityType}
-                onValueChange={setEntityType}
-              >
+              <Select value={entityType} onValueChange={setEntityType}>
                 <option value="model">Model</option>
                 <option value="provider">Provider</option>
               </Select>
@@ -64,10 +59,7 @@ export default function ComparisonsPage() {
             </div>
             <div className="space-y-2">
               <Label>Time Range</Label>
-              <Select
-                value={String(days)}
-                onValueChange={(v) => setDays(Number(v))}
-              >
+              <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
                 <option value="7">Last 7 days</option>
                 <option value="14">Last 14 days</option>
                 <option value="30">Last 30 days</option>
@@ -76,11 +68,7 @@ export default function ComparisonsPage() {
             </div>
             <div className="space-y-2">
               <Label>&nbsp;</Label>
-              <Button
-                className="w-full"
-                onClick={() => refetch()}
-                disabled={isLoading}
-              >
+              <Button className="w-full" onClick={() => refetch()} disabled={isLoading}>
                 {isLoading ? "Comparing..." : "Compare"}
               </Button>
             </div>
@@ -95,16 +83,16 @@ export default function ComparisonsPage() {
               <CardTitle>{comparison.title}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">{comparison.summary}</p>
+              <p className="mb-4 text-sm text-muted-foreground">{comparison.summary}</p>
 
               {comparison.metrics.map((metric) => (
                 <div key={metric.metric_name} className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3">{metric.metric_name}</h3>
+                  <h3 className="mb-3 text-lg font-semibold">{metric.metric_name}</h3>
                   <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                     {metric.values.map((val) => (
                       <div
                         key={val.entity_id}
-                        className={`p-3 rounded-lg border ${
+                        className={`rounded-lg border p-3 ${
                           val.entity_id === metric.best_entity_id
                             ? "border-green-500 bg-green-50 dark:bg-green-900/10"
                             : "border-border"
@@ -116,7 +104,7 @@ export default function ComparisonsPage() {
                             <Trophy className="h-4 w-4 text-yellow-500" />
                           )}
                         </div>
-                        <div className="text-xl font-bold mt-1">{val.formatted_value}</div>
+                        <div className="mt-1 text-xl font-bold">{val.formatted_value}</div>
                       </div>
                     ))}
                   </div>
@@ -130,7 +118,7 @@ export default function ComparisonsPage() {
       {comparison.compared_items.length === 0 && !isLoading && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Medal className="h-12 w-12 text-muted-foreground mb-4" />
+            <Medal className="mb-4 h-12 w-12 text-muted-foreground" />
             <p className="text-muted-foreground">
               Enter entity IDs and click Compare to see results
             </p>

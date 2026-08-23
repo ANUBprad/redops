@@ -52,15 +52,28 @@ const statusColors: Record<string, string> = {
 };
 
 const retryableStatuses = new Set(["failed", "timedout", "cancelled"]);
-const activeStatuses = new Set(["created", "queued", "starting", "running", "paused", "cancelling"]);
+const activeStatuses = new Set([
+  "created",
+  "queued",
+  "starting",
+  "running",
+  "paused",
+  "cancelling",
+]);
 
 export default function AgentRunDetailPage() {
   const params = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const runId = params?.id ?? "";
-  const [sseEvents, setSseEvents] = useState<Array<{ event_type: string; data: Record<string, unknown> }>>([]);
+  const [sseEvents, setSseEvents] = useState<
+    Array<{ event_type: string; data: Record<string, unknown> }>
+  >([]);
 
-  const { data: run, isLoading, error } = useQuery({
+  const {
+    data: run,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["agent-run", runId],
     queryFn: () => api.getAgentRun(runId),
     enabled: !!runId,
@@ -73,8 +86,14 @@ export default function AgentRunDetailPage() {
 
     source.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data) as { event_type?: string; data?: Record<string, unknown> };
-        setSseEvents((prev) => [...prev.slice(-99), { event_type: data.event_type ?? "message", data: data.data ?? {} }]);
+        const data = JSON.parse(event.data) as {
+          event_type?: string;
+          data?: Record<string, unknown>;
+        };
+        setSseEvents((prev) => [
+          ...prev.slice(-99),
+          { event_type: data.event_type ?? "message", data: data.data ?? {} },
+        ]);
       } catch {
         // ignore parse errors
       }
@@ -158,7 +177,8 @@ export default function AgentRunDetailPage() {
           <CardContent>
             <div className="text-2xl font-bold">{runData.total_tokens.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              In: {runData.token_input.toLocaleString()} · Out: {runData.token_output.toLocaleString()}
+              In: {runData.token_input.toLocaleString()} · Out:{" "}
+              {runData.token_output.toLocaleString()}
             </p>
           </CardContent>
         </Card>
@@ -178,9 +198,7 @@ export default function AgentRunDetailPage() {
             <CardTitle className="text-sm font-medium">Failure</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {runData.steps_failed}
-            </div>
+            <div className="text-2xl font-bold text-red-600">{runData.steps_failed}</div>
             {runData.failure_reason && (
               <p className="text-xs text-muted-foreground">{runData.failure_reason}</p>
             )}
@@ -194,15 +212,16 @@ export default function AgentRunDetailPage() {
             <CardTitle>Live Events ({sseEvents.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="max-h-48 overflow-y-auto space-y-2">
-              {sseEvents.slice().reverse().map((event, i) => (
-                <div key={i} className="flex items-start gap-2 text-sm">
-                  <Badge variant="outline">{event.event_type}</Badge>
-                  <span className="text-muted-foreground">
-                    {JSON.stringify(event.data)}
-                  </span>
-                </div>
-              ))}
+            <div className="max-h-48 space-y-2 overflow-y-auto">
+              {sseEvents
+                .slice()
+                .reverse()
+                .map((event, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm">
+                    <Badge variant="outline">{event.event_type}</Badge>
+                    <span className="text-muted-foreground">{JSON.stringify(event.data)}</span>
+                  </div>
+                ))}
             </div>
           </CardContent>
         </Card>
@@ -240,11 +259,15 @@ export default function AgentRunDetailPage() {
             </div>
             <div>
               <dt className="text-muted-foreground">Completed</dt>
-              <dd>{runData.completed_at ? new Date(runData.completed_at).toLocaleString() : "N/A"}</dd>
+              <dd>
+                {runData.completed_at ? new Date(runData.completed_at).toLocaleString() : "N/A"}
+              </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Cancelled</dt>
-              <dd>{runData.cancelled_at ? new Date(runData.cancelled_at).toLocaleString() : "N/A"}</dd>
+              <dd>
+                {runData.cancelled_at ? new Date(runData.cancelled_at).toLocaleString() : "N/A"}
+              </dd>
             </div>
           </dl>
         </CardContent>
@@ -255,19 +278,12 @@ export default function AgentRunDetailPage() {
           <Link href="/agents/runs">Back to Runs</Link>
         </Button>
         {canCancel && (
-          <Button
-            variant="destructive"
-            onClick={handleCancel}
-            disabled={cancelMutation.isPending}
-          >
+          <Button variant="destructive" onClick={handleCancel} disabled={cancelMutation.isPending}>
             {cancelMutation.isPending ? "Cancelling..." : "Cancel Run"}
           </Button>
         )}
         {canRetry && (
-          <Button
-            onClick={handleRetry}
-            disabled={retryMutation.isPending}
-          >
+          <Button onClick={handleRetry} disabled={retryMutation.isPending}>
             {retryMutation.isPending ? "Retrying..." : "Retry Run"}
           </Button>
         )}

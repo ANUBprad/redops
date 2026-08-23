@@ -50,7 +50,7 @@ const DropdownMenu = React.forwardRef<HTMLDivElement, DropdownMenuProps>(
         {open && (
           <div
             className={cn(
-              "absolute z-10 mt-1 min-w-[8rem] rounded-md border bg-popover text-popover-foreground shadow-md",
+              "bg-popover text-popover-foreground absolute z-10 mt-1 min-w-[8rem] rounded-md border shadow-md",
               alignment,
             )}
           >

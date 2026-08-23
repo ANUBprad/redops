@@ -31,8 +31,14 @@ export default function NewAgentRunPage() {
   });
 
   const handleSubmit = () => {
-    const toolList = tools.split(",").map((t) => t.trim()).filter(Boolean);
-    const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
+    const toolList = tools
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const tagList = tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
     createMutation.mutate({
       agent_name: agentName,
       provider,

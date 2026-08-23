@@ -39,7 +39,11 @@ const navGroups: NavGroup[] = [
   {
     heading: "AI Workflows",
     items: [
-      { label: "Mission Control", href: "/dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
+      {
+        label: "Mission Control",
+        href: "/dashboard",
+        icon: <LayoutDashboard className="h-5 w-5" />,
+      },
       { label: "Evaluations", href: "/evaluations", icon: <Target className="h-5 w-5" /> },
       { label: "Evaluation Runs", href: "/runs", icon: <PlayCircle className="h-5 w-5" /> },
       { label: "Agent Runs", href: "/agents/runs", icon: <Bot className="h-5 w-5" /> },
@@ -49,9 +53,7 @@ const navGroups: NavGroup[] = [
   },
   {
     heading: "Insights",
-    items: [
-      { label: "Analytics", href: "/analytics", icon: <TrendingUp className="h-5 w-5" /> },
-    ],
+    items: [{ label: "Analytics", href: "/analytics", icon: <TrendingUp className="h-5 w-5" /> }],
   },
   {
     heading: "Platform",
@@ -85,7 +87,9 @@ export function Sidebar() {
             </h2>
             <div className="space-y-0.5">
               {group.items.map((item) => {
-                const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+                const isActive = item.exact
+                  ? pathname === item.href
+                  : pathname.startsWith(item.href);
                 return (
                   <Tooltip key={item.href} content={item.label} side="right">
                     <Link

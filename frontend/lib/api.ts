@@ -44,7 +44,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const api = {
   // Health
   health: () => request<{ status: string; version: string; service: string }>("/health"),
-  readiness: () => request<{ status: string; version: string; service: string; checks: unknown[] }>("/ready"),
+  readiness: () =>
+    request<{ status: string; version: string; service: string; checks: unknown[] }>("/ready"),
 
   // Evaluations
   listEvaluations: (params: Record<string, string | number | undefined>) => {
@@ -56,11 +57,18 @@ export const api = {
     return request<PaginatedResponse<unknown>>(`/evaluations${query}`);
   },
   getEvaluation: (id: UUID) => request<unknown>(`/evaluations/${id}`),
-  createEvaluation: (data: Record<string, unknown>) => request<unknown>("/evaluations", { method: "POST", body: JSON.stringify(data) }),
-  updateEvaluation: (id: UUID, data: Record<string, unknown>) => request<unknown>(`/evaluations/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  createEvaluation: (data: Record<string, unknown>) =>
+    request<unknown>("/evaluations", { method: "POST", body: JSON.stringify(data) }),
+  updateEvaluation: (id: UUID, data: Record<string, unknown>) =>
+    request<unknown>(`/evaluations/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   deleteEvaluation: (id: UUID) => request<void>(`/evaluations/${id}`, { method: "DELETE" }),
-  duplicateEvaluation: (id: UUID, data: { name: string }) => request<unknown>(`/evaluations/${id}/duplicate`, { method: "POST", body: JSON.stringify(data) }),
-  archiveEvaluation: (id: UUID) => request<unknown>(`/evaluations/${id}/archive`, { method: "POST" }),
+  duplicateEvaluation: (id: UUID, data: { name: string }) =>
+    request<unknown>(`/evaluations/${id}/duplicate`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  archiveEvaluation: (id: UUID) =>
+    request<unknown>(`/evaluations/${id}/archive`, { method: "POST" }),
   markReady: (id: UUID) => request<unknown>(`/evaluations/${id}/ready`, { method: "POST" }),
 
   // Runs
@@ -73,10 +81,15 @@ export const api = {
     return request<PaginatedResponse<unknown>>(`/runs${query}`);
   },
   getRun: (id: UUID) => request<unknown>(`/runs/${id}`),
-  createRun: (data: Record<string, unknown>) => request<unknown>("/runs", { method: "POST", body: JSON.stringify(data) }),
-  cancelRun: (id: UUID, data: { reason?: string; force?: boolean }) => request<unknown>(`/runs/${id}/cancel`, { method: "POST", body: JSON.stringify(data) }),
+  createRun: (data: Record<string, unknown>) =>
+    request<unknown>("/runs", { method: "POST", body: JSON.stringify(data) }),
+  cancelRun: (id: UUID, data: { reason?: string; force?: boolean }) =>
+    request<unknown>(`/runs/${id}/cancel`, { method: "POST", body: JSON.stringify(data) }),
   retryRun: (id: UUID) => request<unknown>(`/runs/${id}/retry`, { method: "POST" }),
-  listRunsForEvaluation: (evaluationId: UUID, params: Record<string, string | number | undefined>) => {
+  listRunsForEvaluation: (
+    evaluationId: UUID,
+    params: Record<string, string | number | undefined>,
+  ) => {
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) {
       if (v !== undefined) qs.set(k, String(v));
@@ -94,7 +107,10 @@ export const api = {
     const query = qs.toString() ? `?${qs.toString()}` : "";
     return request<{ items: unknown[]; total: number }>(`/runs/${runId}/events${query}`);
   },
-  getLogs: (runId: UUID, params?: { level?: string; source?: string; limit?: number; offset?: number }) => {
+  getLogs: (
+    runId: UUID,
+    params?: { level?: string; source?: string; limit?: number; offset?: number },
+  ) => {
     const qs = new URLSearchParams();
     if (params?.level) qs.set("level", params.level);
     if (params?.source) qs.set("source", params.source);
@@ -103,8 +119,16 @@ export const api = {
     const query = qs.toString() ? `?${qs.toString()}` : "";
     return request<{ items: unknown[]; total: number }>(`/runs/${runId}/logs${query}`);
   },
-  createLog: (runId: UUID, data: { level: string; source: string; message: string; metadata?: Record<string, unknown>; correlation_id?: string }) =>
-    request<unknown>(`/runs/${runId}/logs`, { method: "POST", body: JSON.stringify(data) }),
+  createLog: (
+    runId: UUID,
+    data: {
+      level: string;
+      source: string;
+      message: string;
+      metadata?: Record<string, unknown>;
+      correlation_id?: string;
+    },
+  ) => request<unknown>(`/runs/${runId}/logs`, { method: "POST", body: JSON.stringify(data) }),
 
   // SSE streams
   streamEvents: (runId: UUID): EventSource => {
@@ -121,14 +145,23 @@ export const api = {
     const query = category ? `?category=${encodeURIComponent(category)}` : "";
     return request<unknown[]>(`/metrics${query}`);
   },
-  scoreItem: (data: Record<string, unknown>) => request<unknown[]>("/metrics/score", { method: "POST", body: JSON.stringify(data) }),
+  scoreItem: (data: Record<string, unknown>) =>
+    request<unknown[]>("/metrics/score", { method: "POST", body: JSON.stringify(data) }),
   getMetricResults: (runId: UUID, metricName?: string) => {
     const query = metricName ? `?metric_name=${encodeURIComponent(metricName)}` : "";
-    return request<{ items: unknown[]; total: number; page: number; page_size: number; total_pages: number }>(`/metrics/runs/${runId}/results${query}`);
+    return request<{
+      items: unknown[];
+      total: number;
+      page: number;
+      page_size: number;
+      total_pages: number;
+    }>(`/metrics/runs/${runId}/results${query}`);
   },
   getAggregatedScores: (runId: UUID, metricName?: string) => {
     const query = metricName ? `?metric_name=${encodeURIComponent(metricName)}` : "";
-    return request<{ run_id: UUID; aggregations: unknown[] }>(`/metrics/runs/${runId}/scores${query}`);
+    return request<{ run_id: UUID; aggregations: unknown[] }>(
+      `/metrics/runs/${runId}/scores${query}`,
+    );
   },
 
   // Agents
@@ -141,8 +174,10 @@ export const api = {
     return request<PaginatedResponse<unknown>>(`/agents${query}`);
   },
   getAgent: (id: UUID) => request<unknown>(`/agents/${id}`),
-  createAgent: (data: Record<string, unknown>) => request<unknown>("/agents", { method: "POST", body: JSON.stringify(data) }),
-  updateAgent: (id: UUID, data: Record<string, unknown>) => request<unknown>(`/agents/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  createAgent: (data: Record<string, unknown>) =>
+    request<unknown>("/agents", { method: "POST", body: JSON.stringify(data) }),
+  updateAgent: (id: UUID, data: Record<string, unknown>) =>
+    request<unknown>(`/agents/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   deleteAgent: (id: UUID) => request<void>(`/agents/${id}`, { method: "DELETE" }),
   activateAgent: (id: UUID) => request<unknown>(`/agents/${id}/activate`, { method: "POST" }),
   deactivateAgent: (id: UUID) => request<unknown>(`/agents/${id}/deactivate`, { method: "POST" }),
@@ -158,8 +193,10 @@ export const api = {
     return request<PaginatedResponse<unknown>>(`/agent-runs${query}`);
   },
   getAgentRun: (id: UUID) => request<unknown>(`/agent-runs/${id}`),
-  createAgentRun: (data: Record<string, unknown>) => request<unknown>("/agent-runs", { method: "POST", body: JSON.stringify(data) }),
-  cancelAgentRun: (id: UUID, data: { reason?: string; force?: boolean }) => request<unknown>(`/agent-runs/${id}/cancel`, { method: "POST", body: JSON.stringify(data) }),
+  createAgentRun: (data: Record<string, unknown>) =>
+    request<unknown>("/agent-runs", { method: "POST", body: JSON.stringify(data) }),
+  cancelAgentRun: (id: UUID, data: { reason?: string; force?: boolean }) =>
+    request<unknown>(`/agent-runs/${id}/cancel`, { method: "POST", body: JSON.stringify(data) }),
   retryAgentRun: (id: UUID) => request<unknown>(`/agent-runs/${id}/retry`, { method: "POST" }),
 
   // Red Team - Attack Definitions
@@ -172,11 +209,16 @@ export const api = {
     return request<PaginatedResponse<unknown>>(`/redteam/definitions${query}`);
   },
   getAttackDefinition: (id: UUID) => request<unknown>(`/redteam/definitions/${id}`),
-  createAttackDefinition: (data: Record<string, unknown>) => request<unknown>("/redteam/definitions", { method: "POST", body: JSON.stringify(data) }),
-  updateAttackDefinition: (id: UUID, data: Record<string, unknown>) => request<unknown>(`/redteam/definitions/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
-  deleteAttackDefinition: (id: UUID) => request<void>(`/redteam/definitions/${id}`, { method: "DELETE" }),
-  activateAttackDefinition: (id: UUID) => request<unknown>(`/redteam/definitions/${id}/activate`, { method: "POST" }),
-  archiveAttackDefinition: (id: UUID) => request<unknown>(`/redteam/definitions/${id}/archive`, { method: "POST" }),
+  createAttackDefinition: (data: Record<string, unknown>) =>
+    request<unknown>("/redteam/definitions", { method: "POST", body: JSON.stringify(data) }),
+  updateAttackDefinition: (id: UUID, data: Record<string, unknown>) =>
+    request<unknown>(`/redteam/definitions/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteAttackDefinition: (id: UUID) =>
+    request<void>(`/redteam/definitions/${id}`, { method: "DELETE" }),
+  activateAttackDefinition: (id: UUID) =>
+    request<unknown>(`/redteam/definitions/${id}/activate`, { method: "POST" }),
+  archiveAttackDefinition: (id: UUID) =>
+    request<unknown>(`/redteam/definitions/${id}/archive`, { method: "POST" }),
 
   // Red Team - Attack Runs
   listAttackRuns: (params: Record<string, string | number | undefined>) => {
@@ -188,10 +230,14 @@ export const api = {
     return request<PaginatedResponse<unknown>>(`/redteam/runs${query}`);
   },
   getAttackRun: (id: UUID) => request<unknown>(`/redteam/runs/${id}`),
-  createAttackRun: (data: Record<string, unknown>) => request<unknown>("/redteam/runs", { method: "POST", body: JSON.stringify(data) }),
-  startAttackRun: (id: UUID, data: { total_items: number }) => request<unknown>(`/redteam/runs/${id}/start`, { method: "POST", body: JSON.stringify(data) }),
-  completeAttackRun: (id: UUID) => request<unknown>(`/redteam/runs/${id}/complete`, { method: "POST" }),
-  failAttackRun: (id: UUID, data: { error_message?: string }) => request<unknown>(`/redteam/runs/${id}/fail`, { method: "POST", body: JSON.stringify(data) }),
+  createAttackRun: (data: Record<string, unknown>) =>
+    request<unknown>("/redteam/runs", { method: "POST", body: JSON.stringify(data) }),
+  startAttackRun: (id: UUID, data: { total_items: number }) =>
+    request<unknown>(`/redteam/runs/${id}/start`, { method: "POST", body: JSON.stringify(data) }),
+  completeAttackRun: (id: UUID) =>
+    request<unknown>(`/redteam/runs/${id}/complete`, { method: "POST" }),
+  failAttackRun: (id: UUID, data: { error_message?: string }) =>
+    request<unknown>(`/redteam/runs/${id}/fail`, { method: "POST", body: JSON.stringify(data) }),
   cancelAttackRun: (id: UUID) => request<unknown>(`/redteam/runs/${id}/cancel`, { method: "POST" }),
 
   // Analytics
@@ -282,9 +328,15 @@ export const api = {
     request<unknown>(`/organizations/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   listMembers: (orgId: UUID) => request<unknown[]>(`/organizations/${orgId}/members`),
   inviteMember: (orgId: UUID, data: { email: string; role: string }) =>
-    request<unknown>(`/organizations/${orgId}/members`, { method: "POST", body: JSON.stringify(data) }),
+    request<unknown>(`/organizations/${orgId}/members`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   changeMemberRole: (orgId: UUID, userId: UUID, data: { role: string }) =>
-    request<unknown>(`/organizations/${orgId}/members/${userId}/role`, { method: "POST", body: JSON.stringify(data) }),
+    request<unknown>(`/organizations/${orgId}/members/${userId}/role`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   removeMember: (orgId: UUID, userId: UUID) =>
     request<void>(`/organizations/${orgId}/members/${userId}`, { method: "DELETE" }),
   listInvitations: (orgId: UUID) => request<unknown[]>(`/organizations/${orgId}/invitations`),
@@ -293,7 +345,8 @@ export const api = {
   listProjects: (orgId: UUID) => request<unknown[]>(`/orgs/${orgId}/projects`),
   createProject: (orgId: UUID, data: { name: string; description?: string }) =>
     request<unknown>(`/orgs/${orgId}/projects`, { method: "POST", body: JSON.stringify(data) }),
-  getProject: (orgId: UUID, projectId: UUID) => request<unknown>(`/orgs/${orgId}/projects/${projectId}`),
+  getProject: (orgId: UUID, projectId: UUID) =>
+    request<unknown>(`/orgs/${orgId}/projects/${projectId}`),
 
   // ─── API Keys ────────────────────────────────────────────────
   listApiKeys: () => request<unknown[]>("/api-keys"),
@@ -305,8 +358,14 @@ export const api = {
 
   // ─── Schedules ───────────────────────────────────────────────
   listSchedules: () => request<unknown[]>("/schedules"),
-  createSchedule: (data: { name: string; schedule_type: string; cron_expression: string; task_config?: Record<string, unknown>; project_id?: string; timezone?: string }) =>
-    request<unknown>("/schedules", { method: "POST", body: JSON.stringify(data) }),
+  createSchedule: (data: {
+    name: string;
+    schedule_type: string;
+    cron_expression: string;
+    task_config?: Record<string, unknown>;
+    project_id?: string;
+    timezone?: string;
+  }) => request<unknown>("/schedules", { method: "POST", body: JSON.stringify(data) }),
   getSchedule: (id: UUID) => request<unknown>(`/schedules/${id}`),
   pauseSchedule: (id: UUID) => request<unknown>(`/schedules/${id}/pause`, { method: "POST" }),
   resumeSchedule: (id: UUID) => request<unknown>(`/schedules/${id}/resume`, { method: "POST" }),
@@ -320,11 +379,25 @@ export const api = {
     const query = qs.toString() ? `?${qs.toString()}` : "";
     return request<{ items: unknown[]; total: number }>(`/notifications/${orgId}${query}`);
   },
-  sendNotification: (data: { channel: string; event: string; title: string; message: string; target?: string }) =>
-    request<unknown>("/notifications/send", { method: "POST", body: JSON.stringify(data) }),
+  sendNotification: (data: {
+    channel: string;
+    event: string;
+    title: string;
+    message: string;
+    target?: string;
+  }) => request<unknown>("/notifications/send", { method: "POST", body: JSON.stringify(data) }),
 
   // ─── Audit Logs ──────────────────────────────────────────────
-  listAuditLogs: (orgId: UUID, params?: { action?: string; resource_type?: string; user_id?: string; offset?: number; limit?: number }) => {
+  listAuditLogs: (
+    orgId: UUID,
+    params?: {
+      action?: string;
+      resource_type?: string;
+      user_id?: string;
+      offset?: number;
+      limit?: number;
+    },
+  ) => {
     const qs = new URLSearchParams();
     if (params?.action) qs.set("action", params.action);
     if (params?.resource_type) qs.set("resource_type", params.resource_type);

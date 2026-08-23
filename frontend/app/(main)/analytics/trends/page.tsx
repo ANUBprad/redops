@@ -35,7 +35,12 @@ export default function TrendsPage() {
       }) as Promise<TrendSeries>,
   });
 
-  const trend = data ?? { name: metricName, points: [], direction: "flat" as const, change_percent: 0 };
+  const trend = data ?? {
+    name: metricName,
+    points: [],
+    direction: "flat" as const,
+    change_percent: 0,
+  };
 
   const chartData = trend.points.map((p) => ({
     date: new Date(p.timestamp).toLocaleDateString(),
@@ -47,18 +52,13 @@ export default function TrendsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Trend Explorer</h1>
-        <p className="text-muted-foreground">
-          Analyze historical metric, cost, and latency trends
-        </p>
+        <p className="text-muted-foreground">Analyze historical metric, cost, and latency trends</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2">
           <Label htmlFor="metric">Metric</Label>
-          <Select
-            value={metricName}
-            onValueChange={setMetricName}
-          >
+          <Select value={metricName} onValueChange={setMetricName}>
             <option value="score">Score</option>
             <option value="cost">Cost</option>
             <option value="latency">Latency</option>
@@ -67,10 +67,7 @@ export default function TrendsPage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="days">Time Range</Label>
-          <Select
-            value={String(days)}
-            onValueChange={(v) => setDays(Number(v))}
-          >
+          <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
             <option value="7">Last 7 days</option>
             <option value="14">Last 14 days</option>
             <option value="30">Last 30 days</option>
@@ -79,10 +76,7 @@ export default function TrendsPage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="granularity">Granularity</Label>
-          <Select
-            value={granularity}
-            onValueChange={setGranularity}
-          >
+          <Select value={granularity} onValueChange={setGranularity}>
             <option value="day">Daily</option>
             <option value="week">Weekly</option>
             <option value="month">Monthly</option>
@@ -96,19 +90,18 @@ export default function TrendsPage() {
           <div className="flex items-center gap-2">
             {trend.direction === "up" && (
               <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                <TrendingUp className="h-3 w-3 mr-1" />
-                +{trend.change_percent.toFixed(1)}%
+                <TrendingUp className="mr-1 h-3 w-3" />+{trend.change_percent.toFixed(1)}%
               </Badge>
             )}
             {trend.direction === "down" && (
               <Badge className="bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
-                <TrendingDown className="h-3 w-3 mr-1" />
+                <TrendingDown className="mr-1 h-3 w-3" />
                 {trend.change_percent.toFixed(1)}%
               </Badge>
             )}
             {trend.direction === "flat" && (
               <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400">
-                <Minus className="h-3 w-3 mr-1" />
+                <Minus className="mr-1 h-3 w-3" />
                 Stable
               </Badge>
             )}
@@ -116,11 +109,11 @@ export default function TrendsPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+            <div className="flex h-[300px] items-center justify-center text-muted-foreground">
               Loading trend data...
             </div>
           ) : chartData.length === 0 ? (
-            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+            <div className="flex h-[300px] items-center justify-center text-muted-foreground">
               No data available for this time range
             </div>
           ) : (
@@ -162,9 +155,7 @@ export default function TrendsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {(
-                  trend.points.reduce((s, p) => s + p.value, 0) / trend.points.length
-                ).toFixed(4)}
+                {(trend.points.reduce((s, p) => s + p.value, 0) / trend.points.length).toFixed(4)}
               </div>
             </CardContent>
           </Card>

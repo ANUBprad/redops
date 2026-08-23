@@ -5,18 +5,28 @@ import { api } from "@/lib/api";
 import type { AuditLogEntry } from "@/types/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function AuditPage() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.listAuditLogs("current-org").then((data) => {
-      const d = data as { items: AuditLogEntry[] };
-      setLogs(d.items ?? []);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    api
+      .listAuditLogs("current-org")
+      .then((data) => {
+        const d = data as { items: AuditLogEntry[] };
+        setLogs(d.items ?? []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   return (
@@ -46,7 +56,9 @@ export default function AuditPage() {
               <TableBody>
                 {logs.map((log) => (
                   <TableRow key={log.log_id}>
-                    <TableCell className="text-xs">{new Date(log.timestamp).toLocaleString()}</TableCell>
+                    <TableCell className="text-xs">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </TableCell>
                     <TableCell>{log.user_email || log.user_id}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{log.action}</Badge>

@@ -42,11 +42,7 @@ export default function DatasetUploadPage() {
           progress = 100;
           clearInterval(interval);
           setFiles((prev) =>
-            prev.map((f) =>
-              f.id === file.id
-                ? { ...f, progress: 100, status: "complete" }
-                : f,
-            ),
+            prev.map((f) => (f.id === file.id ? { ...f, progress: 100, status: "complete" } : f)),
           );
         } else {
           setFiles((prev) =>
@@ -65,9 +61,12 @@ export default function DatasetUploadPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "complete": return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case "error": return <AlertCircle className="h-5 w-5 text-red-500" />;
-      default: return <Upload className="h-5 w-5 text-blue-500 animate-bounce" />;
+      case "complete":
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case "error":
+        return <AlertCircle className="h-5 w-5 text-red-500" />;
+      default:
+        return <Upload className="h-5 w-5 animate-bounce text-blue-500" />;
     }
   };
 
@@ -94,7 +93,7 @@ export default function DatasetUploadPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="file-upload">Dataset File (JSON/CSV)</Label>
-            <div className="border-2 border-dashed rounded-md p-6 text-center">
+            <div className="rounded-md border-2 border-dashed p-6 text-center">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
               <Input
                 id="file-upload"
@@ -103,7 +102,7 @@ export default function DatasetUploadPage() {
                 onChange={handleFileChange}
                 className="mt-2"
               />
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="mt-2 text-sm text-muted-foreground">
                 Drag and drop or click to upload. Supports JSON, CSV, and JSONL.
               </p>
             </div>

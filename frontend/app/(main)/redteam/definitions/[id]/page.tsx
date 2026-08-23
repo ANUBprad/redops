@@ -31,14 +31,19 @@ export default function AttackDefinitionDetailPage() {
   const params = useParams<{ id: string }>();
   const defId = params?.id ?? "";
 
-  const { data: definition, isLoading, error } = useQuery({
+  const {
+    data: definition,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["attack-definition", defId],
     queryFn: () => api.getAttackDefinition(defId),
     enabled: !!defId,
   });
 
   if (isLoading) return <LoadingState />;
-  if (error || !definition) return <div className="text-destructive">Error loading attack definition</div>;
+  if (error || !definition)
+    return <div className="text-destructive">Error loading attack definition</div>;
 
   const def_ = definition as AttackDefinitionDetail;
 
@@ -72,7 +77,9 @@ export default function AttackDefinitionDetailPage() {
             <CardTitle>Category</CardTitle>
           </CardHeader>
           <CardContent>
-            <Badge variant="outline" className="text-sm">{def_.category}</Badge>
+            <Badge variant="outline" className="text-sm">
+              {def_.category}
+            </Badge>
           </CardContent>
         </Card>
         <Card>
@@ -88,7 +95,9 @@ export default function AttackDefinitionDetailPage() {
             <CardTitle>Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <Badge variant={def_.status === "active" ? "default" : "secondary"}>{def_.status}</Badge>
+            <Badge variant={def_.status === "active" ? "default" : "secondary"}>
+              {def_.status}
+            </Badge>
           </CardContent>
         </Card>
       </div>
@@ -99,7 +108,9 @@ export default function AttackDefinitionDetailPage() {
             <CardTitle>Prompt Template</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="whitespace-pre-wrap rounded-md bg-muted p-4 text-sm">{def_.prompt_template}</pre>
+            <pre className="whitespace-pre-wrap rounded-md bg-muted p-4 text-sm">
+              {def_.prompt_template}
+            </pre>
           </CardContent>
         </Card>
 
@@ -109,7 +120,9 @@ export default function AttackDefinitionDetailPage() {
               <CardTitle>System Prompt Override</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="whitespace-pre-wrap rounded-md bg-muted p-4 text-sm">{def_.system_prompt_override}</pre>
+              <pre className="whitespace-pre-wrap rounded-md bg-muted p-4 text-sm">
+                {def_.system_prompt_override}
+              </pre>
             </CardContent>
           </Card>
         )}
@@ -154,10 +167,12 @@ export default function AttackDefinitionDetailPage() {
               <span className="font-medium">Version:</span> {def_.version}
             </div>
             <div>
-              <span className="font-medium">Created:</span> {new Date(def_.created_at).toLocaleString()}
+              <span className="font-medium">Created:</span>{" "}
+              {new Date(def_.created_at).toLocaleString()}
             </div>
             <div>
-              <span className="font-medium">Updated:</span> {new Date(def_.updated_at).toLocaleString()}
+              <span className="font-medium">Updated:</span>{" "}
+              {new Date(def_.updated_at).toLocaleString()}
             </div>
           </div>
         </CardContent>

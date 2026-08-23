@@ -1,7 +1,16 @@
 import { describe, it, expect } from "vitest";
 
 describe("Sidebar navigation", () => {
-  const navItems = ["Dashboard", "Projects", "Evaluations", "Runs", "Metrics", "Red Team", "Reports", "Settings"];
+  const navItems = [
+    "Dashboard",
+    "Projects",
+    "Evaluations",
+    "Runs",
+    "Metrics",
+    "Red Team",
+    "Reports",
+    "Settings",
+  ];
 
   it("has all required navigation items", () => {
     expect(navItems).toHaveLength(8);
@@ -22,12 +31,18 @@ describe("Pagination", () => {
 describe("Status colors", () => {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed": return "bg-green-100";
-      case "running": return "bg-blue-100";
-      case "failed": return "bg-red-100";
-      case "queued": return "bg-yellow-100";
-      case "cancelled": return "bg-gray-100";
-      default: return "bg-muted";
+      case "completed":
+        return "bg-green-100";
+      case "running":
+        return "bg-blue-100";
+      case "failed":
+        return "bg-red-100";
+      case "queued":
+        return "bg-yellow-100";
+      case "cancelled":
+        return "bg-gray-100";
+      default:
+        return "bg-muted";
     }
   };
 

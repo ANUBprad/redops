@@ -1,10 +1,27 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Dialog } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
-import { BarChart3, Bot, FileText, LayoutDashboard, PlayCircle, Shield, Target, TrendingUp, Trophy } from "lucide-react";
+import {
+  BarChart3,
+  Bot,
+  FileText,
+  LayoutDashboard,
+  PlayCircle,
+  Shield,
+  Target,
+  TrendingUp,
+  Trophy,
+} from "lucide-react";
 
 const commands = [
   { label: "Mission Control", href: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
@@ -33,14 +50,17 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  const handleSelect = useCallback((href: string) => {
-    setOpen(false);
-    router.push(href);
-  }, [router]);
+  const handleSelect = useCallback(
+    (href: string) => {
+      setOpen(false);
+      router.push(href);
+    },
+    [router],
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Command className="p-0 shadow-xl max-w-md">
+      <Command className="max-w-md p-0 shadow-xl">
         <CommandInput placeholder="Type to search..." />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>

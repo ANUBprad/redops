@@ -40,9 +40,15 @@ interface RunDetail {
 export default function RunDetailPage() {
   const params = useParams<{ id: string }>();
   const runId = params?.id ?? "";
-  const [sseEvents, setSseEvents] = useState<Array<{ event_type: string; data: Record<string, unknown> }>>([]);
+  const [sseEvents, setSseEvents] = useState<
+    Array<{ event_type: string; data: Record<string, unknown> }>
+  >([]);
 
-  const { data: run, isLoading, error } = useQuery({
+  const {
+    data: run,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["run", runId],
     queryFn: () => api.getRun(runId),
     enabled: !!runId,
@@ -56,8 +62,14 @@ export default function RunDetailPage() {
 
     source.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data) as { event_type?: string; data?: Record<string, unknown> };
-        setSseEvents((prev) => [...prev.slice(-99), { event_type: data.event_type ?? "message", data: data.data ?? {} }]);
+        const data = JSON.parse(event.data) as {
+          event_type?: string;
+          data?: Record<string, unknown>;
+        };
+        setSseEvents((prev) => [
+          ...prev.slice(-99),
+          { event_type: data.event_type ?? "message", data: data.data ?? {} },
+        ]);
       } catch {
         // ignore parse errors
       }
@@ -77,12 +89,18 @@ export default function RunDetailPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed": return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
-      case "running": return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
-      case "failed": return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
-      case "queued": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
-      case "cancelled": return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
-      default: return "bg-muted text-muted-foreground";
+      case "completed":
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+      case "running":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
+      case "failed":
+        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
+      case "queued":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
+      case "cancelled":
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+      default:
+        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -118,7 +136,8 @@ export default function RunDetailPage() {
           <CardContent>
             <div className="text-2xl font-bold">{runData.total_tokens.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              In: {runData.token_input.toLocaleString()} · Out: {runData.token_output.toLocaleString()}
+              In: {runData.token_input.toLocaleString()} · Out:{" "}
+              {runData.token_output.toLocaleString()}
             </p>
           </CardContent>
         </Card>
@@ -152,15 +171,16 @@ export default function RunDetailPage() {
             <CardTitle>Live Events ({sseEvents.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="max-h-48 overflow-y-auto space-y-2">
-              {sseEvents.slice().reverse().map((event, i) => (
-                <div key={i} className="flex items-start gap-2 text-sm">
-                  <Badge variant="outline">{event.event_type}</Badge>
-                  <span className="text-muted-foreground">
-                    {JSON.stringify(event.data)}
-                  </span>
-                </div>
-              ))}
+            <div className="max-h-48 space-y-2 overflow-y-auto">
+              {sseEvents
+                .slice()
+                .reverse()
+                .map((event, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm">
+                    <Badge variant="outline">{event.event_type}</Badge>
+                    <span className="text-muted-foreground">{JSON.stringify(event.data)}</span>
+                  </div>
+                ))}
             </div>
           </CardContent>
         </Card>
@@ -182,9 +202,7 @@ export default function RunDetailPage() {
 
       {runData.status === "running" && (
         <div className="flex justify-end gap-2">
-          <Button variant="outline">
-            Cancel Run
-          </Button>
+          <Button variant="outline">Cancel Run</Button>
         </div>
       )}
     </div>
