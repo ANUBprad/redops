@@ -82,9 +82,9 @@ class TestMetricEngineIntegration:
 
     @pytest.mark.asyncio
     async def test_all_metrics_registered(self, engine: MetricEngine) -> None:
-        """Verify all 22 metrics are registered."""
+        """Verify all 21 metrics are registered."""
         resolved = engine.resolve_metrics([m.definition().name for m in engine._metrics.values()])
-        assert len(resolved) >= 22
+        assert len(resolved) >= 21
 
     @pytest.mark.asyncio
     async def test_cost_metric_executes(self, engine: MetricEngine) -> None:

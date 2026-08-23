@@ -126,20 +126,15 @@ class TestSemanticSimilarityKnownAnswers:
 
 
 class TestPromptResponseEmbeddingMetrics:
-    """answer_relevance and relevance share prompt/response cosine."""
+    """answer_relevance measures prompt/response cosine."""
 
-    @pytest.mark.parametrize("metric_name", ["answer_relevance", "relevance"])
     @pytest.mark.asyncio
-    async def test_identical_prompt_response_scores_one(
-        self,
-        metric_name: str,
-    ) -> None:
+    async def test_identical_prompt_response_scores_one(self) -> None:
         from app.evaluation.metrics.implementations.answer_relevance_metric import (
             AnswerRelevanceMetric,
         )
-        from app.evaluation.metrics.implementations.relevance_metric import RelevanceMetric
 
-        metric = AnswerRelevanceMetric() if metric_name == "answer_relevance" else RelevanceMetric()
+        metric = AnswerRelevanceMetric()
         provider = ScriptedEmbeddingProvider()
         result = await metric.evaluate(
             MetricInput(
@@ -152,15 +147,13 @@ class TestPromptResponseEmbeddingMetrics:
         assert result.normalized_score == pytest.approx(1.0)
         assert result.metadata["embedding_model"] == "text-embedding-test"
 
-    @pytest.mark.parametrize("metric_name", ["answer_relevance", "relevance"])
     @pytest.mark.asyncio
-    async def test_orthogonal_pair_scores_zero(self, metric_name: str) -> None:
+    async def test_orthogonal_pair_scores_zero(self) -> None:
         from app.evaluation.metrics.implementations.answer_relevance_metric import (
             AnswerRelevanceMetric,
         )
-        from app.evaluation.metrics.implementations.relevance_metric import RelevanceMetric
 
-        metric = AnswerRelevanceMetric() if metric_name == "answer_relevance" else RelevanceMetric()
+        metric = AnswerRelevanceMetric()
         provider = ScriptedEmbeddingProvider()
         result = await metric.evaluate(
             MetricInput(

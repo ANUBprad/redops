@@ -123,11 +123,6 @@ def _canonical_input(metric_name: str) -> MetricInput | None:
             response="Paris is the capital of France",
             metadata={"_embedding_provider": embedding_provider},
         ),
-        "relevance": MetricInput(
-            prompt="What is the capital of France?",
-            response="Paris is the capital of France",
-            metadata={"_embedding_provider": embedding_provider},
-        ),
         "groundedness": MetricInput(
             response="Paris is the capital of France",
             context="France is a country in Europe. Its capital is Paris.",
@@ -208,7 +203,6 @@ def _failing_input(metric_name: str) -> MetricInput:
     return {
         "semantic_similarity": MetricInput(response="orphan response"),
         "answer_relevance": MetricInput(prompt="only a prompt"),
-        "relevance": MetricInput(prompt="only a prompt"),
         "groundedness": MetricInput(response="response without context"),
         "context_relevance": MetricInput(prompt="prompt without context"),
         "correctness": MetricInput(response="no reference given"),

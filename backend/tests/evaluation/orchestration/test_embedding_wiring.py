@@ -20,7 +20,9 @@ from app.evaluation.execution.pipeline.plan import ExecutionPlan
 from app.evaluation.execution.pipeline.step import ExecutionStep
 from app.evaluation.execution.stages.types import StageType
 from app.evaluation.metrics.domain import MetricInput
-from app.evaluation.metrics.implementations.relevance_metric import RelevanceMetric
+from app.evaluation.metrics.implementations.answer_relevance_metric import (
+    AnswerRelevanceMetric,
+)
 from app.evaluation.orchestration.executor import MetricDispatchStage
 from app.providers.models.responses import EmbeddingResponse, Usage
 from app.providers.registry.registry import ProviderRegistry
@@ -140,7 +142,7 @@ class TestEmbeddingProviderWiring:
         """The injected provider drives a real metric computation."""
         provider = FakeEmbeddingProvider()
 
-        metric = RelevanceMetric()
+        metric = AnswerRelevanceMetric()
         result = await metric.evaluate(
             MetricInput(
                 prompt="capital of France",
@@ -155,7 +157,7 @@ class TestEmbeddingProviderWiring:
 
     @pytest.mark.asyncio
     async def test_missing_embedding_provider_is_explicit_error(self) -> None:
-        metric = RelevanceMetric()
+        metric = AnswerRelevanceMetric()
         result = await metric.evaluate(
             MetricInput(prompt="p", response="r", metadata={}),
         )
