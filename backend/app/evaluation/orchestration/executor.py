@@ -717,30 +717,34 @@ class PersistenceStage(ExecutionStage):
         persisted_count = 0
         if self._metric_result_repo is not None:
             for item_index, results in metric_results_by_item.items():
-                for result in results:
-                    try:
-                        await self._metric_result_repo.save(
-                            run_id=str(context.run_id),
-                            item_id=str(item_index),
+                try:
+                    domain_results = [
+                        MetricResult(
                             metric_name=result.metric_name,
                             score=result.score,
                             normalized_score=result.normalized_score,
                             raw_output=result.raw_output,
                             reasoning=result.reasoning,
-                            metadata=result.metadata,
+                            metadata={
+                                **result.metadata,
+                                "run_id": str(context.run_id),
+                                "item_id": result.metadata.get("item_id", str(item_index)),
+                            },
                             execution_time_ms=result.execution_time_ms,
                             error=result.error,
                             confidence=result.confidence,
                             version=result.version,
                             cost_usd=result.cost_usd,
                         )
-                        persisted_count += 1
-                    except Exception:
-                        logger.exception(
-                            "Failed to persist metric result: metric=%s item_index=%s",
-                            result.metric_name,
-                            item_index,
-                        )
+                        for result in results
+                    ]
+                    await self._metric_result_repo.save_many(domain_results)
+                    persisted_count += len(domain_results)
+                except Exception:
+                    logger.exception(
+                        "Failed to persist metric results for item_index=%s",
+                        item_index,
+                    )
 
         elapsed = int((time.monotonic() - start) * 1000)
 
