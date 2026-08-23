@@ -414,6 +414,10 @@ def _serialize_metadata(metadata: EvaluationMetadata) -> dict[str, Any]:
         "created_by": metadata.created_by,
         "tags": list(metadata.tags),
         "description": metadata.description,
+        "judge_provider": metadata.judge_provider,
+        "judge_model": metadata.judge_model,
+        "embedding_provider": metadata.embedding_provider,
+        "embedding_model": metadata.embedding_model,
     }
 
 
@@ -485,4 +489,8 @@ def _deserialize_metadata(data: dict[str, Any]) -> EvaluationMetadata:
         created_by=data.get("created_by"),
         tags=tuple(data.get("tags", ())),
         description=data.get("description"),
+        judge_provider=data.get("judge_provider"),
+        judge_model=data.get("judge_model"),
+        embedding_provider=data.get("embedding_provider"),
+        embedding_model=data.get("embedding_model"),
     )

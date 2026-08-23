@@ -614,6 +614,22 @@ class MetricDispatchStage(ExecutionStage):
         metadata["_judge_provider"] = judge_provider
         metadata["_judge_provider_name"] = judge_provider_name or ""
         metadata["_judge_model"] = judge_model
+
+        embedding_provider_name = context.metadata.embedding_provider if context.metadata else None
+        embedding_model = context.metadata.embedding_model if context.metadata else ""
+        embedding_provider = None
+        if embedding_provider_name and self._provider_registry is not None:
+            try:
+                candidate = self._provider_registry.resolve(embedding_provider_name)
+            except KeyError:
+                candidate = None
+            if candidate is not None and hasattr(candidate, "embed"):
+                embedding_provider = candidate
+        if embedding_provider is None and hasattr(judge_provider, "embed"):
+            embedding_provider = judge_provider
+
+        metadata["_embedding_provider"] = embedding_provider
+        metadata["_embedding_model"] = embedding_model
         return metadata
 
     async def rollback(self, context: PipelineContext, result: StageResult) -> None:

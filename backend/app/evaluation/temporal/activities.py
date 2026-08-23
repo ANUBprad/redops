@@ -484,9 +484,11 @@ async def _evaluate_metrics(
     """Evaluate the selected metrics against an executed item.
 
     The resolved chat provider is injected as the LLM judge so
-    judge-backed metrics perform a real second LLM call. Embedding-
-    backed metrics without a registered embedding provider produce
-    explicit error results rather than fake scores.
+    judge-backed metrics perform a real second LLM call. When that
+    provider also implements the embedding contract (e.g. OpenAI),
+    it is injected for embedding-backed metrics as well; otherwise
+    those metrics produce explicit error results rather than fake
+    scores.
     """
     if engine is None or not metric_names:
         return ()
@@ -503,6 +505,7 @@ async def _evaluate_metrics(
         return ()
 
     metadata = execution.to_metric_metadata()
+    embedding_provider = judge_provider if hasattr(judge_provider, "embed") else None
     metadata.update(
         {
             "run_id": run_id,
@@ -510,6 +513,7 @@ async def _evaluate_metrics(
             "_judge_provider": judge_provider,
             "_judge_provider_name": execution.provider_name,
             "_judge_model": execution.model_id,
+            "_embedding_provider": embedding_provider,
         }
     )
     metric_input = MetricInput(
