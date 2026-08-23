@@ -38,6 +38,17 @@ class EmbeddingMetric(Metric):
             msg = "Embedding metrics require '_embedding_provider' in metadata"
             raise RuntimeError(msg)
 
+        # Cache lives on the MetricInput, so its lifetime is exactly one
+        # evaluation item: identical texts shared by several metrics are
+        # fetched from the provider only once.
+        cache: dict[tuple[str, str], tuple[tuple[float, ...], str, str]] = (
+            input_data.metadata.setdefault("_embedding_cache", {})
+        )
+        cache_key = (text, str(model))
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         from app.providers.models.options import EmbeddingOptions
 
         response = await provider.embed(
@@ -51,7 +62,9 @@ class EmbeddingMetric(Metric):
             msg = "Embedding provider did not return a valid embedding vector"
             raise RuntimeError(msg)
         provider_name = str(getattr(provider, "provider_name", ""))
-        return embedding, response.model or model, provider_name
+        result = (embedding, response.model or model, provider_name)
+        cache[cache_key] = result
+        return result
 
     @staticmethod
     def _cosine_similarity(a: tuple[float, ...], b: tuple[float, ...]) -> float:
