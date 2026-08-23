@@ -86,7 +86,7 @@ docker compose -f ../docker/docker-compose.yml up postgres redis temporal
 
 # Start API (in a separate terminal)
 cd backend
-uvicorn app.main:app --reload
+uvicorn app.main:create_app --reload --factory
 
 # Start Frontend (in a separate terminal)
 cd frontend

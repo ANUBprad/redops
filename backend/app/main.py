@@ -25,6 +25,3 @@ def create_app() -> FastAPI:
     app = create_application()
     setup_observability(app)
     return app
-
-
-app = create_app()
