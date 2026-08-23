@@ -1,2 +1,5 @@
 ".next/" 
 "*.tsbuildinfo" 
+
+.next/
+tsconfig.tsbuildinfo
