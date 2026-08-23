@@ -57,7 +57,7 @@ services:
       - redops-network
 
   temporal-admin:
-    image: temporalio/admin-tools:1.25.2-tctl-1.18.1-cli-1.1.2
+    image: temporalio/admin-tools:1.25.0
     container_name: redops-temporal-admin
     depends_on:
       temporal:

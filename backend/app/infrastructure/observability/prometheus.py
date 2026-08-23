@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from fastapi.responses import Response
-
 if TYPE_CHECKING:
     from fastapi import FastAPI
 
@@ -22,6 +20,7 @@ def setup_prometheus_metrics(app: FastAPI) -> None:
         return
 
     try:
+        from fastapi.responses import Response
         from prometheus_client import (
             Counter,
             Gauge,

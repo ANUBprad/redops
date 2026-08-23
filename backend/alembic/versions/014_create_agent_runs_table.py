@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 # revision identifiers
 revision: str = "014"
-down_revision: str | None = "013_create_notifications"
+down_revision: str | None = "013"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
