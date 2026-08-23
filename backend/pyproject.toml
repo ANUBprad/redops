@@ -22,6 +22,7 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "openai>=1.0",
     "anthropic>=0.20",
+    "jsonschema>=4.21",
     "opentelemetry-api>=1.25",
     "opentelemetry-sdk>=1.25",
     "prometheus-client>=0.20",
@@ -37,6 +38,7 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.6",
     "mypy>=1.10",
+    "types-jsonschema>=4.23",
 ]
 
 [tool.ruff]
