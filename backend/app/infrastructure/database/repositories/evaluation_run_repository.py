@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
-from typing import Any
+from datetime import UTC, datetime
+from typing import Any, overload
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -316,13 +316,33 @@ class SqlAlchemyEvaluationRunRepository(RunRepository):
         run.token_output = model.token_output
         run.cost = model.cost
         run.average_latency_ms = model.average_latency_ms
-        run.started_at = model.started_at
-        run.completed_at = model.completed_at
-        run.cancelled_at = model.cancelled_at
+        run.started_at = _as_utc(model.started_at)
+        run.completed_at = _as_utc(model.completed_at)
+        run.cancelled_at = _as_utc(model.cancelled_at)
         run.version = model.version
-        run.created_at = model.created_at
-        run.updated_at = model.updated_at
+        run.created_at = _as_utc(model.created_at)
+        run.updated_at = _as_utc(model.updated_at)
         return run
+
+
+@overload
+def _as_utc(value: datetime) -> datetime: ...
+
+
+@overload
+def _as_utc(value: datetime | None) -> datetime | None: ...
+
+
+def _as_utc(value: datetime | None) -> datetime | None:
+    """Normalize a stored datetime to timezone-aware UTC.
+
+    SQLite drops tzinfo on persistence; rehydrated timestamps must be
+    UTC-aware so domain arithmetic (e.g. duration) cannot mix naive and
+    aware datetimes.
+    """
+    if value is None or value.tzinfo is not None:
+        return value
+    return value.replace(tzinfo=UTC)
 
 
 def _get_sort_column(sort_by: str) -> Any:
