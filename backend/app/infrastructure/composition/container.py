@@ -22,6 +22,7 @@ from app.agents.temporal.activities import (
 )
 from app.agents.temporal.workflow import AgentRunWorkflow
 from app.evaluation.metrics.engine import MetricEngine
+from app.evaluation.metrics.implementations import ALL_METRICS
 from app.evaluation.temporal.activities import (
     cancel_run_activity,
     complete_run_activity,
@@ -255,8 +256,8 @@ class InfrastructureContainer:
         The ProviderRegistry is populated with the concrete providers whose
         credentials are configured; providers without a key are simply not
         registered so startup never fails on a missing optional key. The
-        MetricEngine starts empty; metrics are registered separately (Phase
-        B.2). The CostCalculator ships with real default pricing so cost
+        MetricEngine is populated with every built-in metric implementation.
+        The CostCalculator ships with real default pricing so cost
         estimates are never faked.
         """
         provider_registry = ProviderRegistry()
@@ -265,9 +266,12 @@ class InfrastructureContainer:
             ProviderRegistry,
             lambda _c: provider_registry,
         )
+
+        metric_engine = MetricEngine()
+        metric_engine.register_many([metric_cls() for metric_cls in ALL_METRICS])
         self._container.register_singleton(
             MetricEngine,
-            lambda _c: MetricEngine(),
+            lambda _c: metric_engine,
         )
         self._container.register_singleton(
             CostCalculator,
