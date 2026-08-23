@@ -45,6 +45,13 @@ class LLMJudgeMetric(Metric):
             model=str(input_data.metadata.get("_judge_model", "")),
         )
 
+    def _resolve_provider_name(self, input_data: MetricInput, provider: Any) -> str:
+        """Record which provider executed the judge call."""
+        configured = input_data.metadata.get("_judge_provider_name")
+        if configured:
+            return str(configured)
+        return str(getattr(provider, "provider_name", ""))
+
     async def evaluate(self, input_data: MetricInput) -> MetricResult:
         """Evaluate using LLM judge."""
         start = time.monotonic()
@@ -130,6 +137,7 @@ class LLMJudgeMetric(Metric):
                 "judge_prompt_version": judge_response.judge_prompt_version,
                 "tokens_input": judge_response.tokens_input,
                 "tokens_output": judge_response.tokens_output,
+                "provider": self._resolve_provider_name(input_data, provider),
             },
             confidence=judge_response.confidence,
             version=metric_def.version,

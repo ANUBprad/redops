@@ -47,8 +47,10 @@ class ContextRelevanceMetric(EmbeddingMetric):
             )
 
         try:
-            prompt_emb, model = await self._get_embedding(input_data.prompt, input_data)
-            context_emb, _ = await self._get_embedding(input_data.context, input_data)
+            prompt_emb, model, provider_name = await self._get_embedding(
+                input_data.prompt, input_data
+            )
+            context_emb, _, _ = await self._get_embedding(input_data.context, input_data)
         except RuntimeError as exc:
             return self._build_embedding_result(
                 "context_relevance",
@@ -68,5 +70,6 @@ class ContextRelevanceMetric(EmbeddingMetric):
             metadata={
                 "method": "cosine_similarity",
                 "embedding_model": model,
+                "embedding_provider": provider_name,
             },
         )

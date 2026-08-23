@@ -54,8 +54,10 @@ class SemanticSimilarityMetric(EmbeddingMetric):
             )
 
         try:
-            response_emb, model = await self._get_embedding(input_data.response, input_data)
-            reference_emb, _ = await self._get_embedding(input_data.reference, input_data)
+            response_emb, model, provider_name = await self._get_embedding(
+                input_data.response, input_data
+            )
+            reference_emb, _, _ = await self._get_embedding(input_data.reference, input_data)
         except RuntimeError as exc:
             return self._build_embedding_result(
                 "semantic_similarity",
@@ -76,5 +78,6 @@ class SemanticSimilarityMetric(EmbeddingMetric):
                 "embedding_dimensions": len(response_emb),
                 "method": "cosine_similarity",
                 "embedding_model": model,
+                "embedding_provider": provider_name,
             },
         )

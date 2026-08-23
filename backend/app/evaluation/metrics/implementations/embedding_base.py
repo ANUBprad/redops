@@ -23,11 +23,12 @@ class EmbeddingMetric(Metric):
         self,
         text: str,
         input_data: Any,
-    ) -> tuple[tuple[float, ...], str]:
+    ) -> tuple[tuple[float, ...], str, str]:
         """Get embedding vector for text.
 
         Returns:
-            Tuple of (embedding vector, model identifier used).
+            Tuple of (embedding vector, model identifier used,
+            provider name).
 
         """
         provider = input_data.metadata.get("_embedding_provider")
@@ -49,7 +50,8 @@ class EmbeddingMetric(Metric):
         if not isinstance(embedding, tuple):
             msg = "Embedding provider did not return a valid embedding vector"
             raise RuntimeError(msg)
-        return embedding, response.model or model
+        provider_name = str(getattr(provider, "provider_name", ""))
+        return embedding, response.model or model, provider_name
 
     @staticmethod
     def _cosine_similarity(a: tuple[float, ...], b: tuple[float, ...]) -> float:

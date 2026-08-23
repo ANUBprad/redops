@@ -28,6 +28,8 @@ from app.evaluation.metrics.domain import (
     ScoreDirection,
 )
 from app.evaluation.metrics.implementations import ALL_METRICS
+from app.evaluation.metrics.implementations.embedding_base import EmbeddingMetric
+from app.evaluation.metrics.implementations.llm_judge_base import LLMJudgeMetric
 from app.providers.models.enums import FinishReason
 from app.providers.models.responses import ChatResponse, EmbeddingResponse, Usage
 
@@ -44,6 +46,8 @@ class DeterministicEmbeddingProvider:
 
     def __init__(self) -> None:
         self.calls: list[str] = []
+
+    provider_name = "deterministic-embeddings"
 
     async def embed(
         self,
@@ -71,6 +75,8 @@ class DeterministicEmbeddingProvider:
 
 class ScriptedJudgeProvider:
     """Fake chat provider returning a fixed structured judge verdict."""
+
+    provider_name = "scripted-judge"
 
     def __init__(
         self,
@@ -272,6 +278,33 @@ class TestResultContract:
         assert result.version == definition.version
         assert result.error is None
         assert result.execution_time_ms >= 0
+
+    @pytest.mark.parametrize("metric_cls", ALL_METRICS)
+    @pytest.mark.asyncio
+    async def test_execution_metadata_records_provenance(
+        self,
+        metric_cls: type,
+    ) -> None:
+        metric = metric_cls()
+        definition = metric.definition()
+        input_data = _canonical_input(definition.name)
+
+        assert input_data is not None
+
+        result = await metric.evaluate(input_data)
+
+        assert result.is_success, f"{definition.name} failed: {result.error}"
+        metadata = result.metadata
+
+        if isinstance(metric, LLMJudgeMetric):
+            assert "judge_model" in metadata
+            assert "judge_prompt_version" in metadata
+            assert "rubric_version" in metadata
+            assert "provider" in metadata
+            assert metadata["provider"]
+        elif isinstance(metric, EmbeddingMetric):
+            assert metadata.get("embedding_model")
+            assert "embedding_provider" in metadata
 
     @pytest.mark.parametrize("metric_cls", ALL_METRICS)
     @pytest.mark.asyncio
