@@ -79,7 +79,7 @@ class JudgeEngine:
 
         start = time.monotonic()
         try:
-            raw_output, usage = await self._call_llm(
+            raw_output, usage, used_model = await self._call_llm(
                 effective_provider,
                 prompt,
                 effective_config,
@@ -101,6 +101,7 @@ class JudgeEngine:
             )
 
         elapsed = int((time.monotonic() - start) * 1000)
+        recorded_model = effective_config.model or used_model
 
         parsed, parse_error = self._parse_response(raw_output)
         rubric_version = (
@@ -113,7 +114,7 @@ class JudgeEngine:
                 confidence=0.0,
                 reasoning=parse_error,
                 rubric_version=rubric_version,
-                judge_model=effective_config.model,
+                judge_model=recorded_model,
                 judge_prompt_version=JUDGE_PROMPT_VERSION,
                 raw_output=raw_output,
                 execution_time_ms=elapsed,
@@ -127,7 +128,7 @@ class JudgeEngine:
             confidence=parsed["confidence"],
             reasoning=parsed["reasoning"],
             rubric_version=rubric_version,
-            judge_model=effective_config.model,
+            judge_model=recorded_model,
             judge_prompt_version=JUDGE_PROMPT_VERSION,
             raw_output=raw_output,
             execution_time_ms=elapsed,
@@ -159,12 +160,12 @@ class JudgeEngine:
         provider: ChatProvider,
         prompt: str,
         config: JudgeConfig,
-    ) -> tuple[str, dict[str, Any]]:
+    ) -> tuple[str, dict[str, Any], str]:
         """Call the LLM provider with the judge prompt.
 
         Returns:
-            Tuple of (response_content, usage_info) where usage_info
-            contains tokens_input, tokens_output.
+            Tuple of (response_content, usage_info, used_model) where
+            usage_info contains tokens_input and tokens_output.
 
         """
         from app.providers.models.messages import Message
@@ -191,7 +192,7 @@ class JudgeEngine:
             "tokens_output": response.usage.output_tokens,
         }
 
-        return response.content, usage_info
+        return response.content, usage_info, getattr(response, "model", "") or config.model
 
     def _parse_response(self, raw_output: str) -> tuple[dict[str, Any], str | None]:
         """Parse the LLM response into structured fields.
