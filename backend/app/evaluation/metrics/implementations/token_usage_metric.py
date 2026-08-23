@@ -12,6 +12,7 @@ from app.evaluation.metrics.domain import (
     MetricResult,
     MetricScale,
 )
+from app.evaluation.metrics.implementations._measurement import as_number
 
 
 class TokenUsageMetric(Metric):
@@ -49,8 +50,8 @@ class TokenUsageMetric(Metric):
                 error="tokens_output not provided in metadata",
             )
 
-        tokens_output = input_data.metadata.get("tokens_output", 0)
-        if not isinstance(tokens_output, (int, float)):
+        tokens_output = as_number(input_data.metadata.get("tokens_output"))
+        if tokens_output is None:
             return MetricResult(
                 metric_name="token_usage",
                 score=0.0,

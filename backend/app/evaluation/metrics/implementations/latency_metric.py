@@ -12,6 +12,7 @@ from app.evaluation.metrics.domain import (
     MetricResult,
     MetricScale,
 )
+from app.evaluation.metrics.implementations._measurement import as_number
 
 
 class LatencyMetric(Metric):
@@ -49,8 +50,8 @@ class LatencyMetric(Metric):
                 error="latency_ms not provided in metadata",
             )
 
-        latency_ms = input_data.metadata.get("latency_ms", 0)
-        if not isinstance(latency_ms, (int, float)):
+        latency_ms = as_number(input_data.metadata.get("latency_ms"))
+        if latency_ms is None:
             return MetricResult(
                 metric_name="latency",
                 score=0.0,

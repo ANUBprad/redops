@@ -12,6 +12,7 @@ from app.evaluation.metrics.domain import (
     MetricResult,
     MetricScale,
 )
+from app.evaluation.metrics.implementations._measurement import as_number
 
 
 class CostMetric(Metric):
@@ -49,8 +50,8 @@ class CostMetric(Metric):
                 error="cost_usd not provided in metadata",
             )
 
-        cost_usd = input_data.metadata.get("cost_usd", 0.0)
-        if not isinstance(cost_usd, (int, float)):
+        cost_usd = as_number(input_data.metadata.get("cost_usd"))
+        if cost_usd is None:
             return MetricResult(
                 metric_name="cost",
                 score=0.0,

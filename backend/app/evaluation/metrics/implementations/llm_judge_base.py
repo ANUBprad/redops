@@ -41,8 +41,8 @@ class LLMJudgeMetric(Metric):
     def _get_judge_config(self, input_data: MetricInput) -> JudgeConfig:
         """Resolve the judge config."""
         return self._judge_config or JudgeConfig(
-            provider_name=str(input_data.metadata.get("_judge_provider_name", "")),
-            model=str(input_data.metadata.get("_judge_model", "")),
+            provider_name=str(input_data.metadata.get("_judge_provider_name") or ""),
+            model=str(input_data.metadata.get("_judge_model") or ""),
         )
 
     def _resolve_provider_name(self, input_data: MetricInput, provider: Any) -> str:
