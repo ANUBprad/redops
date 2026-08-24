@@ -78,6 +78,4 @@ class DatabaseTraceRepository(TraceRepository):
         )
         result = await self._session.execute(stmt)
         rows = result.all()
-        return [
-            row.trace_data for row in rows if isinstance(row.trace_data, dict)
-        ]
+        return [row.trace_data for row in rows if isinstance(row.trace_data, dict)]

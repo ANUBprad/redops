@@ -36,11 +36,12 @@ def _try_get_redis_fallback() -> Any:
     traces are stored in the database.
     """
     try:
-        from app.evaluation.replay.redis_repository import RedisTraceRepository
-        from redis import asyncio as aioredis
-
         # Try to connect to Redis using the same URL from app config
         import os
+
+        from redis import asyncio as aioredis
+
+        from app.evaluation.replay.redis_repository import RedisTraceRepository
 
         redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
         client = aioredis.from_url(redis_url, decode_responses=False)
