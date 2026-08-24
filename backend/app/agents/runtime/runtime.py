@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from app.agents.domain.enums.agent_enums import AgentRunStatus
+from app.agents.domain.tool_execution import ToolRegistry
 from app.agents.runtime.checkpoint import AgentCheckpointManager
 from app.agents.runtime.executor import AgentExecutor
 from app.agents.runtime.planner import AgentPlanner
@@ -17,6 +18,8 @@ if TYPE_CHECKING:
         AgentRunRepository,
     )
     from app.agents.domain.entities.agent_entities import AgentRun
+    from app.providers.contracts.chat import ChatProvider
+    from app.providers.contracts.tool_calling import ToolCallingProvider
 
 logger = logging.getLogger(__name__)
 
@@ -25,26 +28,30 @@ class AgentRuntimeCoordinator:
     """Main coordinator for agent run execution.
 
     Coordinates planning, executing, checkpointing, and state management.
+    Delegates actual AI execution to AgentExecutor → AgentLoop.
     """
 
     def __init__(
         self,
         run_repository: AgentRunRepository,
         checkpoint_repository: AgentCheckpointRepository,
+        provider: ChatProvider | ToolCallingProvider,
+        tool_registry: ToolRegistry | None = None,
         event_publisher: Any | None = None,
-        provider_registry: Any | None = None,
     ) -> None:
         self._run_repository = run_repository
         self._checkpoint_repository = checkpoint_repository
         self._event_publisher = event_publisher
         self._planner = AgentPlanner()
-        self._executor = AgentExecutor(provider_registry)
+        self._executor = AgentExecutor(provider, tool_registry)
         self._checkpoint_manager = AgentCheckpointManager()
 
     async def execute_run(self, run: AgentRun) -> AgentExecutionOutcome:
-        """Execute a complete agent run."""
-        str(run.id)
+        """Execute a complete agent run.
 
+        Plans the run, then delegates to AgentExecutor which runs the
+        full AgentLoop (LLM ↔ tool interaction) in one call.
+        """
         if run.status == AgentRunStatus.CREATED:
             run.queue()
             await self._run_repository.save(run)
@@ -68,52 +75,30 @@ class AgentRuntimeCoordinator:
             run.start(plan.total_steps)
             await self._run_repository.save(run)
 
-            for step_index in range(plan.total_steps):
-                tool_name = (
-                    plan.tool_sequence[step_index % len(plan.tool_sequence)]
-                    if plan.tool_sequence
-                    else ""
+            result = self._executor.execute_run_sync(run)
+
+            if result.success:
+                run.record_step_success()
+                run.record_token_usage(
+                    result.total_tokens_input,
+                    result.total_tokens_output,
                 )
-
-                result = await self._executor.execute_step(run, step_index, tool_name)
-
-                if result.success:
-                    run.record_step_success()
-                    run.record_token_usage(result.tokens_input, result.tokens_output)
-                    run.record_cost(result.cost_usd)
-                    run.record_latency(result.latency_ms)
-                else:
-                    run.record_step_failure()
-                    run.record_latency(result.latency_ms)
-
-                await self._checkpoint_manager.maybe_checkpoint(
-                    run,
-                    run.steps_completed,
-                    self._checkpoint_repository,
-                )
-                await self._run_repository.persist_progress(run)
-
-            if run.steps_failed > 0 and run.steps_failed == run.steps_total:
+                run.record_cost(result.total_cost_usd)
+                run.record_latency(result.total_duration_ms)
+                run.complete()
+            else:
                 run.fail(
-                    error_code="ALL_STEPS_FAILED",
-                    error_message="All steps failed during execution",
-                )
-                await self._run_repository.save(run)
-                return AgentExecutionOutcome(
-                    success=False,
-                    error="All steps failed",
-                    steps_completed=run.steps_completed,
-                    steps_total=run.steps_total,
+                    error_code="EXECUTION_FAILED",
+                    error_message=result.error or "Agent loop failed",
                 )
 
-            run.complete()
             await self._run_repository.save(run)
-
             return AgentExecutionOutcome(
-                success=True,
+                success=result.success,
+                error=result.error,
                 steps_completed=run.steps_completed,
                 steps_total=run.steps_total,
-                duration_ms=run.duration_ms,
+                duration_ms=result.total_duration_ms,
             )
 
         except Exception as exc:

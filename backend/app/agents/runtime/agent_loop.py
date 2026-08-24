@@ -285,6 +285,23 @@ class AgentLoop:
                 status="failed",
             )
 
+    def execute_sync(
+        self,
+        user_message: str,
+        *,
+        recorder: TrajectoryRecorder | None = None,
+    ) -> AgentLoopResult:
+        """Synchronous wrapper for execute()."""
+        import asyncio
+
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(
+                self.execute(user_message, recorder=recorder)
+            )
+        finally:
+            loop.close()
+
     def _provider_supports_tools(self) -> bool:
         """Check if the provider implements ToolCallingProvider."""
         from app.providers.contracts.tool_calling import ToolCallingProvider
