@@ -4,16 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from app.evaluation.domain.value_objects.evaluation_value_objects import (
-    ExecutionBudget,
-    ExecutionLimits,
-)
 from app.evaluation.execution.pipeline.plan import ExecutionPlan
 from app.evaluation.execution.pipeline.step import ExecutionStep, StepDependency
 from app.evaluation.execution.stages.types import StageType
 from app.evaluation.execution.validators.validators import (
-    BudgetValidator,
-    ConcurrencyValidator,
     DependencyGraphValidator,
     PlanValidator,
     StageOrderingValidator,
@@ -213,84 +207,6 @@ class TestDependencyGraphValidator:
         )
         with pytest.raises(ValidationError):
             DependencyGraphValidator.validate_or_raise([s1])
-
-
-class TestBudgetValidator:
-    """Tests for BudgetValidator."""
-
-    def test_none_budget(self) -> None:
-        """Verify None budget is valid."""
-        result = BudgetValidator.validate(None)
-        assert result.valid
-
-    def test_valid_budget(self) -> None:
-        """Verify valid budget passes."""
-        budget = ExecutionBudget(
-            max_cost_usd=10.0,
-            max_tokens=100000,
-            max_duration_seconds=3600,
-        )
-        result = BudgetValidator.validate(budget)
-        assert result.valid
-
-    def test_unlimited_budget(self) -> None:
-        """Verify unlimited budget passes."""
-        budget = ExecutionBudget()
-        result = BudgetValidator.validate(budget)
-        assert result.valid
-
-    def test_negative_cost(self) -> None:
-        """Verify negative cost fails at object creation."""
-        with pytest.raises(ValueError):
-            ExecutionBudget(max_cost_usd=-1.0)
-
-    def test_negative_tokens(self) -> None:
-        """Verify negative tokens fails at object creation."""
-        with pytest.raises(ValueError):
-            ExecutionBudget(max_tokens=-1)
-
-    def test_zero_duration(self) -> None:
-        """Verify zero duration fails at object creation."""
-        with pytest.raises(ValueError):
-            ExecutionBudget(max_duration_seconds=0)
-
-    def test_zero_cost_with_items(self) -> None:
-        """Verify zero cost with items present fails."""
-        budget = ExecutionBudget(max_cost_usd=0.0)
-        result = BudgetValidator.validate(budget, total_items=10)
-        assert not result.valid
-
-
-class TestConcurrencyValidator:
-    """Tests for ConcurrencyValidator."""
-
-    def test_none_limits(self) -> None:
-        """Verify None limits is valid."""
-        result = ConcurrencyValidator.validate(None)
-        assert result.valid
-
-    def test_valid_limits(self) -> None:
-        """Verify valid limits pass."""
-        limits = ExecutionLimits(max_concurrency=5, batch_size=50, checkpoint_interval=50)
-        result = ConcurrencyValidator.validate(limits)
-        assert result.valid
-
-    def test_zero_concurrency(self) -> None:
-        """Verify zero concurrency fails at object creation."""
-        with pytest.raises(ValueError):
-            ExecutionLimits(max_concurrency=0)
-
-    def test_concurrency_exceeds_items(self) -> None:
-        """Verify concurrency exceeding items fails."""
-        limits = ExecutionLimits(max_concurrency=10)
-        result = ConcurrencyValidator.validate(limits, total_items=5)
-        assert not result.valid
-
-    def test_concurrency_exceeds_batch(self) -> None:
-        """Verify concurrency exceeding batch size fails."""
-        limits = ExecutionLimits(max_concurrency=10, batch_size=5)
-        result = ConcurrencyValidator.validate(limits)
-        assert not result.valid
 
 
 class TestStageOrderingValidator:

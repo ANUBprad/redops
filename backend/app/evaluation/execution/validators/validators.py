@@ -14,10 +14,6 @@ from app.kernel.exceptions.errors import ValidationError
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from app.evaluation.domain.value_objects.evaluation_value_objects import (
-        ExecutionBudget,
-        ExecutionLimits,
-    )
     from app.evaluation.execution.pipeline.plan import ExecutionPlan
     from app.evaluation.execution.pipeline.step import ExecutionStep
     from app.evaluation.execution.stages.types import StageType
@@ -170,116 +166,6 @@ class DependencyGraphValidator:
         if not result.valid:
             msg = result.errors[0] if result.errors else "Unknown dependency error"
             raise ValidationError(msg, field="step_dependencies")
-
-
-class BudgetValidator:
-    """Validates execution budget parameters."""
-
-    @staticmethod
-    def validate(budget: ExecutionBudget | None, total_items: int = 0) -> ValidationResult:
-        """Validate budget parameters.
-
-        Args:
-            budget: The budget to validate.
-            total_items: Item count for per-item budget checks.
-
-        Returns:
-            A ValidationResult indicating validity.
-
-        """
-        errors: list[str] = []
-
-        if budget is None:
-            return ValidationResult.ok()
-
-        if budget.max_cost_usd is not None and budget.max_cost_usd < 0:
-            errors.append("Max cost cannot be negative")
-        if budget.max_tokens is not None and budget.max_tokens < 0:
-            errors.append("Max tokens cannot be negative")
-        if budget.max_duration_seconds is not None and budget.max_duration_seconds <= 0:
-            errors.append("Max duration must be positive")
-
-        if total_items > 0 and budget.max_cost_usd is not None and budget.max_cost_usd == 0:
-            errors.append("Max cost cannot be zero when items are present")
-
-        return ValidationResult.failed(*errors) if errors else ValidationResult.ok()
-
-    @staticmethod
-    def validate_or_raise(
-        budget: ExecutionBudget | None,
-        total_items: int = 0,
-    ) -> None:
-        """Validate and raise on the first error.
-
-        Args:
-            budget: The budget to validate.
-            total_items: Optional item count.
-
-        Raises:
-            ValidationError: If budget validation fails.
-
-        """
-        result = BudgetValidator.validate(budget, total_items)
-        if not result.valid:
-            msg = result.errors[0] if result.errors else "Unknown budget error"
-            raise ValidationError(msg, field="execution_budget")
-
-
-class ConcurrencyValidator:
-    """Validates concurrency and limits configuration."""
-
-    @staticmethod
-    def validate(limits: ExecutionLimits | None, total_items: int = 0) -> ValidationResult:
-        """Validate concurrency and limits.
-
-        Args:
-            limits: The limits to validate.
-            total_items: Item count for concurrency checks.
-
-        Returns:
-            A ValidationResult indicating validity.
-
-        """
-        errors: list[str] = []
-
-        if limits is None:
-            return ValidationResult.ok()
-
-        if limits.max_concurrency < 1:
-            errors.append("Max concurrency must be >= 1")
-        if limits.batch_size < 1:
-            errors.append("Batch size must be >= 1")
-        if limits.checkpoint_interval < 1:
-            errors.append("Checkpoint interval must be >= 1")
-
-        if total_items > 0 and limits.max_concurrency > total_items:
-            errors.append(
-                f"Max concurrency ({limits.max_concurrency}) exceeds total items ({total_items})",
-            )
-
-        if limits.max_concurrency > limits.batch_size:
-            errors.append(
-                f"Max concurrency ({limits.max_concurrency}) exceeds batch size ({limits.batch_size})",
-            )
-
-        return ValidationResult.failed(*errors) if errors else ValidationResult.ok()
-
-    @staticmethod
-    def validate_or_raise(limits: ExecutionLimits | None, total_items: int = 0) -> None:
-        """Validate and raise on the first error.
-
-        Args:
-            limits: The limits to validate.
-            total_items: Optional item count.
-
-        Raises:
-            ValidationError: If concurrency validation fails.
-
-        """
-        result = ConcurrencyValidator.validate(limits, total_items)
-        if not result.valid:
-            msg = result.errors[0] if result.errors else "Unknown concurrency error"
-            raise ValidationError(msg, field="execution_limits")
 
 
 class StageOrderingValidator:

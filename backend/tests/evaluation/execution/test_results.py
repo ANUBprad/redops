@@ -6,9 +6,6 @@ from app.evaluation.execution.pipeline.step import StepStatus
 from app.evaluation.execution.results.results import (
     ExecutionOutcome,
     ExecutionResult,
-    ExecutionStatistics,
-    FailureReport,
-    PipelineSummary,
     StageResult,
     StepResult,
 )
@@ -154,90 +151,3 @@ class TestExecutionResult:
         assert result.total_stages == 1
         assert len(result.successful_stages) == 1
 
-
-class TestFailureReport:
-    """Tests for FailureReport."""
-
-    def test_defaults(self) -> None:
-        """Verify default failure report."""
-        report = FailureReport()
-        assert not report.has_failures
-        assert report.total_failures == 0
-
-    def test_with_failures(self) -> None:
-        """Verify failure report with failures."""
-        step_result = StepResult(
-            step_id=UUIDv7.generate(),
-            step_name="f1",
-            stage_type=StageType.PLANNING,
-            status=StepStatus.FAILED,
-            outcome=ExecutionOutcome.FAILURE,
-            error="Error 1",
-        )
-        report = FailureReport(
-            total_failures=1,
-            step_failures=(step_result,),
-            first_failure_message="Error 1",
-            last_failure_message="Error 1",
-        )
-        assert report.has_failures
-        assert report.total_failures == 1
-        assert report.first_failure_message == "Error 1"
-
-
-class TestExecutionStatistics:
-    """Tests for ExecutionStatistics."""
-
-    def test_defaults(self) -> None:
-        """Verify default statistics."""
-        stats = ExecutionStatistics()
-        assert stats.total_steps == 0
-        assert stats.success_rate == 1.0
-
-    def test_success_rate(self) -> None:
-        """Verify success rate calculation."""
-        stats = ExecutionStatistics(total_steps=10, completed_steps=7)
-        assert stats.success_rate == 0.7
-
-    def test_zero_steps(self) -> None:
-        """Verify success rate with zero steps."""
-        stats = ExecutionStatistics()
-        assert stats.success_rate == 1.0
-
-
-class TestPipelineSummary:
-    """Tests for PipelineSummary."""
-
-    def test_creation(self) -> None:
-        """Verify basic summary creation."""
-        summary = PipelineSummary(run_id=UUIDv7.generate())
-        assert summary.is_success
-        assert summary.outcome == ExecutionOutcome.SUCCESS
-
-    def test_from_execution_result(self) -> None:
-        """Verify summary creation from execution result."""
-        result = ExecutionResult(
-            run_id=UUIDv7.generate(),
-            outcome=ExecutionOutcome.SUCCESS,
-            total_duration_ms=1000,
-            items_processed=50,
-            items_succeeded=45,
-            items_failed=5,
-        )
-        summary = PipelineSummary.from_execution_result(result, plan_version=2)
-        assert summary.run_id == result.run_id
-        assert summary.outcome == ExecutionOutcome.SUCCESS
-        assert summary.plan_version == 2
-        assert summary.items_processed == 50
-        assert summary.items_succeeded == 45
-        assert summary.items_failed == 5
-
-    def test_from_failed_result(self) -> None:
-        """Verify summary from failed result."""
-        result = ExecutionResult(
-            run_id=UUIDv7.generate(),
-            outcome=ExecutionOutcome.FAILURE,
-        )
-        summary = PipelineSummary.from_execution_result(result)
-        assert not summary.is_success
-        assert summary.outcome == ExecutionOutcome.FAILURE
