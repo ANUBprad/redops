@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from dataclasses import field as dataclasses_field
 from typing import TYPE_CHECKING, Any
 
+import sqlalchemy as sa
 from temporalio import activity
 
 from app.evaluation.application.run_commands import (
@@ -684,7 +685,7 @@ async def persist_metric_results_activity(input: PersistMetricResultsInput) -> i
                 )
 
                 await session.execute(
-                    MetricResultModel.__table__.delete().where(
+                    sa.delete(MetricResultModel).where(
                         MetricResultModel.run_id == input.run_id,
                         MetricResultModel.item_id == input.item_id,
                     )
