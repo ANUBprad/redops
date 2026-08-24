@@ -67,6 +67,10 @@ class TemporalWorkerLifecycle(LifecycleService):
 
     async def stop(self) -> None:
         """Signal the worker to shut down gracefully."""
+        if self._worker_task is not None and not self._worker_task.done():
+            self._worker_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._worker_task
         self._worker_task = None
 
     async def dispose(self) -> None:

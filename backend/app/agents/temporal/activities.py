@@ -357,7 +357,8 @@ async def execute_agent_loop_activity(
 
     executor = AgentExecutor(provider, tool_registry)
 
-    activity.heartbeat(f"agent loop starting run_id={input.run_id}")
+    if activity.in_activity():
+        activity.heartbeat(f"agent loop starting run_id={input.run_id}")
 
     # Set up cancellation monitoring: a threading.Event that is set
     # when Temporal reports the activity has been cancelled.
@@ -393,7 +394,8 @@ async def execute_agent_loop_activity(
         cancel_event.set()
         monitor_thread.join(timeout=2.0)
 
-        activity.heartbeat(f"agent loop finished run_id={input.run_id}")
+        if activity.in_activity():
+            activity.heartbeat(f"agent loop finished run_id={input.run_id}")
 
         if loop_result.success:
             complete_handler = CompleteAgentRunHandler(repo)

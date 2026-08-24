@@ -426,7 +426,8 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
     start = time.monotonic()
 
     try:
-        activity.heartbeat(f"preparing item {input.item_index}")
+        if activity.in_activity():
+            activity.heartbeat(f"preparing item {input.item_index}")
 
         # Idempotency check: if metric results already exist for this
         # (run_id, item_id), the previous execution succeeded.  Return
@@ -462,7 +463,8 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
         )
         executor = ItemExecutor(_get_cost_calculator(), prompt_template=template)
 
-        activity.heartbeat(f"calling provider for item {input.item_index}")
+        if activity.in_activity():
+            activity.heartbeat(f"calling provider for item {input.item_index}")
 
         result = await executor.execute(
             provider,
@@ -475,7 +477,8 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
         elapsed_ms = int((time.monotonic() - start) * 1000)
         metrics: tuple[MetricResultPayload, ...] = ()
         if result.is_success:
-            activity.heartbeat(f"evaluating metrics for item {input.item_index}")
+            if activity.in_activity():
+                activity.heartbeat(f"evaluating metrics for item {input.item_index}")
             metrics = await _evaluate_metrics(
                 engine=_metric_engine,
                 run_id=input.run_id,

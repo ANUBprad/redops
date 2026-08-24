@@ -34,7 +34,7 @@ class FakeTemporalClient:
         self.submissions: list[tuple[object, str]] = []
 
     async def start_workflow(
-        self, workflow: object, args: object, *, id: str, task_queue: str
+        self, workflow: object, args: object, *, id: str, task_queue: str, **kwargs: object
     ) -> None:
         self.submissions.append((workflow, task_queue))
 

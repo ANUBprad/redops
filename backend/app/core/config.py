@@ -96,7 +96,18 @@ class AppConfig(BaseSettings):
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
 
     # SECURITY
-    app_secret_key: str = Field(default="change-me", alias="APP_SECRET_KEY")
+    app_secret_key: str = Field(default="", alias="APP_SECRET_KEY")
+
+    @field_validator("app_secret_key")
+    @classmethod
+    def validate_secret_key(cls, v: str) -> str:
+        if not v:
+            import os
+
+            if os.getenv("APP_ENV", "development") == "production":
+                msg = "APP_SECRET_KEY must be set in production"
+                raise ValueError(msg)
+        return v
 
     # JWT
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
