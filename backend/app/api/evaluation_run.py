@@ -101,6 +101,7 @@ def _run_to_response(run: EvaluationRun) -> RunResponse:
         failure_reason=(
             run.failure_summary.first_failure if run.failure_summary is not None else None
         ),
+        verdict=run.verdict,
         version=run.version,
         started_at=run.started_at.isoformat() if run.started_at else None,
         completed_at=run.completed_at.isoformat() if run.completed_at else None,

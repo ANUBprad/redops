@@ -9,8 +9,9 @@ handlers, ensuring no duplicate business logic.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import timedelta
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from temporalio import workflow
 
@@ -20,6 +21,7 @@ with workflow.unsafe.imports_passed_through():
         ExecuteItemInput,
         ExecuteItemResult,
         FailRunInput,
+        FinalizeRunIntegrityInput,
         PersistMetricResultsInput,
         ProgressInput,
         RunIdInput,
@@ -28,6 +30,7 @@ with workflow.unsafe.imports_passed_through():
         complete_run_activity,
         execute_item_activity,
         fail_run_activity,
+        finalize_run_integrity_activity,
         persist_metric_results_activity,
         queue_run_activity,
         start_run_activity,
@@ -75,12 +78,81 @@ class EvaluationRunWorkflowResult:
     total_tokens_output: int = 0
 
 
+def _compute_workflow_fingerprint(
+    *,
+    prompt_template: str,
+    system_prompt: str,
+    provider: str,
+    model: str,
+    metrics: tuple[str, ...],
+) -> str:
+    """Compute a deterministic fingerprint for the evaluation configuration.
+
+    Runs inside the workflow (no I/O). Uses SHA-256 for stability.
+    """
+    import hashlib
+    import json
+
+    components: dict[str, str] = {}
+    if prompt_template:
+        components["prompt_template"] = hashlib.sha256(
+            prompt_template.encode(),
+        ).hexdigest()[:32]
+    if system_prompt:
+        components["system_prompt"] = hashlib.sha256(
+            system_prompt.encode(),
+        ).hexdigest()[:32]
+    components["provider"] = provider
+    components["model"] = model
+    components["metrics"] = json.dumps(sorted(metrics), sort_keys=True)
+
+    canonical = json.dumps(components, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()[:32]
+
+
+def _build_item_trace(item_result: ExecuteItemResult) -> dict[str, Any]:
+    """Build a trace dict for a single item from the activity result."""
+    metric_traces = []
+    for m in item_result.metrics:
+        metric_traces.append(
+            {
+                "metric_name": m.metric_name,
+                "score": m.score,
+                "normalized_score": m.normalized_score,
+                "confidence": m.confidence,
+                "reasoning": m.reasoning,
+                "version": m.version,
+                "cost_usd": m.cost_usd,
+                "execution_time_ms": m.execution_time_ms,
+                "error": m.error,
+            }
+        )
+
+    return {
+        "item_index": item_result.item_index,
+        "prompt_trace": {"prompt": ""},
+        "provider_trace": {
+            "response_content": item_result.response,
+            "tokens_input": item_result.tokens_input,
+            "tokens_output": item_result.tokens_output,
+            "cost_usd": item_result.cost_usd,
+            "latency_ms": item_result.latency_ms,
+            "error": item_result.error,
+        },
+        "metric_traces": metric_traces,
+        "total_latency_ms": item_result.latency_ms,
+        "total_cost_usd": item_result.cost_usd,
+        "error": item_result.error,
+    }
+
+
 @workflow.defn
 class EvaluationRunWorkflow:
     """Workflow that orchestrates an evaluation run's lifecycle.
 
     Handles queuing, starting, item execution, progress tracking,
     and completion of an evaluation run. Supports cancellation via signal.
+    Records execution traces and evaluates thresholds at completion.
     """
 
     def __init__(self) -> None:
@@ -101,6 +173,23 @@ class EvaluationRunWorkflow:
         activity_start_to_close = timedelta(seconds=30)
         activity_schedule_to_close = timedelta(minutes=5)
 
+        # Trace: record run start
+        started_at = datetime.now(UTC).isoformat()
+        item_traces: list[dict[str, Any]] = []
+        total_cost_usd = 0.0
+        total_tokens_input = 0
+        total_tokens_output = 0
+        total_latency_ms = 0
+
+        # Compute fingerprint from configuration (no I/O)
+        fingerprint = _compute_workflow_fingerprint(
+            prompt_template=input.prompt_template or "",
+            system_prompt=input.system_prompt or "",
+            provider=input.provider_name,
+            model=input.model_id,
+            metrics=input.metric_names,
+        )
+
         await workflow.execute_activity(
             queue_run_activity,
             RunIdInput(run_id=input.run_id),
@@ -117,9 +206,6 @@ class EvaluationRunWorkflow:
 
         items_completed = 0
         items_failed = 0
-        total_cost_usd = 0.0
-        total_tokens_input = 0
-        total_tokens_output = 0
 
         for item_index in range(input.total_items):
             if self._cancel_requested:
@@ -171,6 +257,10 @@ class EvaluationRunWorkflow:
                 total_cost_usd += item_result.cost_usd
                 total_tokens_input += item_result.tokens_input
                 total_tokens_output += item_result.tokens_output
+                total_latency_ms += item_result.latency_ms
+
+                # Record item trace
+                item_traces.append(_build_item_trace(item_result))
 
                 if item_result.failed:
                     items_failed += 1
@@ -218,6 +308,30 @@ class EvaluationRunWorkflow:
                     schedule_to_close_timeout=activity_schedule_to_close,
                 )
 
+        # Build trace data from accumulated item traces
+        completed_at = datetime.now(UTC).isoformat()
+        trace_data: dict[str, Any] = {
+            "run_id": input.run_id,
+            "evaluation_name": "",
+            "provider_name": input.provider_name,
+            "model_id": input.model_id,
+            "started_at": started_at,
+            "completed_at": completed_at,
+            "status": "completed" if items_failed < input.total_items else "failed",
+            "item_traces": item_traces,
+            "total_cost_usd": total_cost_usd,
+            "total_tokens_input": total_tokens_input,
+            "total_tokens_output": total_tokens_output,
+            "total_latency_ms": total_latency_ms,
+            "configuration": {
+                "provider": input.provider_name,
+                "model": input.model_id,
+                "metrics": list(input.metric_names),
+                "prompt_template": input.prompt_template,
+                "system_prompt": input.system_prompt,
+            },
+        }
+
         if items_failed == input.total_items:
             await workflow.execute_activity(
                 fail_run_activity,
@@ -229,6 +343,20 @@ class EvaluationRunWorkflow:
                 start_to_close_timeout=activity_start_to_close,
                 schedule_to_close_timeout=activity_schedule_to_close,
             )
+
+            # Finalize integrity with error verdict
+            await workflow.execute_activity(
+                finalize_run_integrity_activity,
+                FinalizeRunIntegrityInput(
+                    run_id=input.run_id,
+                    metric_names=input.metric_names,
+                    trace_data=trace_data,
+                    fingerprint=fingerprint,
+                ),
+                start_to_close_timeout=activity_start_to_close,
+                schedule_to_close_timeout=activity_schedule_to_close,
+            )
+
             return EvaluationRunWorkflowResult(
                 run_id=input.run_id,
                 status="failed",
@@ -243,6 +371,19 @@ class EvaluationRunWorkflow:
         await workflow.execute_activity(
             complete_run_activity,
             RunIdInput(run_id=input.run_id),
+            start_to_close_timeout=activity_start_to_close,
+            schedule_to_close_timeout=activity_schedule_to_close,
+        )
+
+        # Finalize integrity: evaluate thresholds, capture provenance, persist
+        await workflow.execute_activity(
+            finalize_run_integrity_activity,
+            FinalizeRunIntegrityInput(
+                run_id=input.run_id,
+                metric_names=input.metric_names,
+                trace_data=trace_data,
+                fingerprint=fingerprint,
+            ),
             start_to_close_timeout=activity_start_to_close,
             schedule_to_close_timeout=activity_schedule_to_close,
         )

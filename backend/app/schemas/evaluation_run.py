@@ -85,6 +85,7 @@ class RunResponse(BaseModel):
     cost: float = Field(..., description="Total cost in USD")
     average_latency_ms: int = Field(..., description="Average latency in ms")
     failure_reason: str | None = Field(default=None, description="Failure reason")
+    verdict: str | None = Field(default=None, description="Run verdict: pass, fail, error, or null")
     version: int = Field(..., description="Optimistic version")
     started_at: str | None = Field(default=None, description="Start timestamp")
     completed_at: str | None = Field(default=None, description="Completion timestamp")

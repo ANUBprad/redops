@@ -47,6 +47,10 @@ class EvaluationRunModel(Base):
         JSON,
         default=dict,
     )
+    verdict: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    trace_data: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    provenance: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
     cancelled_at: Mapped[datetime | None] = mapped_column(nullable=True)

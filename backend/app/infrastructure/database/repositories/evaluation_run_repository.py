@@ -276,6 +276,10 @@ class SqlAlchemyEvaluationRunRepository(RunRepository):
             config=_serialize_config(run.config),
             profile=_serialize_profile(run.profile),
             metadata_=_serialize_metadata(run.metadata),
+            verdict=run.verdict,
+            trace_data=run.trace_data,
+            provenance=run.provenance,
+            fingerprint=run.fingerprint,
             started_at=run.started_at,
             completed_at=run.completed_at,
             cancelled_at=run.cancelled_at,
@@ -316,6 +320,10 @@ class SqlAlchemyEvaluationRunRepository(RunRepository):
         run.token_output = model.token_output
         run.cost = model.cost
         run.average_latency_ms = model.average_latency_ms
+        run.verdict = model.verdict
+        run.trace_data = model.trace_data
+        run.provenance = model.provenance
+        run.fingerprint = model.fingerprint
         run.started_at = _as_utc(model.started_at)
         run.completed_at = _as_utc(model.completed_at)
         run.cancelled_at = _as_utc(model.cancelled_at)

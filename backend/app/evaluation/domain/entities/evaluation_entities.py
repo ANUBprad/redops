@@ -332,6 +332,10 @@ class EvaluationRun(AggregateRoot, VersionMixin):
         self._failure_summary: FailureSummary | None = None
         self._state_machine = RunStateMachine()
         self._cancellation_reason: CancellationReason | None = None
+        self.verdict: str | None = None
+        self.trace_data: dict[str, Any] | None = None
+        self.provenance: dict[str, Any] | None = None
+        self.fingerprint: str | None = None
 
     @property
     def status(self) -> RunStatus:

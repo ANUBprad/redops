@@ -246,6 +246,21 @@ class RunResult:
     evaluation_name: str = ""
 
 
+@dataclass(frozen=True, slots=True)
+class FinalizeRunIntegrityInput:
+    """Input for the finalize_run_integrity activity.
+
+    Carries trace data, provenance, fingerprint, and metric names
+    needed to evaluate thresholds and persist the full evaluation record.
+    """
+
+    run_id: str
+    metric_names: tuple[str, ...] = ()
+    trace_data: dict[str, Any] = dataclasses_field(default_factory=dict)
+    provenance: dict[str, Any] = dataclasses_field(default_factory=dict)
+    fingerprint: str = ""
+
+
 # ---------------------------------------------------------------------------
 # Activities
 # ---------------------------------------------------------------------------
@@ -583,3 +598,120 @@ async def persist_metric_results_activity(input: PersistMetricResultsInput) -> i
         await repo.save_many([to_domain(p) for p in input.results])
         await session.commit()
     return len(input.results)
+
+
+@activity.defn
+async def finalize_run_integrity_activity(
+    input: FinalizeRunIntegrityInput,
+) -> str:
+    """Finalize evaluation run integrity: evaluate thresholds, capture provenance, persist.
+
+    This activity runs after all items complete. It:
+    1. Loads all metric results for the run
+    2. Evaluates thresholds against each metric result
+    3. Determines a run-level verdict (pass/fail/error)
+    4. Captures environment provenance
+    5. Persists trace_data, provenance, fingerprint, and verdict to the evaluation run
+
+    Returns the determined verdict string.
+    """
+    from app.evaluation.metrics.domain import MetricResult
+    from app.evaluation.reliability.provenance import capture_environment
+    from app.infrastructure.database.repositories.metric_result_repository import (
+        SqlAlchemyMetricResultRepository,
+    )
+
+    activity.logger.info(
+        "Finalizing run integrity run_id=%s metric_count=%d",
+        input.run_id,
+        len(input.metric_names),
+    )
+
+    # 1. Capture environment provenance (I/O — git commands, platform info)
+    env_snapshot = capture_environment()
+
+    # 2. Load all metric results for this run and evaluate thresholds
+    verdict = "pass"
+    async with _get_session() as session:
+        metric_repo = SqlAlchemyMetricResultRepository(session)
+        run_repo = SqlAlchemyEvaluationRunRepository(session)
+
+        # Load all persisted metric results for this run
+        all_results: list[MetricResult] = []
+        for metric_name in input.metric_names:
+            results = await metric_repo.find_by_run_id(
+                run_id=input.run_id,
+                metric_name=metric_name,
+            )
+            all_results.extend(results)
+
+        # Evaluate thresholds using the metric engine definitions
+        threshold_evaluations: dict[str, bool | None] = {}
+        if _metric_engine is not None and all_results:
+            for metric_name in input.metric_names:
+                definition = _metric_engine._definitions.get(metric_name)
+                if definition is None:
+                    continue
+                threshold = definition.default_threshold
+                if threshold is None:
+                    continue
+
+                metric_results = [r for r in all_results if r.metric_name == metric_name]
+                if not metric_results:
+                    threshold_evaluations[metric_name] = None
+                    continue
+
+                # Evaluate threshold against aggregated mean
+                successful = [r for r in metric_results if r.is_success]
+                if not successful:
+                    threshold_evaluations[metric_name] = None
+                    verdict = "error" if verdict != "fail" else verdict
+                    continue
+
+                mean_score = sum(r.normalized_score for r in successful) / len(successful)
+                passed = mean_score >= threshold
+                threshold_evaluations[metric_name] = passed
+
+                if not passed:
+                    verdict = "fail"
+
+        # If all thresholds passed but we had only errors, verdict is error
+        if verdict == "pass" and all(
+            v is None for v in threshold_evaluations.values()
+        ):
+            if threshold_evaluations:
+                verdict = "error"
+
+        # 3. Build provenance dict
+        provenance_data = {
+            "environment": {
+                "git_commit_hash": env_snapshot.git_commit_hash,
+                "git_branch": env_snapshot.git_branch,
+                "python_version": env_snapshot.python_version,
+                "requirements_hash": env_snapshot.requirements_hash,
+                "platform_info": env_snapshot.platform_info,
+            },
+            "metric_versions": {
+                name: "1.0.0" for name in input.metric_names
+            },
+            "threshold_evaluations": threshold_evaluations,
+        }
+
+        # 4. Persist to evaluation run
+        from kernel.entities.base import UUIDv7
+
+        run = await run_repo.find_by_id(UUIDv7.from_string(input.run_id))
+        if run is not None:
+            run.verdict = verdict
+            run.trace_data = input.trace_data if input.trace_data else None
+            run.provenance = provenance_data
+            run.fingerprint = input.fingerprint if input.fingerprint else None
+            await run_repo.save(run)
+            await session.commit()
+
+    activity.logger.info(
+        "Run integrity finalized run_id=%s verdict=%s",
+        input.run_id,
+        verdict,
+    )
+    return verdict
