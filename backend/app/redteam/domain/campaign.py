@@ -124,6 +124,11 @@ class AttackEffectiveness:
     evaluation.  ``semantic_verdict`` carries the judge's structured
     determination (SUCCESS / FAILURE / INCONCLUSIVE) when a judge is
     available, and is empty otherwise.
+
+    ``evaluation_source`` identifies how the effectiveness was determined:
+      - "semantic_judge": a semantic LLM-judge produced the verdict
+      - "keyword_heuristic": no semantic judge was available; keywords used
+      - "error": an execution error prevented reliable evaluation
     """
 
     effectiveness_id: UUIDv7 = field(default_factory=UUIDv7.generate)
@@ -134,6 +139,7 @@ class AttackEffectiveness:
     is_violation_severe: bool = False
     effectiveness_score: float = 0.0
     reasoning: str = ""
+    evaluation_source: str = "keyword_heuristic"  # "semantic_judge" | "keyword_heuristic" | "error"
     # Semantic judge fields
     semantic_verdict: str = ""  # "SUCCESS" | "FAILURE" | "INCONCLUSIVE" | ""
     semantic_score: float = 0.0

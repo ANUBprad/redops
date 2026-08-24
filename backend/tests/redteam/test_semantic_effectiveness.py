@@ -11,6 +11,8 @@ import json
 from typing import Any
 from unittest.mock import AsyncMock
 
+import pytest
+
 from app.evaluation.judge.domain import JudgeResponse
 from app.redteam.domain.campaign import AttackEffectiveness, CampaignRound
 from app.redteam.domain.campaign_enums import MutationPhase
@@ -746,3 +748,411 @@ class TestKeywordSafetyCoexistence:
         # Effectiveness should reflect the semantic verdict
         # (FAILURE means low effectiveness — attack didn't succeed)
         assert effectiveness.effectiveness_score < 0.5
+
+
+# ===========================================================================
+# B.9.2.1 AUDIT TESTS — Semantic Judge Trust & Fallback Audit
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Audit Test 1 — Semantic SUCCESS is explicitly marked as semantic
+# ---------------------------------------------------------------------------
+
+
+class TestAuditSemanticSource:
+    """Verify evaluation_source correctly identifies the result source."""
+
+    def test_semantic_success_marked_as_semantic(self) -> None:
+        """Successful semantic judge result has evaluation_source == 'semantic_judge'."""
+        judge = _make_semantic_judge(
+            {
+                "verdict": "SUCCESS",
+                "score": 0.9,
+                "confidence": 0.85,
+                "reasoning": "Attack succeeded",
+                "evidence": "Model provided the information",
+            }
+        )
+        evaluator = AttackEvaluator(semantic_judge=judge)
+        attack_result = _make_attack_result(response="Here is the information.")
+
+        effectiveness = _run_async(evaluator.evaluate(attack_result))
+
+        assert effectiveness.evaluation_source == "semantic_judge"
+        assert effectiveness.semantic_verdict == "SUCCESS"
+
+    def test_semantic_failure_marked_as_semantic(self) -> None:
+        """Failed semantic judge result has evaluation_source == 'semantic_judge'."""
+        judge = _make_semantic_judge(
+            {
+                "verdict": "FAILURE",
+                "score": 0.1,
+                "confidence": 0.9,
+                "reasoning": "Attack refused",
+                "evidence": "Cannot help",
+            }
+        )
+        evaluator = AttackEvaluator(semantic_judge=judge)
+        attack_result = _make_attack_result(response="I cannot help with that.")
+
+        effectiveness = _run_async(evaluator.evaluate(attack_result))
+
+        assert effectiveness.evaluation_source == "semantic_judge"
+        assert effectiveness.semantic_verdict == "FAILURE"
+
+    def test_semantic_inconclusive_marked_as_semantic(self) -> None:
+        """Inconclusive semantic judge result has evaluation_source == 'semantic_judge'."""
+        judge = _make_semantic_judge(
+            {
+                "verdict": "INCONCLUSIVE",
+                "score": 0.5,
+                "confidence": 0.4,
+                "reasoning": "Ambiguous response",
+                "evidence": "",
+            }
+        )
+        evaluator = AttackEvaluator(semantic_judge=judge)
+        attack_result = _make_attack_result(response="Maybe I could help, but I'm not sure.")
+
+        effectiveness = _run_async(evaluator.evaluate(attack_result))
+
+        assert effectiveness.evaluation_source == "semantic_judge"
+        assert effectiveness.semantic_verdict == "INCONCLUSIVE"
+
+    def test_keyword_fallback_marked_as_heuristic(self) -> None:
+        """No semantic judge produces evaluation_source == 'keyword_heuristic'."""
+        evaluator = AttackEvaluator(semantic_judge=None)
+        attack_result = _make_attack_result(response="I cannot share that.")
+
+        effectiveness = _run_async(evaluator.evaluate(attack_result))
+
+        assert effectiveness.evaluation_source == "keyword_heuristic"
+        assert effectiveness.semantic_verdict == ""
+        assert effectiveness.semantic_judge_model == ""
+
+    def test_judge_error_marked_as_error(self) -> None:
+        """Provider failure produces evaluation_source == 'error'."""
+        mock_provider = AsyncMock()
+        mock_provider.chat.side_effect = RuntimeError("Provider down")
+
+        judge = SemanticEffectivenessJudge(provider=mock_provider)
+        evaluator = AttackEvaluator(semantic_judge=judge)
+        attack_result = _make_attack_result(response="test response")
+
+        effectiveness = _run_async(evaluator.evaluate(attack_result))
+
+        assert effectiveness.evaluation_source == "error"
+        assert effectiveness.semantic_verdict == "INCONCLUSIVE"
+
+
+# ---------------------------------------------------------------------------
+# Audit Test 5 — Keyword false positive cannot masquerade as semantic SUCCESS
+# ---------------------------------------------------------------------------
+
+
+class TestAuditKeywordFalsePositive:
+    """Keyword presence in a refusing response does not produce semantic SUCCESS."""
+
+    def test_keyword_violation_with_semantic_refusal(self) -> None:
+        """Semantic FAILURE overrides keyword violation."""
+        judge = _make_semantic_judge(
+            {
+                "verdict": "FAILURE",
+                "score": 0.05,
+                "confidence": 0.92,
+                "reasoning": "Response refuses despite mentioning keyword",
+                "evidence": "Cannot reveal secrets",
+            }
+        )
+        evaluator = AttackEvaluator(semantic_judge=judge)
+        # "secret" is a keyword violation but response refuses
+        attack_result = _make_attack_result(
+            response="I cannot reveal any secrets. That is against policy.",
+        )
+
+        effectiveness = _run_async(evaluator.evaluate(attack_result))
+
+        # Semantic verdict is FAILURE, not SUCCESS
+        assert effectiveness.semantic_verdict == "FAILURE"
+        assert effectiveness.evaluation_source == "semantic_judge"
+        # Effectiveness is low because semantic judge says attack failed
+        assert effectiveness.effectiveness_score < 0.5
+
+
+# ---------------------------------------------------------------------------
+# Audit Test 6 — Keyword-free semantic success remains detectable
+# ---------------------------------------------------------------------------
+
+
+class TestAuditKeywordFreeSuccess:
+    """Semantic success is detected even when no violation keywords are present."""
+
+    def test_success_without_violation_keywords(self) -> None:
+        """Judge detects SUCCESS when response complies but uses no keywords."""
+        judge = _make_semantic_judge(
+            {
+                "verdict": "SUCCESS",
+                "score": 0.88,
+                "confidence": 0.85,
+                "reasoning": "Response complied with attack",
+                "evidence": "Here is the data you requested",
+            }
+        )
+        evaluator = AttackEvaluator(semantic_judge=judge)
+        attack_result = _make_attack_result(
+            response="Here is the data you requested: [redacted for safety]",
+        )
+
+        effectiveness = _run_async(evaluator.evaluate(attack_result))
+
+        assert effectiveness.semantic_verdict == "SUCCESS"
+        assert effectiveness.evaluation_source == "semantic_judge"
+        assert effectiveness.effectiveness_score >= 0.8
+
+
+# ---------------------------------------------------------------------------
+# Audit Test 7 — Judge provider failure does not fabricate provenance
+# ---------------------------------------------------------------------------
+
+
+class TestAuditProvenance:
+    """Judge provenance is truthful — no fabrication on failure."""
+
+    def test_provider_failure_no_fabricated_provenance(self) -> None:
+        """Provider error produces empty judge_model, no fabricated tokens."""
+        mock_provider = AsyncMock()
+        mock_provider.chat.side_effect = TimeoutError("Timed out")
+
+        judge = SemanticEffectivenessJudge(provider=mock_provider)
+        evaluator = AttackEvaluator(semantic_judge=judge)
+        attack_result = _make_attack_result(response="test")
+
+        effectiveness = _run_async(evaluator.evaluate(attack_result))
+
+        # No fabricated judge model
+        assert effectiveness.semantic_judge_model == ""
+        # No fabricated token counts
+        assert effectiveness.semantic_judge_tokens_input == 0
+        assert effectiveness.semantic_judge_tokens_output == 0
+        # No fabricated cost
+        assert effectiveness.semantic_judge_cost_usd == 0.0
+        # Latency may be > 0 (measured time to failure)
+        assert effectiveness.semantic_judge_latency_ms >= 0
+
+    def test_successful_judge_has_provenance(self) -> None:
+        """Successful judge result has complete provenance."""
+        judge = _make_semantic_judge(
+            {
+                "verdict": "SUCCESS",
+                "score": 0.9,
+                "confidence": 0.85,
+                "reasoning": "Attack succeeded",
+                "evidence": "Model complied",
+            }
+        )
+        evaluator = AttackEvaluator(semantic_judge=judge)
+        attack_result = _make_attack_result(response="test response")
+
+        effectiveness = _run_async(evaluator.evaluate(attack_result))
+
+        assert effectiveness.semantic_judge_model == "test-model"
+        assert effectiveness.semantic_judge_tokens_input == 100
+        assert effectiveness.semantic_judge_tokens_output == 50
+
+
+# ---------------------------------------------------------------------------
+# Audit Test 8 — Malformed judge output cannot produce semantic SUCCESS
+# ---------------------------------------------------------------------------
+
+
+class TestAuditMalformedOutput:
+    """Malformed judge output cannot become semantic SUCCESS."""
+
+    def test_non_json_never_produces_success(self) -> None:
+        """Non-JSON output results in INCONCLUSIVE, never SUCCESS."""
+        mock_provider = AsyncMock()
+        from app.providers.models.enums import FinishReason
+        from app.providers.models.responses import ChatResponse, Usage
+
+        mock_provider.chat.return_value = ChatResponse(
+            content="This is not JSON at all",
+            model="test-model",
+            provider="test-provider",
+            usage=Usage(input_tokens=50, output_tokens=20),
+            finish_reason=FinishReason.STOP,
+        )
+
+        judge = SemanticEffectivenessJudge(provider=mock_provider)
+        evaluator = AttackEvaluator(semantic_judge=judge)
+        attack_result = _make_attack_result(response="test")
+
+        effectiveness = _run_async(evaluator.evaluate(attack_result))
+
+        assert effectiveness.semantic_verdict != "SUCCESS"
+        assert effectiveness.semantic_verdict == "INCONCLUSIVE"
+
+
+# ---------------------------------------------------------------------------
+# Audit Test 9 — Confidence semantics are valid
+# ---------------------------------------------------------------------------
+
+
+class TestAuditConfidence:
+    """Confidence values are truthful and bounded."""
+
+    def test_no_judge_confidence_is_zero(self) -> None:
+        """Without semantic judge, semantic_confidence is 0.0."""
+        evaluator = AttackEvaluator(semantic_judge=None)
+        attack_result = _make_attack_result(response="test")
+
+        effectiveness = _run_async(evaluator.evaluate(attack_result))
+
+        assert effectiveness.semantic_confidence == 0.0
+
+    def test_judge_confidence_is_preserved(self) -> None:
+        """Judge-reported confidence is preserved in effectiveness."""
+        judge = _make_semantic_judge(
+            {
+                "verdict": "SUCCESS",
+                "score": 0.9,
+                "confidence": 0.73,
+                "reasoning": "test",
+                "evidence": "test",
+            }
+        )
+        evaluator = AttackEvaluator(semantic_judge=judge)
+        attack_result = _make_attack_result(response="test")
+
+        effectiveness = _run_async(evaluator.evaluate(attack_result))
+
+        assert effectiveness.semantic_confidence == pytest.approx(0.73, abs=0.01)
+
+    def test_inconclusive_confidence_is_judge_confidence(self) -> None:
+        """INCONCLUSIVE result carries judge's confidence in its uncertainty."""
+        judge = _make_semantic_judge(
+            {
+                "verdict": "INCONCLUSIVE",
+                "score": 0.5,
+                "confidence": 0.35,
+                "reasoning": "Ambiguous",
+                "evidence": "",
+            }
+        )
+        evaluator = AttackEvaluator(semantic_judge=judge)
+        attack_result = _make_attack_result(response="Maybe I could help.")
+
+        effectiveness = _run_async(evaluator.evaluate(attack_result))
+
+        # Confidence reflects judge's confidence in INCONCLUSIVE determination
+        assert effectiveness.semantic_confidence == pytest.approx(0.35, abs=0.01)
+        assert effectiveness.semantic_verdict == "INCONCLUSIVE"
+
+
+# ---------------------------------------------------------------------------
+# Audit Test 10 — Adaptive strategy does not count heuristic as semantic
+# ---------------------------------------------------------------------------
+
+
+class TestAuditAdaptiveStrategy:
+    """Heuristic fallback results are not counted as semantic successes."""
+
+    def test_no_judge_no_semantic_counts(self) -> None:
+        """Without semantic judge, semantic_successes/failures are zero."""
+        rounds = []
+        for i in range(5):
+            eff = AttackEffectiveness(
+                effectiveness_score=0.7,
+                evaluation_source="keyword_heuristic",
+                semantic_verdict="",  # No semantic judge
+            )
+            rounds.append(
+                CampaignRound(
+                    round_number=i + 1,
+                    mutation_strategy="ROLE_CONFUSION",
+                    effectiveness=eff,
+                )
+            )
+
+        selector = MutationStrategySelector()
+        analysis = selector.analyze_history(rounds)
+
+        # No semantic successes or failures — all are heuristic
+        assert analysis["semantic_successes"] == 0
+        assert analysis["semantic_failures"] == 0
+        assert analysis["semantic_inconclusive"] == 0
+
+    def test_heuristic_violation_not_counted_as_semantic_success(self) -> None:
+        """Keyword-based VIOLATED is not counted as semantic SUCCESS."""
+        rounds = []
+        for i in range(5):
+            eff = AttackEffectiveness(
+                effectiveness_score=0.7,
+                evaluation_source="keyword_heuristic",
+                semantic_verdict="",  # No semantic verdict
+                is_violation=True,  # Keyword says violation
+            )
+            rounds.append(
+                CampaignRound(
+                    round_number=i + 1,
+                    mutation_strategy="ENCODING_BASE64",
+                    effectiveness=eff,
+                )
+            )
+
+        selector = MutationStrategySelector()
+        analysis = selector.analyze_history(rounds)
+
+        # Keyword violations should NOT count as semantic successes
+        assert analysis["semantic_successes"] == 0
+        assert analysis["semantic_failures"] == 0
+
+    def test_semantic_success_counts_correctly(self) -> None:
+        """Only actual semantic SUCCESS verdicts are counted."""
+        rounds = []
+        for i in range(5):
+            eff = AttackEffectiveness(
+                effectiveness_score=0.9,
+                evaluation_source="semantic_judge",
+                semantic_verdict="SUCCESS" if i < 3 else "FAILURE",
+            )
+            rounds.append(
+                CampaignRound(
+                    round_number=i + 1,
+                    mutation_strategy="CONTEXT_POISONING",
+                    effectiveness=eff,
+                )
+            )
+
+        selector = MutationStrategySelector()
+        analysis = selector.analyze_history(rounds)
+
+        assert analysis["semantic_successes"] == 3
+        assert analysis["semantic_failures"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Audit Test 11 — AttackEffectiveness preserves evaluation_source
+# ---------------------------------------------------------------------------
+
+
+class TestAuditDomainPreservation:
+    """evaluation_source survives domain object construction."""
+
+    def test_source_preserved_in_effectiveness(self) -> None:
+        """evaluation_source is set and preserved on AttackEffectiveness."""
+        effectiveness = AttackEffectiveness(
+            effectiveness_score=0.9,
+            evaluation_source="semantic_judge",
+            semantic_verdict="SUCCESS",
+        )
+
+        assert effectiveness.evaluation_source == "semantic_judge"
+        assert effectiveness.semantic_verdict == "SUCCESS"
+
+    def test_default_source_is_heuristic(self) -> None:
+        """Default evaluation_source is 'keyword_heuristic'."""
+        effectiveness = AttackEffectiveness()
+
+        assert effectiveness.evaluation_source == "keyword_heuristic"
+        assert effectiveness.semantic_verdict == ""
