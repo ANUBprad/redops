@@ -124,9 +124,19 @@ class TrajectoryEvaluator:
             "available_tools": list(available_tools),
         }
 
+        raw_history = trajectory.get("conversation_history", ())
+        if isinstance(raw_history, (list, tuple)):
+            response_text = "\n".join(
+                f"[{msg.get('role', 'unknown')}]: {msg.get('content', '')}"
+                for msg in raw_history
+                if isinstance(msg, dict)
+            )
+        else:
+            response_text = str(raw_history)
+
         input_data = MetricInput(
             prompt=prompt,
-            response=trajectory.get("conversation_history", [-1]),
+            response=response_text,
             reference=reference,
             metadata=metadata,
         )
