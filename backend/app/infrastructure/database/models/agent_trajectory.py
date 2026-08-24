@@ -21,10 +21,7 @@ class AgentTrajectoryModel(Base):
     __tablename__ = "agent_trajectories"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    run_id: Mapped[str] = mapped_column(
-        String(36),
-        index=True,
-    )
+    run_id: Mapped[str] = mapped_column(String(36))
     agent_name: Mapped[str] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(30))
     total_steps: Mapped[int] = mapped_column(Integer, default=0)
