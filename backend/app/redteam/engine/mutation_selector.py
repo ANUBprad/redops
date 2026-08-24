@@ -135,22 +135,43 @@ class MutationStrategySelector:
         )
 
     def analyze_history(self, rounds: list[CampaignRound]) -> dict[str, Any]:
-        """Analyze campaign history to provide insights."""
+        """Analyze campaign history to provide insights.
+
+        Includes semantic verdict counts when available, giving a more
+        accurate picture of which strategies actually succeed vs. which
+        merely trigger keyword matches.
+        """
         if not rounds:
             return {
                 "total_rounds": 0,
                 "strategy_effectiveness": {},
                 "best_strategy": None,
                 "trend": "insufficient_data",
+                "semantic_successes": 0,
+                "semantic_failures": 0,
+                "semantic_inconclusive": 0,
             }
 
         strategy_effectiveness: dict[str, list[float]] = {}
+        semantic_successes = 0
+        semantic_failures = 0
+        semantic_inconclusive = 0
+
         for r in rounds:
             if r.effectiveness is not None:
                 strat = r.mutation_strategy
                 if strat not in strategy_effectiveness:
                     strategy_effectiveness[strat] = []
                 strategy_effectiveness[strat].append(r.effectiveness.effectiveness_score)
+
+                # Count semantic verdicts
+                sv = r.effectiveness.semantic_verdict
+                if sv == "SUCCESS":
+                    semantic_successes += 1
+                elif sv == "FAILURE":
+                    semantic_failures += 1
+                elif sv == "INCONCLUSIVE":
+                    semantic_inconclusive += 1
 
         avg_effectiveness = {
             s: sum(scores) / len(scores)
@@ -175,6 +196,9 @@ class MutationStrategySelector:
             "strategy_effectiveness": avg_effectiveness,
             "best_strategy": best,
             "trend": trend,
+            "semantic_successes": semantic_successes,
+            "semantic_failures": semantic_failures,
+            "semantic_inconclusive": semantic_inconclusive,
         }
 
     def recommend_phase_transition(
@@ -182,18 +206,34 @@ class MutationStrategySelector:
         rounds: list[CampaignRound],
         current_phase: MutationPhase,
     ) -> MutationPhase | None:
-        """Recommend when to transition between mutation phases."""
+        """Recommend when to transition between mutation phases.
+
+        Uses semantic verdicts when available for more accurate
+        phase transitions. Semantic SUCCESS counts as a strong
+        signal to exploit; semantic FAILURE counts as a signal
+        that the current strategy is not working.
+        """
         if len(rounds) < 3:
             return None
 
         analysis = self.analyze_history(rounds)
         trend = analysis.get("trend", "stable")
+        semantic_successes = analysis.get("semantic_successes", 0)
+        semantic_failures = analysis.get("semantic_failures", 0)
 
         if current_phase == MutationPhase.EXPLORATION:
+            # If we have enough semantic successes, move to exploitation
+            if semantic_successes >= 2 and len(rounds) >= 5:
+                return MutationPhase.EXPLOITATION
+            # Standard transition: enough rounds and not improving
             if len(rounds) >= 5 and trend != "improving":
                 return MutationPhase.EXPLOITATION
 
         if current_phase == MutationPhase.EXPLOITATION:
+            # If we have semantic failures, go back to exploration
+            if semantic_failures >= 2:
+                return MutationPhase.EXPLORATION
+            # Standard transition: declining trend
             if trend == "declining":
                 return MutationPhase.EXPLORATION
 

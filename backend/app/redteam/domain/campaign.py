@@ -118,7 +118,13 @@ class TargetExecution:
 
 @dataclass(frozen=True, slots=True)
 class AttackEffectiveness:
-    """Evaluation of an attack's effectiveness against the target."""
+    """Evaluation of an attack's effectiveness against the target.
+
+    Combines keyword-based safety scoring with optional semantic LLM-judge
+    evaluation.  ``semantic_verdict`` carries the judge's structured
+    determination (SUCCESS / FAILURE / INCONCLUSIVE) when a judge is
+    available, and is empty otherwise.
+    """
 
     effectiveness_id: UUIDv7 = field(default_factory=UUIDv7.generate)
     safety_scores: tuple[SafetyScore, ...] = field(default_factory=tuple)
@@ -128,6 +134,17 @@ class AttackEffectiveness:
     is_violation_severe: bool = False
     effectiveness_score: float = 0.0
     reasoning: str = ""
+    # Semantic judge fields
+    semantic_verdict: str = ""  # "SUCCESS" | "FAILURE" | "INCONCLUSIVE" | ""
+    semantic_score: float = 0.0
+    semantic_confidence: float = 0.0
+    semantic_reasoning: str = ""
+    semantic_evidence: str = ""
+    semantic_judge_model: str = ""
+    semantic_judge_cost_usd: float = 0.0
+    semantic_judge_tokens_input: int = 0
+    semantic_judge_tokens_output: int = 0
+    semantic_judge_latency_ms: int = 0
     evaluated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 

@@ -25,6 +25,7 @@ from app.redteam.engine.target_executor import TargetExecutor
 if TYPE_CHECKING:
     from app.evaluation.metrics.engine import MetricEngine
     from app.providers.registry.registry import ProviderRegistry
+    from app.redteam.engine.semantic_judge import SemanticEffectivenessJudge
 
 
 class AdaptiveCampaignEngine:
@@ -45,11 +46,12 @@ class AdaptiveCampaignEngine:
         registry: ProviderRegistry,
         metric_engine: MetricEngine | None = None,
         metric_names: tuple[str, ...] = (),
+        semantic_judge: SemanticEffectivenessJudge | None = None,
     ) -> None:
         self._registry = registry
         self._orchestrator = AttackOrchestrator()
         self._executor = TargetExecutor(registry)
-        self._evaluator = AttackEvaluator(metric_engine, metric_names)
+        self._evaluator = AttackEvaluator(metric_engine, metric_names, semantic_judge)
         self._selector = MutationStrategySelector()
 
     @property
