@@ -359,6 +359,23 @@ async def execute_agent_loop_activity(
 
     activity.heartbeat(f"agent loop starting run_id={input.run_id}")
 
+    # Set up cancellation monitoring: a threading.Event that is set
+    # when Temporal reports the activity has been cancelled.
+    import threading
+
+    cancel_event = threading.Event()
+
+    def _monitor_cancellation() -> None:
+        """Poll activity.is_cancelled() and signal the cancel event."""
+        while not cancel_event.is_set():
+            if activity.is_cancelled():
+                cancel_event.set()
+                return
+            cancel_event.wait(timeout=1.0)
+
+    monitor_thread = threading.Thread(target=_monitor_cancellation, daemon=True)
+    monitor_thread.start()
+
     async with _get_session() as session:
         repo = SqlAlchemyAgentRunRepository(session)
         from app.kernel.entities.base import UUIDv7
@@ -368,7 +385,13 @@ async def execute_agent_loop_activity(
             msg = f"Agent run {input.run_id} not found"
             raise ValueError(msg)
 
-        loop_result = executor.execute_run_sync(run, system_prompt=input.system_prompt)
+        loop_result = executor.execute_run_sync(
+            run, system_prompt=input.system_prompt, cancel_event=cancel_event
+        )
+
+        # Stop the cancellation monitor thread
+        cancel_event.set()
+        monitor_thread.join(timeout=2.0)
 
         activity.heartbeat(f"agent loop finished run_id={input.run_id}")
 

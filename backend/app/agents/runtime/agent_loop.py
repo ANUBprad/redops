@@ -73,6 +73,7 @@ class AgentLoop:
     - The model produces a response with no tool calls (final answer)
     - max_steps is reached
     - An unrecoverable error occurs
+    - The cancel_event is set (cancellation)
     """
 
     def __init__(
@@ -91,6 +92,7 @@ class AgentLoop:
         user_message: str,
         *,
         recorder: TrajectoryRecorder | None = None,
+        cancel_event: Any | None = None,
     ) -> AgentLoopResult:
         """Execute the agent loop with a user message.
 
@@ -105,10 +107,12 @@ class AgentLoop:
         messages: list[dict[str, Any]] = []
 
         if self._config.system_prompt:
-            messages.append({
-                "role": "system",
-                "content": self._config.system_prompt,
-            })
+            messages.append(
+                {
+                    "role": "system",
+                    "content": self._config.system_prompt,
+                }
+            )
 
         messages.append({"role": "user", "content": user_message})
 
@@ -124,15 +128,29 @@ class AgentLoop:
 
         try:
             while step_count < self._config.max_steps:
+                # Check for cancellation before each LLM call
+                if cancel_event is not None and cancel_event.is_set():
+                    elapsed = int((time.monotonic() - start) * 1000)
+                    if recorder is not None:
+                        recorder.set_status(TrajectoryStatus.CANCELLED)
+                    return AgentLoopResult(
+                        success=False,
+                        total_steps=step_count,
+                        total_llm_calls=llm_call_count,
+                        total_tool_calls=tool_call_count,
+                        total_tokens_input=total_tokens_input,
+                        total_tokens_output=total_tokens_output,
+                        total_cost_usd=total_cost,
+                        total_duration_ms=elapsed,
+                        error="Agent run cancelled",
+                        status="cancelled",
+                    )
+
                 step_start = time.monotonic()
 
-                if has_tools and isinstance(
-                    self._provider, ToolCallingProvider
-                ):
+                if has_tools and isinstance(self._provider, ToolCallingProvider):
                     response = await self._provider.chat_with_tools(
-                        messages=[
-                            self._dict_to_message(m) for m in messages
-                        ],
+                        messages=[self._dict_to_message(m) for m in messages],
                         model="",
                         tools=list(tools_schema),
                     )
@@ -141,9 +159,7 @@ class AgentLoop:
 
                     if isinstance(self._provider, ChatProvider):
                         response = await self._provider.chat(
-                            messages=[
-                                self._dict_to_message(m) for m in messages
-                            ],
+                            messages=[self._dict_to_message(m) for m in messages],
                             model="",
                         )
                     else:
@@ -164,9 +180,7 @@ class AgentLoop:
                         ToolCallRecord(
                             tool_call_id=tc.tool_call_id,
                             tool_name=tc.name,
-                            arguments=json.loads(tc.arguments)
-                            if tc.arguments
-                            else {},
+                            arguments=json.loads(tc.arguments) if tc.arguments else {},
                         )
                         for tc in tool_calls_in_response
                     )
@@ -202,21 +216,23 @@ class AgentLoop:
                         status="completed",
                     )
 
-                messages.append({
-                    "role": "assistant",
-                    "content": response.content or "",
-                    "tool_calls": [
-                        {
-                            "id": tc.tool_call_id,
-                            "type": "function",
-                            "function": {
-                                "name": tc.name,
-                                "arguments": tc.arguments,
-                            },
-                        }
-                        for tc in tool_calls_in_response
-                    ],
-                })
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": response.content or "",
+                        "tool_calls": [
+                            {
+                                "id": tc.tool_call_id,
+                                "type": "function",
+                                "function": {
+                                    "name": tc.name,
+                                    "arguments": tc.arguments,
+                                },
+                            }
+                            for tc in tool_calls_in_response
+                        ],
+                    }
+                )
 
                 for tc in tool_calls_in_response:
                     step_count += 1
@@ -229,9 +245,7 @@ class AgentLoop:
 
                     tool_start = time.monotonic()
                     tool_result = self._tool_executor.execute(tc.name, args)
-                    tool_elapsed = int(
-                        (time.monotonic() - tool_start) * 1000
-                    )
+                    tool_elapsed = int((time.monotonic() - tool_start) * 1000)
 
                     if recorder is not None:
                         recorder.record_tool_call(
@@ -243,13 +257,33 @@ class AgentLoop:
                             latency_ms=tool_elapsed,
                         )
 
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tc.tool_call_id,
-                        "content": tool_result.result
-                        if tool_result.is_success
-                        else f"Error: {tool_result.error}",
-                    })
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tc.tool_call_id,
+                            "content": tool_result.result
+                            if tool_result.is_success
+                            else f"Error: {tool_result.error}",
+                        }
+                    )
+
+                    # Check for cancellation after each tool execution
+                    if cancel_event is not None and cancel_event.is_set():
+                        elapsed = int((time.monotonic() - start) * 1000)
+                        if recorder is not None:
+                            recorder.set_status(TrajectoryStatus.CANCELLED)
+                        return AgentLoopResult(
+                            success=False,
+                            total_steps=step_count,
+                            total_llm_calls=llm_call_count,
+                            total_tool_calls=tool_call_count,
+                            total_tokens_input=total_tokens_input,
+                            total_tokens_output=total_tokens_output,
+                            total_cost_usd=total_cost,
+                            total_duration_ms=elapsed,
+                            error="Agent run cancelled",
+                            status="cancelled",
+                        )
 
             elapsed = int((time.monotonic() - start) * 1000)
             if recorder is not None:
@@ -290,6 +324,7 @@ class AgentLoop:
         user_message: str,
         *,
         recorder: TrajectoryRecorder | None = None,
+        cancel_event: Any | None = None,
     ) -> AgentLoopResult:
         """Synchronous wrapper for execute()."""
         import asyncio
@@ -297,7 +332,11 @@ class AgentLoop:
         loop = asyncio.new_event_loop()
         try:
             return loop.run_until_complete(
-                self.execute(user_message, recorder=recorder)
+                self.execute(
+                    user_message,
+                    recorder=recorder,
+                    cancel_event=cancel_event,
+                )
             )
         finally:
             loop.close()

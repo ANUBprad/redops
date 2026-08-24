@@ -43,12 +43,18 @@ class AgentExecutor:
         *,
         system_prompt: str = "",
         recorder: TrajectoryRecorder | None = None,
+        cancel_event: object | None = None,
     ) -> AgentLoopResult:
         """Execute a complete agent run synchronously.
 
         This is the primary entry point used by AgentRuntimeCoordinator.
         Creates an AgentLoop configured from the run's parameters and
         executes the full LLM ↔ tool interaction loop.
+
+        Args:
+            cancel_event: Optional threading/asyncio.Event that signals
+                cancellation.  When set, the loop terminates at the next
+                safe boundary (before LLM call or after tool execution).
         """
         config = AgentLoopConfig(
             max_steps=run.steps_total or run.config.max_steps,
@@ -65,7 +71,11 @@ class AgentExecutor:
         )
 
         user_message = self._build_user_message(run)
-        return loop.execute_sync(user_message, recorder=recorder)
+        return loop.execute_sync(
+            user_message,
+            recorder=recorder,
+            cancel_event=cancel_event,
+        )
 
     def classify_failure(self, error: str) -> AgentRunFailureReason:
         """Classify an error into a failure reason."""
