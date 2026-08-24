@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -152,6 +153,7 @@ async def create_agent_run(
             ),
             id=workflow_id,
             task_queue=config.temporal_task_queue,
+            execution_timeout=timedelta(hours=1),
         )
 
         queue_handler = QueueAgentRunHandler(repo)
