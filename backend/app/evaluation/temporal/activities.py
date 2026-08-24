@@ -637,10 +637,13 @@ async def finalize_run_integrity_activity(
         run_repo = SqlAlchemyEvaluationRunRepository(session)
 
         # Load all persisted metric results for this run
+        from app.kernel.entities.base import UUIDv7 as KernelUUIDv7
+
+        run_uuid = KernelUUIDv7.from_string(input.run_id)
         all_results: list[MetricResult] = []
         for metric_name in input.metric_names:
             results = await metric_repo.find_by_run_id(
-                run_id=input.run_id,
+                run_id=run_uuid,
                 metric_name=metric_name,
             )
             all_results.extend(results)
@@ -676,9 +679,7 @@ async def finalize_run_integrity_activity(
                     verdict = "fail"
 
         # If all thresholds passed but we had only errors, verdict is error
-        if verdict == "pass" and all(
-            v is None for v in threshold_evaluations.values()
-        ):
+        if verdict == "pass" and all(v is None for v in threshold_evaluations.values()):
             if threshold_evaluations:
                 verdict = "error"
 
@@ -691,16 +692,14 @@ async def finalize_run_integrity_activity(
                 "requirements_hash": env_snapshot.requirements_hash,
                 "platform_info": env_snapshot.platform_info,
             },
-            "metric_versions": {
-                name: "1.0.0" for name in input.metric_names
-            },
+            "metric_versions": dict.fromkeys(input.metric_names, "1.0.0"),
             "threshold_evaluations": threshold_evaluations,
         }
 
         # 4. Persist to evaluation run
-        from kernel.entities.base import UUIDv7
+        from app.kernel.entities.base import UUIDv7 as KernelUUIDv7
 
-        run = await run_repo.find_by_id(UUIDv7.from_string(input.run_id))
+        run = await run_repo.find_by_id(KernelUUIDv7.from_string(input.run_id))
         if run is not None:
             run.verdict = verdict
             run.trace_data = input.trace_data if input.trace_data else None

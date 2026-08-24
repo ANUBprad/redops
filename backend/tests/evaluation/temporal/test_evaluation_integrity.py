@@ -11,9 +11,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.evaluation.domain.entities.evaluation_entities import EvaluationRun
-from app.evaluation.domain.enums.evaluation_enums import RunStatus
 from app.evaluation.metrics.domain import MetricResult
-from app.evaluation.metrics.engine import MetricEngine
 from app.evaluation.reliability.fingerprint import EvaluationFingerprint, compute_fingerprint
 from app.evaluation.reliability.provenance import (
     EnvironmentSnapshot,
@@ -23,18 +21,16 @@ from app.evaluation.reliability.provenance import (
 from app.evaluation.replay.domain import ExecutionTrace
 from app.evaluation.replay.recorder import TraceRecorder
 from app.evaluation.replay.service import ReplayService
+from app.evaluation.temporal.activities import ExecuteItemResult, MetricResultPayload
 from app.evaluation.temporal.workflow import (
     EvaluationRunWorkflowInput,
     _build_item_trace,
     _compute_workflow_fingerprint,
 )
-from app.evaluation.temporal.activities import ExecuteItemResult, MetricResultPayload
 from app.infrastructure.database.models.evaluation_run import EvaluationRunModel
 from app.infrastructure.database.repositories.evaluation_run_repository import (
     SqlAlchemyEvaluationRunRepository,
 )
-from app.kernel.entities.base import UUIDv7
-
 
 # ---------------------------------------------------------------------------
 # Test 1 — Provenance
@@ -372,7 +368,12 @@ class TestTracePersistence:
             )
             await recorder.record_prompt(0, "What is 2+2?")
             await recorder.record_provider_response(
-                0, "4", tokens_input=10, tokens_output=5, cost_usd=0.001, latency_ms=200,
+                0,
+                "4",
+                tokens_input=10,
+                tokens_output=5,
+                cost_usd=0.001,
+                latency_ms=200,
             )
             await recorder.record_metric(0, "correctness", 0.95, 0.95, confidence=0.9)
             await recorder.record_event(
@@ -411,8 +412,12 @@ class TestReplay:
 
             await recorder.record_event(TraceEventType.RUN_STARTED)
             await recorder.record_prompt(0, "What is AI?")
-            await recorder.record_provider_response(0, "AI is artificial intelligence.", cost_usd=0.002)
-            await recorder.record_metric(0, "correctness", 0.9, 0.9, confidence=0.85, reasoning="Factually correct")
+            await recorder.record_provider_response(
+                0, "AI is artificial intelligence.", cost_usd=0.002
+            )
+            await recorder.record_metric(
+                0, "correctness", 0.9, 0.9, confidence=0.85, reasoning="Factually correct"
+            )
             await recorder.record_event(TraceEventType.RUN_COMPLETED)
 
             trace = recorder.build_trace()
@@ -570,9 +575,7 @@ class TestFullIntegration:
                 {
                     "item_index": 0,
                     "provider_trace": {"response_content": "4"},
-                    "metric_traces": [
-                        {"metric_name": "correctness", "normalized_score": 0.9}
-                    ],
+                    "metric_traces": [{"metric_name": "correctness", "normalized_score": 0.9}],
                 }
             ],
         }
