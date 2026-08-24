@@ -218,12 +218,8 @@ def _analyze_metric(
     # Both scores available — compute degradation
     delta = current - baseline
 
-    if direction == ScoreDirection.HIGHER_IS_BETTER:
-        # Degradation is when current < baseline (delta < 0)
-        degradation = -delta  # positive means worse
-    else:
-        # LOWER_IS_BETTER: degradation is when current > baseline (delta > 0)
-        degradation = delta
+    # Positive degradation means the metric got worse
+    degradation = -delta if direction == ScoreDirection.HIGHER_IS_BETTER else delta
 
     if degradation <= tolerance:
         status = MetricStatus.PASS
@@ -233,7 +229,11 @@ def _analyze_metric(
         reasoning = "Scores are equal"
     else:
         status = MetricStatus.REGRESSION
-        direction_label = "higher is better" if direction == ScoreDirection.HIGHER_IS_BETTER else "lower is better"
+        direction_label = (
+            "higher is better"
+            if direction == ScoreDirection.HIGHER_IS_BETTER
+            else "lower is better"
+        )
         reasoning = f"Regression detected ({direction_label}): degradation {degradation:.4f} > tolerance {tolerance}"
 
     # Check for improvement

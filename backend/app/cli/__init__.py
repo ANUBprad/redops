@@ -90,7 +90,11 @@ def _format_comparison_report(result: Any) -> str:
 
         b_str = f"{mc.baseline_score:.4f}" if mc.baseline_score is not None else "N/A"
         c_str = f"{mc.current_score:.4f}" if mc.current_score is not None else "N/A"
-        delta_str = f"{mc.delta:+.4f}" if mc.baseline_score is not None and mc.current_score is not None else "N/A"
+        delta_str = (
+            f"{mc.delta:+.4f}"
+            if mc.baseline_score is not None and mc.current_score is not None
+            else "N/A"
+        )
 
         lines.append(
             f"  [{status_icon:>4}] {mc.metric_name:<30} "
@@ -231,6 +235,7 @@ def main() -> None:
 
     if args.command == "compare":
         import asyncio
+
         exit_code = asyncio.run(_run_compare(args))
         sys.exit(exit_code)
 
