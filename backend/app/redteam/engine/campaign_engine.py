@@ -133,10 +133,7 @@ class AdaptiveCampaignEngine:
             )
 
         lineage = AttackLineage(
-            parent_lineage_id=(
-                campaign.rounds[-1].lineage.lineage_id
-                if campaign.rounds else None
-            ),
+            parent_lineage_id=(campaign.rounds[-1].lineage.lineage_id if campaign.rounds else None),
             generation=campaign.current_round_number,
             mutation_strategy=strategy.value,
             attack_category=category.value,
@@ -179,9 +176,13 @@ class AdaptiveCampaignEngine:
             parameters={},
             count=1,
         )
-        return scenarios[0] if scenarios else AttackScenario(
-            category=category,
-            prompt=f"Default {category.value} attack",
+        return (
+            scenarios[0]
+            if scenarios
+            else AttackScenario(
+                category=category,
+                prompt=f"Default {category.value} attack",
+            )
         )
 
     def _select_category(self, campaign: AdaptiveCampaign) -> AttackCategory:
@@ -202,7 +203,10 @@ class AdaptiveCampaignEngine:
         if campaign_round.effectiveness is None:
             return False
 
-        if campaign_round.effectiveness.effectiveness_score >= campaign.budget.effectiveness_threshold:
+        if (
+            campaign_round.effectiveness.effectiveness_score
+            >= campaign.budget.effectiveness_threshold
+        ):
             return True
 
         if campaign_round.execution is not None and campaign_round.execution.error is not None:

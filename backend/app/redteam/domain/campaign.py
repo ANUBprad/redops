@@ -312,12 +312,15 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
         """Create a new adaptive campaign."""
         if not name or not name.strip():
             from app.kernel.exceptions.errors import ValidationError
+
             raise ValidationError(message="Campaign name is required", field="name")
         if not target_provider:
             from app.kernel.exceptions.errors import ValidationError
+
             raise ValidationError(message="Target provider is required", field="target_provider")
         if not target_model:
             from app.kernel.exceptions.errors import ValidationError
+
             raise ValidationError(message="Target model is required", field="target_model")
 
         campaign = cls(
@@ -459,20 +462,16 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
             )
 
         effectiveness_scores = [
-            r.effectiveness.effectiveness_score
-            for r in rounds
-            if r.effectiveness is not None
+            r.effectiveness.effectiveness_score for r in rounds if r.effectiveness is not None
         ]
         final_eff = effectiveness_scores[-1] if effectiveness_scores else 0.0
         peak_eff = max(effectiveness_scores) if effectiveness_scores else 0.0
 
         violation_count = sum(
-            1 for r in rounds
-            if r.effectiveness is not None and r.effectiveness.is_violation
+            1 for r in rounds if r.effectiveness is not None and r.effectiveness.is_violation
         )
         severe_count = sum(
-            1 for r in rounds
-            if r.effectiveness is not None and r.effectiveness.is_violation_severe
+            1 for r in rounds if r.effectiveness is not None and r.effectiveness.is_violation_severe
         )
 
         total_duration = sum(r.duration_ms for r in rounds)
@@ -486,15 +485,11 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
             if r.effectiveness is not None:
                 if r.effectiveness.is_violation:
                     category_stats[cat]["violations"] += 1
-                category_stats[cat]["effectiveness"].append(
-                    r.effectiveness.effectiveness_score
-                )
+                category_stats[cat]["effectiveness"].append(r.effectiveness.effectiveness_score)
 
         for stats in category_stats.values():
             eff_scores = stats.pop("effectiveness")
-            stats["avg_effectiveness"] = (
-                sum(eff_scores) / len(eff_scores) if eff_scores else 0.0
-            )
+            stats["avg_effectiveness"] = sum(eff_scores) / len(eff_scores) if eff_scores else 0.0
 
         budget_reason = None
         if self._state == CampaignState.BUDGET_EXHAUSTED:

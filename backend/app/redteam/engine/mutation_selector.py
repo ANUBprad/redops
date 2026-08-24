@@ -65,9 +65,7 @@ class MutationStrategySelector:
 
     def _select_exploration(self, rounds: list[CampaignRound]) -> MutationStrategy:
         """Select a strategy that hasn't been tried recently."""
-        recent_strategies = {
-            r.mutation_strategy for r in rounds[-5:]
-        } if rounds else set()
+        recent_strategies = {r.mutation_strategy for r in rounds[-5:]} if rounds else set()
 
         all_strategies = list(MutationStrategy)
         untried = [s for s in all_strategies if s.value not in recent_strategies]
@@ -92,10 +90,7 @@ class MutationStrategySelector:
         if not strategy_scores:
             return MutationStrategy.ROLE_CONFUSION
 
-        avg_scores = {
-            s: sum(scores) / len(scores)
-            for s, scores in strategy_scores.items()
-        }
+        avg_scores = {s: sum(scores) / len(scores) for s, scores in strategy_scores.items()}
 
         best_strategy = max(avg_scores, key=avg_scores.get)  # type: ignore[arg-type]
         try:
@@ -128,10 +123,14 @@ class MutationStrategySelector:
             count=1,
             context=context,
         )
-        return results[0] if results else MutationResult(
-            original_prompt=prompt,
-            mutated_prompt=prompt,
-            strategy=strategy,
+        return (
+            results[0]
+            if results
+            else MutationResult(
+                original_prompt=prompt,
+                mutated_prompt=prompt,
+                strategy=strategy,
+            )
         )
 
     def analyze_history(self, rounds: list[CampaignRound]) -> dict[str, Any]:
@@ -174,17 +173,14 @@ class MutationStrategySelector:
                     semantic_inconclusive += 1
 
         avg_effectiveness = {
-            s: sum(scores) / len(scores)
-            for s, scores in strategy_effectiveness.items()
+            s: sum(scores) / len(scores) for s, scores in strategy_effectiveness.items()
         }
 
         best = max(avg_effectiveness, key=avg_effectiveness.get) if avg_effectiveness else None  # type: ignore[arg-type]
 
         recent = rounds[-3:] if len(rounds) >= 3 else rounds
         recent_eff = [
-            r.effectiveness.effectiveness_score
-            for r in recent
-            if r.effectiveness is not None
+            r.effectiveness.effectiveness_score for r in recent if r.effectiveness is not None
         ]
         if len(recent_eff) >= 2:
             trend = "improving" if recent_eff[-1] > recent_eff[0] else "declining"
