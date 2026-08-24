@@ -129,3 +129,55 @@ class AgentEventPublisher(ABC):
     async def publish_many(self, events: list[object]) -> None:
         """Publish multiple domain events."""
         ...
+
+
+@dataclass
+class TrajectoryQuery:
+    """Query parameters for listing trajectories."""
+
+    run_id: str | None = None
+    agent_name: str | None = None
+    status: str | None = None
+    sort_by: str = "created_at"
+    sort_order: str = "desc"
+    page: int = 1
+    page_size: int = 20
+
+
+@dataclass
+class PaginatedTrajectories:
+    """Paginated result for trajectory listing."""
+
+    items: list[dict[str, object]] = field(default_factory=list)
+    total: int = 0
+    page: int = 1
+    page_size: int = 20
+
+
+class AgentTrajectoryRepository(ABC):
+    """Repository for agent trajectory persistence."""
+
+    @abstractmethod
+    async def save(self, trajectory: dict[str, object]) -> None:
+        """Save a trajectory."""
+        ...
+
+    @abstractmethod
+    async def find_by_id(self, trajectory_id: str) -> dict[str, object] | None:
+        """Find a trajectory by ID."""
+        ...
+
+    @abstractmethod
+    async def find_by_run_id(self, run_id: str) -> dict[str, object] | None:
+        """Find trajectory by run ID."""
+        ...
+
+    @abstractmethod
+    async def list(self, query: TrajectoryQuery) -> PaginatedTrajectories:
+        """List trajectories with filtering and pagination."""
+        ...
+
+    @abstractmethod
+    async def delete(self, trajectory_id: str) -> bool:
+        """Delete a trajectory by ID."""
+        ...
