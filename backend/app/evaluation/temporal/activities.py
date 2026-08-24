@@ -428,6 +428,19 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
     try:
         activity.heartbeat(f"preparing item {input.item_index}")
 
+        # Idempotency check: if metric results already exist for this
+        # (run_id, item_id), the previous execution succeeded.  Return
+        # the cached result instead of re-calling the provider.
+        item_id = input.item_id or str(input.item_index)
+        existing_metrics = await _load_existing_metrics(input.run_id, item_id)
+        if existing_metrics is not None:
+            activity.logger.info(
+                "Returning cached result for item run_id=%s item_index=%d (idempotent)",
+                input.run_id,
+                input.item_index,
+            )
+            return existing_metrics
+
         from app.evaluation.data.dataset import DatasetItem
         from app.evaluation.execution.item_executor import ItemExecutor
         from app.evaluation.execution.prompt_builder import PromptTemplate
@@ -460,7 +473,6 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
         )
 
         elapsed_ms = int((time.monotonic() - start) * 1000)
-        item_id = input.item_id or str(input.item_index)
         metrics: tuple[MetricResultPayload, ...] = ()
         if result.is_success:
             activity.heartbeat(f"evaluating metrics for item {input.item_index}")
@@ -568,6 +580,57 @@ def _to_payload(result: Any) -> MetricResultPayload:
     )
 
 
+async def _load_existing_metrics(run_id: str, item_id: str) -> ExecuteItemResult | None:
+    """Check if metric results already exist for this (run_id, item_id).
+
+    Returns an ExecuteItemResult reconstructed from persisted data if
+    results exist, enabling idempotent retries.  Returns None when no
+    prior results are found (first execution).
+    """
+    from app.infrastructure.database.repositories.metric_result_repository import (
+        SqlAlchemyMetricResultRepository,
+    )
+    from app.kernel.entities.base import UUIDv7
+
+    try:
+        run_uuid = UUIDv7.from_string(run_id)
+        item_uuid = UUIDv7.from_string(item_id)
+    except Exception:
+        return None
+
+    async with _get_session() as session:
+        repo = SqlAlchemyMetricResultRepository(session)
+        existing = await repo.find_by_item_id(run_uuid, item_uuid)
+        if not existing:
+            return None
+
+        metrics = tuple(
+            MetricResultPayload(
+                metric_name=r.metric_name,
+                score=r.score,
+                normalized_score=r.normalized_score,
+                raw_output=r.raw_output,
+                reasoning=r.reasoning,
+                metadata=dict(r.metadata),
+                execution_time_ms=r.execution_time_ms,
+                error=r.error,
+                confidence=r.confidence,
+                version=r.version,
+                cost_usd=r.cost_usd,
+            )
+            for r in existing
+        )
+
+        total_cost = sum(m.cost_usd for m in metrics)
+        return ExecuteItemResult(
+            item_index=0,
+            response="",
+            cost_usd=total_cost,
+            item_id=item_id,
+            metrics=metrics,
+        )
+
+
 @activity.defn
 async def persist_metric_results_activity(input: PersistMetricResultsInput) -> int:
     """Persist metric results for a single evaluated item."""
@@ -603,6 +666,29 @@ async def persist_metric_results_activity(input: PersistMetricResultsInput) -> i
 
     async with _get_session() as session:
         repo = SqlAlchemyMetricResultRepository(session)
+
+        # Idempotency: delete any existing results for this (run_id, item_id)
+        # before inserting, so retries do not produce duplicate rows.
+        from app.kernel.entities.base import UUIDv7 as KernelUUIDv7
+
+        try:
+            run_uuid = KernelUUIDv7.from_string(input.run_id)
+            item_uuid = KernelUUIDv7.from_string(input.item_id)
+            existing = await repo.find_by_item_id(run_uuid, item_uuid)
+            if existing:
+                from app.infrastructure.database.models.metric_result import (
+                    MetricResultModel,
+                )
+
+                await session.execute(
+                    MetricResultModel.__table__.delete().where(
+                        MetricResultModel.run_id == input.run_id,
+                        MetricResultModel.item_id == input.item_id,
+                    )
+                )
+        except Exception:
+            pass  # If ID parsing fails, proceed with insert (first execution)
+
         await repo.save_many([to_domain(p) for p in input.results])
         await session.commit()
     return len(input.results)
