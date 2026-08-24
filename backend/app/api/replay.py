@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_db_session
+from app.core.dependencies import CurrentUser, get_current_user, get_db_session
 from app.evaluation.replay.composite_repository import CompositeTraceRepository
 from app.evaluation.replay.database_repository import DatabaseTraceRepository
 from app.evaluation.replay.service import ItemReport, ReplayService, ReplaySummary
@@ -69,6 +69,7 @@ def get_replay_service(
 async def get_trace(
     run_id: str,
     service: ReplayService = Depends(get_replay_service),
+    _user: CurrentUser = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Get the execution trace for a run."""
     trace = await service.load_trace(run_id)
@@ -81,6 +82,7 @@ async def get_trace(
 async def get_replay_report(
     run_id: str,
     service: ReplayService = Depends(get_replay_service),
+    _user: CurrentUser = Depends(get_current_user),
 ) -> ReplayReportResponse:
     """Get a detailed replay report for a run.
 
@@ -118,6 +120,7 @@ async def compare_runs(
     baseline_run_id: str,
     comparison_run_id: str,
     service: ReplayService = Depends(get_replay_service),
+    _user: CurrentUser = Depends(get_current_user),
 ) -> TraceComparisonResponse:
     """Compare two evaluation runs.
 
@@ -164,6 +167,7 @@ async def compare_runs(
 async def delete_trace(
     run_id: str,
     service: ReplayService = Depends(get_replay_service),
+    _user: CurrentUser = Depends(get_current_user),
 ) -> dict[str, str]:
     """Delete an execution trace."""
     if service._trace_repository is not None:
