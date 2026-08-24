@@ -65,7 +65,6 @@ from app.providers.models import (
     Usage,
 )
 from app.providers.registry import ProviderRegistry
-from app.providers.selection import SelectionStrategy
 from app.providers.streaming import (
     BackpressureManager,
     StreamChunk,
@@ -117,7 +116,6 @@ __all__ = [
     "ProviderTimeout",
     "ProviderUnavailable",
     "RateLimitExceeded",
-    "SelectionStrategy",
     "StreamChunk",
     "StreamConsumer",
     "StreamEventType",
