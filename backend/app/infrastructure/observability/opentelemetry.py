@@ -15,15 +15,9 @@ def setup_opentelemetry(app: FastAPI) -> None:
     """
     try:
         from opentelemetry import trace
+        from opentelemetry.sdk.resources import Resource
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-
-        provider = TracerProvider()
-        processor = BatchSpanProcessor(ConsoleSpanExporter())
-        provider.add_span_processor(processor)
-        trace.set_tracer_provider(provider)
-
-        from opentelemetry.sdk.resources import Resource
 
         resource = Resource.create(
             {
@@ -32,6 +26,8 @@ def setup_opentelemetry(app: FastAPI) -> None:
             }
         )
         provider = TracerProvider(resource=resource)
+        processor = BatchSpanProcessor(ConsoleSpanExporter())
+        provider.add_span_processor(processor)
         trace.set_tracer_provider(provider)
     except ImportError:
         pass
