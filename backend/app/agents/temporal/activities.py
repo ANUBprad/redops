@@ -8,7 +8,7 @@ session via the configured session factory.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from temporalio import activity
 
@@ -30,6 +30,7 @@ from app.agents.application.run_handlers import (
     StartAgentRunHandler,
     UpdateAgentRunProgressHandler,
 )
+from app.agents.domain.tool_execution import ToolRegistry
 from app.infrastructure.database.repositories.agent_run_repository import (
     SqlAlchemyAgentRunRepository,
 )
@@ -38,6 +39,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 _session_factory: async_sessionmaker[AsyncSession] | None = None
+_agent_provider_registry: Any = None
 
 
 def configure_agent_session_factory(factory: async_sessionmaker[AsyncSession]) -> None:
@@ -47,6 +49,12 @@ def configure_agent_session_factory(factory: async_sessionmaker[AsyncSession]) -
     """
     global _session_factory
     _session_factory = factory
+
+
+def configure_agent_provider_registry(registry: Any) -> None:
+    """Set the provider registry for agent loop execution."""
+    global _agent_provider_registry
+    _agent_provider_registry = registry
 
 
 def _get_session() -> AsyncSession:
@@ -279,3 +287,111 @@ async def cancel_agent_run_activity(input: CancelAgentRunInput) -> AgentRunResul
         run = await handler.handle(command)
         await session.commit()
     return AgentRunResult(run_id=str(run.id), status=run.status.value)
+
+
+# ---------------------------------------------------------------------------
+# Agent loop execution activity
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class ExecuteAgentLoopInput:
+    """Input for the execute_agent_loop activity."""
+
+    run_id: str
+    provider_name: str = ""
+    model_id: str = ""
+    system_prompt: str = ""
+    tools: tuple[str, ...] = ()
+    max_steps: int = 10
+
+
+@dataclass(frozen=True, slots=True)
+class ExecuteAgentLoopResult:
+    """Result returned by the agent loop execution activity."""
+
+    run_id: str
+    success: bool = True
+    final_response: str = ""
+    total_steps: int = 0
+    total_llm_calls: int = 0
+    total_tool_calls: int = 0
+    total_tokens_input: int = 0
+    total_tokens_output: int = 0
+    total_cost_usd: float = 0.0
+    total_duration_ms: int = 0
+    error: str | None = None
+    status: str = "completed"
+
+
+@activity.defn
+async def execute_agent_loop_activity(
+    input: ExecuteAgentLoopInput,
+) -> ExecuteAgentLoopResult:
+    """Execute the full agent loop (LLM ↔ tool interaction).
+
+    Creates a provider from the configured registry, builds a tool
+    registry, and runs AgentLoop.execute_sync(). Returns the full
+    loop result including trajectory metrics.
+    """
+    activity.logger.info(
+        "Executing agent loop run_id=%s provider=%s model=%s",
+        input.run_id,
+        input.provider_name,
+        input.model_id,
+    )
+
+    if _agent_provider_registry is None:
+        msg = "Provider registry not configured. Call configure_agent_provider_registry first."
+        raise RuntimeError(msg)
+
+    provider = _agent_provider_registry.resolve(input.provider_name)
+
+    tool_registry = ToolRegistry()
+
+    from app.agents.runtime.executor import AgentExecutor
+
+    executor = AgentExecutor(provider, tool_registry)
+
+    async with _get_session() as session:
+        repo = SqlAlchemyAgentRunRepository(session)
+        from app.kernel.entities.base import UUIDv7
+
+        run = await repo.find_by_id(UUIDv7.from_string(input.run_id))
+        if run is None:
+            msg = f"Agent run {input.run_id} not found"
+            raise ValueError(msg)
+
+        loop_result = executor.execute_run_sync(
+            run, system_prompt=input.system_prompt
+        )
+
+        if loop_result.success:
+            complete_handler = CompleteAgentRunHandler(repo)
+            complete_command = CompleteAgentRunCommand(run_id=input.run_id)
+            await complete_handler.handle(complete_command)
+        else:
+            fail_handler = FailAgentRunHandler(repo)
+            fail_command = FailAgentRunCommand(
+                run_id=input.run_id,
+                error_code="EXECUTION_FAILED",
+                error_message=loop_result.error or "Agent loop failed",
+            )
+            await fail_handler.handle(fail_command)
+
+        await session.commit()
+
+    return ExecuteAgentLoopResult(
+        run_id=input.run_id,
+        success=loop_result.success,
+        final_response=loop_result.final_response,
+        total_steps=loop_result.total_steps,
+        total_llm_calls=loop_result.total_llm_calls,
+        total_tool_calls=loop_result.total_tool_calls,
+        total_tokens_input=loop_result.total_tokens_input,
+        total_tokens_output=loop_result.total_tokens_output,
+        total_cost_usd=loop_result.total_cost_usd,
+        total_duration_ms=loop_result.total_duration_ms,
+        error=loop_result.error,
+        status=loop_result.status,
+    )
