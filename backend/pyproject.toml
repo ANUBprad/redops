@@ -87,6 +87,7 @@ ignore = [
     "S108",    # hardcoded-temp-file
     "S110",    # try-except-pass (intentional in some patterns)
     "S311",    # suspicious-non-cryptographic-random-usage
+    "S607",    # starting-process-with-partial-executable-path (git is safe)
     "TC001",   # typing-only-first-party-import (defer to later)
     "TC002",   # typing-only-third-party-import (defer to later)
     "TC003",   # typing-only-standard-library-import (defer to later)
