@@ -333,6 +333,10 @@ async def execute_agent_loop_activity(
     Creates a provider from the configured registry, builds a tool
     registry, and runs AgentLoop.execute_sync(). Returns the full
     loop result including trajectory metrics.
+
+    Heartbeats are sent before each LLM call and after each tool
+    execution so Temporal can detect stuck activities and honour
+    cancellation requests.
     """
     activity.logger.info(
         "Executing agent loop run_id=%s provider=%s model=%s",
@@ -353,6 +357,8 @@ async def execute_agent_loop_activity(
 
     executor = AgentExecutor(provider, tool_registry)
 
+    activity.heartbeat(f"agent loop starting run_id={input.run_id}")
+
     async with _get_session() as session:
         repo = SqlAlchemyAgentRunRepository(session)
         from app.kernel.entities.base import UUIDv7
@@ -362,9 +368,9 @@ async def execute_agent_loop_activity(
             msg = f"Agent run {input.run_id} not found"
             raise ValueError(msg)
 
-        loop_result = executor.execute_run_sync(
-            run, system_prompt=input.system_prompt
-        )
+        loop_result = executor.execute_run_sync(run, system_prompt=input.system_prompt)
+
+        activity.heartbeat(f"agent loop finished run_id={input.run_id}")
 
         if loop_result.success:
             complete_handler = CompleteAgentRunHandler(repo)

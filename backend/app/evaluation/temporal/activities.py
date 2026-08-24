@@ -411,6 +411,9 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
     the requested metrics against the generated response, and
     returns a result carrying real token usage, estimated cost,
     latency, and metric scores.
+
+    Heartbeats are sent at meaningful boundaries so Temporal can
+    detect stuck activities and honour cancellation requests.
     """
     import time
 
@@ -423,6 +426,8 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
     start = time.monotonic()
 
     try:
+        activity.heartbeat(f"preparing item {input.item_index}")
+
         from app.evaluation.data.dataset import DatasetItem
         from app.evaluation.execution.item_executor import ItemExecutor
         from app.evaluation.execution.prompt_builder import PromptTemplate
@@ -444,6 +449,8 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
         )
         executor = ItemExecutor(_get_cost_calculator(), prompt_template=template)
 
+        activity.heartbeat(f"calling provider for item {input.item_index}")
+
         result = await executor.execute(
             provider,
             provider_name=input.provider_name,
@@ -456,6 +463,7 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
         item_id = input.item_id or str(input.item_index)
         metrics: tuple[MetricResultPayload, ...] = ()
         if result.is_success:
+            activity.heartbeat(f"evaluating metrics for item {input.item_index}")
             metrics = await _evaluate_metrics(
                 engine=_metric_engine,
                 run_id=input.run_id,
