@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from redis import asyncio as aioredis
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_redis_client
-from app.evaluation.replay.redis_repository import RedisTraceRepository
+from app.core.dependencies import get_db_session
+from app.evaluation.replay.composite_repository import CompositeTraceRepository
+from app.evaluation.replay.database_repository import DatabaseTraceRepository
 from app.evaluation.replay.service import ItemReport, ReplayService, ReplaySummary
 from app.schemas.replay import (
     ItemComparisonResponse,
@@ -21,14 +23,45 @@ from app.schemas.replay import (
     TraceComparisonResponse,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/replay", tags=["Replay"])
 
 
+def _try_get_redis_fallback() -> Any:
+    """Try to create a Redis trace repository for fallback.
+
+    Returns None if Redis is not configured or unavailable.
+    This allows the replay API to work without Redis when
+    traces are stored in the database.
+    """
+    try:
+        from app.evaluation.replay.redis_repository import RedisTraceRepository
+        from redis import asyncio as aioredis
+
+        # Try to connect to Redis using the same URL from app config
+        import os
+
+        redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+        client = aioredis.from_url(redis_url, decode_responses=False)
+        return RedisTraceRepository(client)
+    except Exception:
+        logger.debug("Redis unavailable for replay fallback, using database only")
+        return None
+
+
 def get_replay_service(
-    redis_client: aioredis.Redis = Depends(get_redis_client),
+    session: AsyncSession = Depends(get_db_session),
 ) -> ReplayService:
-    """Provide a replay service backed by the application trace repository."""
-    return ReplayService(RedisTraceRepository(redis_client))
+    """Provide a replay service backed by database-primary, Redis-fallback.
+
+    The database (evaluation_runs.trace_data) is the authoritative source
+    for traces produced by the evaluation workflow. Redis is retained as
+    a fallback for traces written directly by external consumers.
+    """
+    primary = DatabaseTraceRepository(session)
+    fallback = _try_get_redis_fallback()
+    return ReplayService(CompositeTraceRepository(primary, fallback))
 
 
 @router.get("/traces/{run_id}", response_model=dict[str, Any])
