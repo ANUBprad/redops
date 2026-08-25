@@ -18,6 +18,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");
 
+  const token = localStorage.getItem("redops-access-token");
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
   const response = await fetch(url, { ...options, headers });
 
   if (!response.ok) {
@@ -39,6 +44,120 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+class AuthenticatedEventSource implements EventSource {
+  private controller: AbortController;
+  private _onmessage: ((event: MessageEvent) => void) | null = null;
+  private _onerror: ((event: Event) => void) | null = null;
+  private _onopen: ((event: Event) => void) | null = null;
+  readyState: number = 0;
+  url: string;
+  withCredentials: boolean = false;
+  readonly CONNECTING = 0;
+  readonly OPEN = 1;
+  readonly CLOSED = 2;
+
+  constructor(url: string) {
+    this.url = url;
+    this.controller = new AbortController();
+    this.readyState = 0;
+    this.connect();
+  }
+
+  private async connect(): Promise<void> {
+    const headers: Record<string, string> = {};
+    const token = localStorage.getItem("redops-access-token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    try {
+      const response = await fetch(this.url, {
+        headers,
+        signal: this.controller.signal,
+      });
+
+      if (!response.ok) {
+        this.readyState = 2;
+        this._onerror?.(new Event("error"));
+        return;
+      }
+
+      this.readyState = 1;
+      this._onopen?.(new Event("open"));
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        this.readyState = 2;
+        this._onerror?.(new Event("error"));
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6);
+            this._onmessage?.({ data } as MessageEvent);
+          }
+        }
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      this._onerror?.(new Event("error"));
+    } finally {
+      this.readyState = 2;
+    }
+  }
+
+  get onmessage(): ((event: MessageEvent) => void) | null {
+    return this._onmessage;
+  }
+
+  set onmessage(handler: ((event: MessageEvent) => void) | null) {
+    this._onmessage = handler;
+  }
+
+  get onerror(): ((event: Event) => void) | null {
+    return this._onerror;
+  }
+
+  set onerror(handler: ((event: Event) => void) | null) {
+    this._onerror = handler;
+  }
+
+  get onopen(): ((event: Event) => void) | null {
+    return this._onopen;
+  }
+
+  set onopen(handler: ((event: Event) => void) | null) {
+    this._onopen = handler;
+  }
+
+  close(): void {
+    this.readyState = 2;
+    this.controller.abort();
+  }
+
+  addEventListener(): void {}
+  removeEventListener(): void {}
+  dispatchEvent(): boolean {
+    return true;
+  }
+}
+
+function createAuthenticatedEventSource(url: string): EventSource {
+  return new AuthenticatedEventSource(url);
 }
 
 export const api = {
@@ -132,12 +251,12 @@ export const api = {
 
   // SSE streams
   streamEvents: (runId: UUID): EventSource => {
-    const url = `${BASE_URL.replace("/api/v1", "")}/runs/${runId}/events/stream`;
-    return new EventSource(url);
+    const url = `${BASE_URL}/runs/${runId}/events/stream`;
+    return createAuthenticatedEventSource(url);
   },
   streamProgress: (runId: UUID): EventSource => {
-    const url = `${BASE_URL.replace("/api/v1", "")}/runs/${runId}/progress/stream`;
-    return new EventSource(url);
+    const url = `${BASE_URL}/runs/${runId}/progress/stream`;
+    return createAuthenticatedEventSource(url);
   },
 
   // Replay
