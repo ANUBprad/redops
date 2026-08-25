@@ -254,12 +254,8 @@ class TestTrajectoryDomain:
         assert traj.step_count == 2
 
     def test_trajectory_all_tool_calls(self) -> None:
-        tc1 = ToolCallRecord(
-            tool_call_id="c1", tool_name="calc", arguments={}
-        )
-        tc2 = ToolCallRecord(
-            tool_call_id="c2", tool_name="lookup", arguments={}
-        )
+        tc1 = ToolCallRecord(tool_call_id="c1", tool_name="calc", arguments={})
+        tc2 = ToolCallRecord(tool_call_id="c2", tool_name="lookup", arguments={})
         steps = (
             TrajectoryStep(
                 step_index=0,
@@ -525,9 +521,7 @@ class TestToolExecution:
 
     def test_registry_validation(self) -> None:
         registry = _build_test_tool_registry()
-        error = registry.validate_tool_args(
-            "calculator", {"expression": "1+1"}
-        )
+        error = registry.validate_tool_args("calculator", {"expression": "1+1"})
         assert error is None
 
         error = registry.validate_tool_args("calculator", {})
@@ -713,9 +707,7 @@ class TestTrajectoryMetrics:
     def test_trajectory_completeness_completed(self) -> None:
         metric = TrajectoryCompletenessMetric()
         traj = self._make_completed_trajectory()
-        result = _run_async(
-            metric.evaluate(MetricInput(metadata={"trajectory": traj}))
-        )
+        result = _run_async(metric.evaluate(MetricInput(metadata={"trajectory": traj})))
         assert result.is_success
         assert result.normalized_score == 1.0
 
@@ -731,9 +723,7 @@ class TestTrajectoryMetrics:
                 },
             ],
         )
-        result = _run_async(
-            metric.evaluate(MetricInput(metadata={"trajectory": traj}))
-        )
+        result = _run_async(metric.evaluate(MetricInput(metadata={"trajectory": traj})))
         assert result.is_success
         assert 0.0 < result.normalized_score < 1.0
 
@@ -745,9 +735,7 @@ class TestTrajectoryMetrics:
     def test_trajectory_efficiency_good(self) -> None:
         metric = TrajectoryEfficiencyMetric()
         traj = self._make_completed_trajectory()
-        result = _run_async(
-            metric.evaluate(MetricInput(metadata={"trajectory": traj}))
-        )
+        result = _run_async(metric.evaluate(MetricInput(metadata={"trajectory": traj})))
         assert result.is_success
         assert result.normalized_score > 0.5
 
@@ -763,9 +751,7 @@ class TestTrajectoryMetrics:
                 "tool_error_rate": 0.9,
             },
         )
-        result = _run_async(
-            metric.evaluate(MetricInput(metadata={"trajectory": traj}))
-        )
+        result = _run_async(metric.evaluate(MetricInput(metadata={"trajectory": traj})))
         assert result.is_success
         assert result.normalized_score < 0.5
 
@@ -808,9 +794,7 @@ class TestTrajectoryMetrics:
                 "tool_error_rate": 1.0,
             },
         )
-        result = _run_async(
-            metric.evaluate(MetricInput(metadata={"trajectory": traj}))
-        )
+        result = _run_async(metric.evaluate(MetricInput(metadata={"trajectory": traj})))
         assert result.is_success
         assert result.normalized_score > 0.5
 
@@ -831,9 +815,7 @@ class TestTrajectoryMetrics:
                 "tool_calls": 0,
             },
         )
-        result = _run_async(
-            metric.evaluate(MetricInput(metadata={"trajectory": traj}))
-        )
+        result = _run_async(metric.evaluate(MetricInput(metadata={"trajectory": traj})))
         assert result.is_success
         assert result.normalized_score == 1.0
 
@@ -1091,9 +1073,7 @@ class TestFullTrajectoryLifecycle:
 
         # Step 2: Tool executes
         executor = SafeToolExecutor(registry)
-        tool_result = executor.execute(
-            "calculator", {"expression": "15 * 7 + 3"}
-        )
+        tool_result = executor.execute("calculator", {"expression": "15 * 7 + 3"})
         recorder.record_tool_call(
             tool_call_id="call-001",
             tool_name="calculator",
@@ -1114,9 +1094,7 @@ class TestFullTrajectoryLifecycle:
             cost_usd=0.002,
             latency_ms=100,
         )
-        recorder.record_final_answer(
-            f"15 * 7 + 3 = {tool_result.result}"
-        )
+        recorder.record_final_answer(f"15 * 7 + 3 = {tool_result.result}")
 
         # Build trajectory
         trajectory = recorder.build()
@@ -1198,9 +1176,7 @@ class TestFullTrajectoryLifecycle:
 
         # Step 2: Tool fails
         executor = SafeToolExecutor(registry)
-        fail_result = executor.execute(
-            "failing_tool", {"reason": "test failure"}
-        )
+        fail_result = executor.execute("failing_tool", {"reason": "test failure"})
         recorder.record_tool_call(
             tool_call_id="call-fail-1",
             tool_name="failing_tool",

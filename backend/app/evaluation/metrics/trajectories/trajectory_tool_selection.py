@@ -62,9 +62,7 @@ class TrajectoryToolSelectionMetric(Metric):
         metrics_data = trajectory.get("metrics", {})
         tools_used = list(metrics_data.get("unique_tools_used", []))
 
-        tool_calls = [
-            s for s in steps if s.get("step_type") == "tool_call"
-        ]
+        tool_calls = [s for s in steps if s.get("step_type") == "tool_call"]
 
         if not tool_calls and not tools_used:
             return MetricResult(
@@ -91,9 +89,7 @@ class TrajectoryToolSelectionMetric(Metric):
                 validity_rate = len(valid_tools) / len(tools_used)
                 score += validity_rate * 0.5
                 if invalid_tools:
-                    reasoning_parts.append(
-                        f"invalid tools called: {invalid_tools}"
-                    )
+                    reasoning_parts.append(f"invalid tools called: {invalid_tools}")
                 else:
                     reasoning_parts.append("all tools are valid")
         else:
@@ -102,9 +98,7 @@ class TrajectoryToolSelectionMetric(Metric):
 
         if len(tools_used) > 1:
             score += 0.3
-            reasoning_parts.append(
-                f"used {len(tools_used)} different tools (good diversity)"
-            )
+            reasoning_parts.append(f"used {len(tools_used)} different tools (good diversity)")
         elif len(tools_used) == 1:
             score += 0.15
             reasoning_parts.append("used only 1 tool (may be appropriate)")
@@ -124,9 +118,7 @@ class TrajectoryToolSelectionMetric(Metric):
             score += 0.1
             reasoning_parts.append(f"tool repeated {max_repeats} times")
         else:
-            reasoning_parts.append(
-                f"excessive tool repetition ({max_repeats} times)"
-            )
+            reasoning_parts.append(f"excessive tool repetition ({max_repeats} times)")
 
         return MetricResult(
             metric_name="trajectory_tool_selection",

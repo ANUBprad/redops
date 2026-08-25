@@ -150,4 +150,3 @@ class TestExecutionResult:
         )
         assert result.total_stages == 1
         assert len(result.successful_stages) == 1
-

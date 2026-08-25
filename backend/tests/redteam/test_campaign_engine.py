@@ -9,41 +9,32 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.evaluation.metrics.engine import MetricEngine
-from app.evaluation.metrics.domain import MetricResult
-from app.kernel.entities.base import UUIDv7
 from app.kernel.exceptions.errors import ConflictError, ValidationError
 from app.providers.models.enums import FinishReason
-from app.providers.models.messages import Message
-from app.providers.models.options import ChatOptions
 from app.providers.models.responses import ChatResponse, Usage
 from app.providers.registry.registry import ProviderRegistry
 from app.redteam.domain.campaign import (
     AdaptiveCampaign,
     AttackEffectiveness,
     AttackLineage,
-    AttackEffectiveness as _AE,
     CampaignBudget,
-    CampaignResult,
     CampaignRound,
     TargetExecution,
 )
 from app.redteam.domain.campaign_enums import CampaignState, MutationPhase
 from app.redteam.domain.enums import (
     AttackCategory,
-    AttackSeverity,
-    AttackStatus,
     SafetyVerdict,
 )
-from app.redteam.domain.value_objects import AttackResult, AttackScenario, SafetyScore
+from app.redteam.domain.value_objects import AttackResult, AttackScenario
 from app.redteam.engine.attack_evaluator import AttackEvaluator
 from app.redteam.engine.campaign_engine import AdaptiveCampaignEngine
+from app.redteam.engine.mutation import MutationStrategy
 from app.redteam.engine.mutation_selector import MutationStrategySelector
-from app.redteam.engine.mutation import MutationEngine, MutationStrategy
 from app.redteam.engine.target_executor import TargetExecutor
 
 
@@ -172,23 +163,29 @@ class TestCampaignBudget:
 
     def test_check_violation_returns_none_when_within(self) -> None:
         budget = CampaignBudget(max_rounds=10)
-        assert budget.check_violation(
-            current_round=5,
-            total_attacks=5,
-            total_tokens=0,
-            total_cost=0.0,
-            elapsed_seconds=0.0,
-        ) is None
+        assert (
+            budget.check_violation(
+                current_round=5,
+                total_attacks=5,
+                total_tokens=0,
+                total_cost=0.0,
+                elapsed_seconds=0.0,
+            )
+            is None
+        )
 
     def test_check_violation_returns_reason(self) -> None:
         budget = CampaignBudget(max_rounds=3)
-        assert budget.check_violation(
-            current_round=3,
-            total_attacks=3,
-            total_tokens=0,
-            total_cost=0.0,
-            elapsed_seconds=0.0,
-        ) == "max_rounds"
+        assert (
+            budget.check_violation(
+                current_round=3,
+                total_attacks=3,
+                total_tokens=0,
+                total_cost=0.0,
+                elapsed_seconds=0.0,
+            )
+            == "max_rounds"
+        )
 
 
 class TestAttackLineage:
@@ -491,9 +488,7 @@ class TestMutationStrategySelector:
             )
             for i in range(6)
         ]
-        recommendation = selector.recommend_phase_transition(
-            rounds, MutationPhase.EXPLORATION
-        )
+        recommendation = selector.recommend_phase_transition(rounds, MutationPhase.EXPLORATION)
         assert recommendation == MutationPhase.EXPLOITATION
 
 
@@ -784,7 +779,7 @@ class TestAdaptiveCampaignEngine:
         result = _run_async(engine.run_campaign(campaign))
 
         assert len(result.category_stats) > 0
-        for cat, stats in result.category_stats.items():
+        for stats in result.category_stats.values():
             assert "total" in stats
             assert "violations" in stats
             assert "avg_effectiveness" in stats
