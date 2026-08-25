@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-revision: str = "010"
+revision: str = "010_create_schedules"
 down_revision: str | None = "009"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

@@ -25,7 +25,14 @@ from app.agents.application.run_handlers import (
     RetryAgentRunHandler,
 )
 from app.agents.temporal.workflow import AgentRunWorkflow, AgentRunWorkflowInput
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session, get_temporal_client
+from app.core.config import AppConfig
+from app.core.dependencies import (
+    CurrentUser,
+    get_config_dependency,
+    get_current_user,
+    get_db_session,
+    get_temporal_client,
+)
 from app.infrastructure.database.repositories.agent_run_repository import (
     SqlAlchemyAgentRunRepository,
 )
@@ -114,6 +121,7 @@ async def create_agent_run(
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
     temporal_client: TemporalClient = Depends(get_temporal_client),
+    config: AppConfig = Depends(get_config_dependency),
 ) -> AgentRunResponse:
     """Create a new agent run and schedule its execution."""
     repo = _get_repository(session)
@@ -143,7 +151,7 @@ async def create_agent_run(
                 total_steps=body.max_steps,
             ),
             id=workflow_id,
-            task_queue="redops-agents",
+            task_queue=config.temporal_task_queue,
         )
 
         queue_handler = QueueAgentRunHandler(repo)

@@ -13,6 +13,7 @@ from structlog import get_logger
 
 from app.infrastructure.composition.services import InfrastructureServices
 from app.infrastructure.config.logging import LoggingConfiguration
+from app.infrastructure.database.engine import DatabaseEngine
 from app.infrastructure.observability.logging import configure_infrastructure_logging
 from app.kernel.health.health import HealthRegistry, HealthReport
 from app.kernel.service_registry.service_registry import ServiceRegistry
@@ -67,6 +68,9 @@ class Bootstrap:
 
         self._service_registry = ServiceRegistry()
         self._health_registry = HealthRegistry()
+
+        database_engine = self._di_container.resolve(DatabaseEngine)
+        await database_engine.initialize()
 
         services = InfrastructureServices(
             di_container=self._di_container,

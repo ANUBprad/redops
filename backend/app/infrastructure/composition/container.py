@@ -58,8 +58,10 @@ from app.infrastructure.temporal.worker import (
 from app.kernel.container.di_container import DIContainer
 from app.kernel.health.health import HealthRegistry
 from app.kernel.registry.plugin import Plugin, PluginRegistry
+from app.providers.anthropic.provider import AnthropicProvider
 from app.providers.cost.calculator import CostCalculator
 from app.providers.cost.defaults import build_default_cost_calculator
+from app.providers.openai.provider import OpenAIProvider
 from app.providers.registry.registry import ProviderRegistry
 
 if TYPE_CHECKING:
@@ -250,14 +252,18 @@ class InfrastructureContainer:
     def _register_evaluation(self) -> None:
         """Register evaluation engine singletons.
 
-        ProviderRegistry and MetricEngine start empty; concrete
-        providers and metrics register themselves at startup via
-        plugin discovery. The CostCalculator ships with real
-        default pricing so cost estimates are never faked.
+        The ProviderRegistry is populated with the concrete providers whose
+        credentials are configured; providers without a key are simply not
+        registered so startup never fails on a missing optional key. The
+        MetricEngine starts empty; metrics are registered separately (Phase
+        B.2). The CostCalculator ships with real default pricing so cost
+        estimates are never faked.
         """
+        provider_registry = ProviderRegistry()
+        self._register_providers(provider_registry)
         self._container.register_singleton(
             ProviderRegistry,
-            lambda _c: ProviderRegistry(),
+            lambda _c: provider_registry,
         )
         self._container.register_singleton(
             MetricEngine,
@@ -267,6 +273,21 @@ class InfrastructureContainer:
             CostCalculator,
             lambda _c: build_default_cost_calculator(),
         )
+
+    def _register_providers(self, registry: ProviderRegistry) -> None:
+        """Register configured providers into the shared registry.
+
+        Only providers whose API key is present are registered. OpenAI and
+        Anthropic read their keys from configuration (which loads the
+        OPENAI_API_KEY / ANTHROPIC_API_KEY environment variables), so an
+        absent optional key simply omits that provider rather than failing
+        startup.
+        """
+        cfg = self._app_config
+        if cfg.openai_api_key:
+            registry.register(OpenAIProvider(api_key=cfg.openai_api_key))
+        if cfg.anthropic_api_key:
+            registry.register(AnthropicProvider(api_key=cfg.anthropic_api_key))
 
     def _register_plugins(self) -> None:
         """Register plugin infrastructure components."""
