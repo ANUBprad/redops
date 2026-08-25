@@ -25,6 +25,7 @@ interface RunSummary {
   items_completed: number;
   items_failed: number;
   cost: number;
+  verdict: string | null;
   started_at: string | null;
   completed_at: string | null;
   created_at: string;
@@ -66,6 +67,19 @@ export default function RunsPage() {
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
       case "cancelled":
         return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+      default:
+        return "bg-muted text-muted-foreground";
+    }
+  };
+
+  const getVerdictColor = (verdict: string | null) => {
+    switch (verdict) {
+      case "pass":
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+      case "fail":
+        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
+      case "error":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400";
       default:
         return "bg-muted text-muted-foreground";
     }
@@ -125,6 +139,7 @@ export default function RunsPage() {
                 <tr className="border-b">
                   <th className="pb-2 text-sm font-medium">Run</th>
                   <th className="pb-2 text-sm font-medium">Status</th>
+                  <th className="pb-2 text-sm font-medium">Verdict</th>
                   <th className="pb-2 text-sm font-medium">Progress</th>
                   <th className="pb-2 text-sm font-medium">Items</th>
                   <th className="pb-2 text-sm font-medium">Cost</th>
@@ -145,6 +160,13 @@ export default function RunsPage() {
                     </td>
                     <td className="py-3">
                       <Badge className={getStatusColor(run.status)}>{run.status}</Badge>
+                    </td>
+                    <td className="py-3">
+                      {run.verdict ? (
+                        <Badge className={getVerdictColor(run.verdict)}>{run.verdict}</Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="py-3">
                       <div className="text-sm">{Math.round(run.progress * 100)}%</div>
