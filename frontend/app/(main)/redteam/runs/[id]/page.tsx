@@ -216,9 +216,7 @@ export default function AttackRunDetailPage() {
             <div>
               <dt className="text-muted-foreground">Started</dt>
               <dd>
-                {runData.started_at
-                  ? new Date(runData.started_at).toLocaleString()
-                  : "Not started"}
+                {runData.started_at ? new Date(runData.started_at).toLocaleString() : "Not started"}
               </dd>
             </div>
             <div>

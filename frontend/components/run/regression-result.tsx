@@ -25,12 +25,13 @@ export function RegressionResultView({ baselineRunId, currentRunId }: Regression
 
   const result = data as RegressionResult;
 
-  const verdictColor = {
-    pass: "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400",
-    fail: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400",
-    not_comparable: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400",
-    error: "bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400",
-  }[result.verdict] ?? "bg-muted text-muted-foreground";
+  const verdictColor =
+    {
+      pass: "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400",
+      fail: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400",
+      not_comparable: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400",
+      error: "bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400",
+    }[result.verdict] ?? "bg-muted text-muted-foreground";
 
   return (
     <div className="space-y-4">
@@ -100,16 +101,17 @@ export function RegressionResultView({ baselineRunId, currentRunId }: Regression
 }
 
 function MetricRegressionRow({ comparison }: { comparison: MetricRegression }) {
-  const statusColor = {
-    pass: "bg-green-100 text-green-800",
-    regression: "bg-red-100 text-red-800",
-    improvement: "bg-blue-100 text-blue-800",
-    no_change: "bg-gray-100 text-gray-800",
-    not_comparable: "bg-yellow-100 text-yellow-800",
-    added: "bg-purple-100 text-purple-800",
-    removed: "bg-orange-100 text-orange-800",
-    error: "bg-red-100 text-red-800",
-  }[comparison.status] ?? "bg-muted text-muted-foreground";
+  const statusColor =
+    {
+      pass: "bg-green-100 text-green-800",
+      regression: "bg-red-100 text-red-800",
+      improvement: "bg-blue-100 text-blue-800",
+      no_change: "bg-gray-100 text-gray-800",
+      not_comparable: "bg-yellow-100 text-yellow-800",
+      added: "bg-purple-100 text-purple-800",
+      removed: "bg-orange-100 text-orange-800",
+      error: "bg-red-100 text-red-800",
+    }[comparison.status] ?? "bg-muted text-muted-foreground";
 
   return (
     <div className="flex items-center justify-between rounded border p-2">
@@ -118,7 +120,7 @@ function MetricRegressionRow({ comparison }: { comparison: MetricRegression }) {
           <span className="text-sm font-medium">{comparison.metric_name}</span>
           <Badge className={statusColor}>{comparison.status}</Badge>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">{comparison.reasoning}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{comparison.reasoning}</p>
       </div>
       <div className="text-right text-sm">
         {comparison.baseline_score !== null && comparison.current_score !== null ? (

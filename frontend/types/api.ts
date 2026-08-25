@@ -655,7 +655,10 @@ export interface TraceComparison {
   comparison_provider: string;
   baseline_model: string;
   comparison_model: string;
-  metric_deltas: Record<string, { baseline_mean: number; comparison_mean: number; delta: number; delta_pct: number }>;
+  metric_deltas: Record<
+    string,
+    { baseline_mean: number; comparison_mean: number; delta: number; delta_pct: number }
+  >;
   cost_delta: number;
   latency_delta: number;
   item_comparisons: ItemComparison[];
@@ -666,7 +669,15 @@ export interface TraceComparison {
 // ─── Regression Types ─────────────────────────────────────────
 
 export type RegressionVerdict = "pass" | "fail" | "not_comparable" | "error";
-export type MetricRegressionStatus = "pass" | "regression" | "improvement" | "no_change" | "not_comparable" | "added" | "removed" | "error";
+export type MetricRegressionStatus =
+  | "pass"
+  | "regression"
+  | "improvement"
+  | "no_change"
+  | "not_comparable"
+  | "added"
+  | "removed"
+  | "error";
 
 export interface MetricRegression {
   metric_name: string;

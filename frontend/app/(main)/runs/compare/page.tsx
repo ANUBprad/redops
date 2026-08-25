@@ -36,7 +36,7 @@ export default function ComparePage() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium mb-1 block">Baseline Run ID</label>
+              <label className="mb-1 block text-sm font-medium">Baseline Run ID</label>
               <Input
                 placeholder="Enter baseline run ID"
                 value={baselineId}
@@ -44,7 +44,7 @@ export default function ComparePage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Comparison Run ID</label>
+              <label className="mb-1 block text-sm font-medium">Comparison Run ID</label>
               <Input
                 placeholder="Enter comparison run ID"
                 value={comparisonId}
@@ -88,7 +88,7 @@ function ComparisonResult({ result }: { result: TraceComparison }) {
           <CardContent>
             <div className="text-lg font-bold">{result.baseline_provider}</div>
             <div className="text-sm text-muted-foreground">{result.baseline_model}</div>
-            <div className="text-xs text-muted-foreground mt-1">
+            <div className="mt-1 text-xs text-muted-foreground">
               Run: {result.baseline_run_id.slice(0, 8)}...
             </div>
           </CardContent>
@@ -100,7 +100,7 @@ function ComparisonResult({ result }: { result: TraceComparison }) {
           <CardContent>
             <div className="text-lg font-bold">{result.comparison_provider}</div>
             <div className="text-sm text-muted-foreground">{result.comparison_model}</div>
-            <div className="text-xs text-muted-foreground mt-1">
+            <div className="mt-1 text-xs text-muted-foreground">
               Run: {result.comparison_run_id.slice(0, 8)}...
             </div>
           </CardContent>
@@ -116,7 +116,7 @@ function ComparisonResult({ result }: { result: TraceComparison }) {
             <div className="text-sm text-muted-foreground">
               Confidence: {(result.confidence * 100).toFixed(0)}%
             </div>
-            <div className="text-xs text-muted-foreground mt-1">
+            <div className="mt-1 text-xs text-muted-foreground">
               Cost delta: ${result.cost_delta.toFixed(4)}
             </div>
           </CardContent>
@@ -138,7 +138,9 @@ function ComparisonResult({ result }: { result: TraceComparison }) {
                   <span className="font-medium">{delta.comparison_mean.toFixed(3)}</span>
                   <Badge
                     variant={delta.delta >= 0 ? "default" : "secondary"}
-                    className={delta.delta >= 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}
+                    className={
+                      delta.delta >= 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                    }
                   >
                     {delta.delta >= 0 ? "+" : ""}
                     {(delta.delta * 100).toFixed(1)}%

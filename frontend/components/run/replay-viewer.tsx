@@ -76,7 +76,7 @@ export function ReplayViewer({ runId }: ReplayViewerProps) {
             <div className="space-y-1">
               {Object.entries(summary.metric_summaries).map(([name, ms]) => (
                 <div key={name} className="flex justify-between text-xs">
-                  <span className="text-muted-foreground truncate">{name}</span>
+                  <span className="truncate text-muted-foreground">{name}</span>
                   <span className="font-medium">{ms.mean.toFixed(3)}</span>
                 </div>
               ))}
@@ -105,9 +105,7 @@ export function ReplayViewer({ runId }: ReplayViewerProps) {
         </CardContent>
       </Card>
 
-      {selectedItem !== null && items[selectedItem] && (
-        <ItemDetail item={items[selectedItem]} />
-      )}
+      {selectedItem !== null && items[selectedItem] && <ItemDetail item={items[selectedItem]} />}
     </div>
   );
 }
@@ -131,7 +129,7 @@ function ItemRow({
   return (
     <button
       onClick={onSelect}
-      className={`w-full text-left rounded-lg border p-3 transition-colors ${
+      className={`w-full rounded-lg border p-3 text-left transition-colors ${
         isSelected
           ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
           : "border-border hover:border-muted-foreground/50"
@@ -140,7 +138,7 @@ function ItemRow({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium">#{item.item_index + 1}</span>
-          <span className="text-sm text-muted-foreground truncate max-w-xs">
+          <span className="max-w-xs truncate text-sm text-muted-foreground">
             {item.prompt_preview}
           </span>
         </div>
@@ -154,9 +152,7 @@ function ItemRow({
           <span className="text-xs text-muted-foreground">
             {item.total_latency_ms.toLocaleString()}ms
           </span>
-          <span className="text-xs text-muted-foreground">
-            ${item.total_cost_usd.toFixed(4)}
-          </span>
+          <span className="text-xs text-muted-foreground">${item.total_cost_usd.toFixed(4)}</span>
         </div>
       </div>
     </button>
@@ -171,16 +167,16 @@ function ItemDetail({ item }: { item: ItemReport }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <h4 className="text-sm font-medium mb-1">Prompt</h4>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{item.prompt_preview}</p>
+          <h4 className="mb-1 text-sm font-medium">Prompt</h4>
+          <p className="whitespace-pre-wrap text-sm text-muted-foreground">{item.prompt_preview}</p>
         </div>
 
         <div>
-          <h4 className="text-sm font-medium mb-1">Provider Response</h4>
+          <h4 className="mb-1 text-sm font-medium">Provider Response</h4>
           {item.provider_error ? (
             <p className="text-sm text-destructive">{item.provider_error}</p>
           ) : (
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            <p className="whitespace-pre-wrap text-sm text-muted-foreground">
               {item.provider_response_preview}
             </p>
           )}
@@ -188,13 +184,13 @@ function ItemDetail({ item }: { item: ItemReport }) {
 
         {item.error && (
           <div>
-            <h4 className="text-sm font-medium mb-1">Item Error</h4>
+            <h4 className="mb-1 text-sm font-medium">Item Error</h4>
             <p className="text-sm text-destructive">{item.error}</p>
           </div>
         )}
 
         <div>
-          <h4 className="text-sm font-medium mb-2">Metric Scores</h4>
+          <h4 className="mb-2 text-sm font-medium">Metric Scores</h4>
           <div className="space-y-2">
             {item.metric_explanations.map((me) => (
               <MetricRow key={me.metric_name} explanation={me} />
@@ -214,22 +210,18 @@ function ItemDetail({ item }: { item: ItemReport }) {
 function MetricRow({ explanation }: { explanation: MetricExplanation }) {
   const scorePercent = Math.round(explanation.normalized_score * 100);
   const scoreColor =
-    scorePercent >= 80
-      ? "text-green-600"
-      : scorePercent >= 50
-        ? "text-yellow-600"
-        : "text-red-600";
+    scorePercent >= 80 ? "text-green-600" : scorePercent >= 50 ? "text-yellow-600" : "text-red-600";
 
   return (
     <div className="rounded border p-2">
-      <div className="flex items-center justify-between mb-1">
+      <div className="mb-1 flex items-center justify-between">
         <span className="text-sm font-medium">{explanation.metric_name}</span>
         <span className={`text-sm font-bold ${scoreColor}`}>{scorePercent}%</span>
       </div>
       {explanation.reasoning && (
         <p className="text-xs text-muted-foreground">{explanation.reasoning}</p>
       )}
-      <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+      <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
         <span>Confidence: {(explanation.confidence * 100).toFixed(0)}%</span>
         {explanation.judge_model && <span>Judge: {explanation.judge_model}</span>}
       </div>

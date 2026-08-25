@@ -29,7 +29,8 @@ export default function DashboardPage() {
 
   const { data: runsData, isLoading: runsLoading } = useQuery({
     queryKey: ["dashboard-runs"],
-    queryFn: () => api.listRuns({ page: 1, page_size: 5, sort_by: "created_at", sort_order: "desc" }),
+    queryFn: () =>
+      api.listRuns({ page: 1, page_size: 5, sort_by: "created_at", sort_order: "desc" }),
   });
 
   const { data: safetyData } = useQuery({
@@ -88,7 +89,9 @@ export default function DashboardPage() {
     },
   ];
 
-  const runs = ((runsData as unknown as Record<string, unknown>)?.items as Array<Record<string, unknown>>) ?? [];
+  const runs =
+    ((runsData as unknown as Record<string, unknown>)?.items as Array<Record<string, unknown>>) ??
+    [];
 
   const safety = (safetyData as Record<string, unknown>) || {};
   const safetyVerdicts = (safety.safety_verdicts as Record<string, number>) || {};
@@ -126,19 +129,27 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {runs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No runs yet. Create an evaluation and start a run.</p>
+              <p className="text-sm text-muted-foreground">
+                No runs yet. Create an evaluation and start a run.
+              </p>
             ) : (
               <div className="space-y-4">
                 {runs.map((run) => (
                   <div key={String(run.id)} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">{String(run.evaluation_name || "Unnamed")}</span>
-                      <Badge className={getStatusColor(String(run.status))}>{String(run.status)}</Badge>
+                      <span className="font-medium">
+                        {String(run.evaluation_name || "Unnamed")}
+                      </span>
+                      <Badge className={getStatusColor(String(run.status))}>
+                        {String(run.status)}
+                      </Badge>
                     </div>
                     <Progress
                       value={
                         run.items_total
-                          ? Math.round(((run.items_completed as number) / (run.items_total as number)) * 100)
+                          ? Math.round(
+                              ((run.items_completed as number) / (run.items_total as number)) * 100,
+                            )
                           : 0
                       }
                       className="h-2"
@@ -162,7 +173,9 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {totalSafety === 0 ? (
-              <p className="text-sm text-muted-foreground">No safety data available yet. Run a red-team campaign.</p>
+              <p className="text-sm text-muted-foreground">
+                No safety data available yet. Run a red-team campaign.
+              </p>
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -172,7 +185,9 @@ export default function DashboardPage() {
                 <Progress value={safePercent} className="h-2" />
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Violated</span>
-                  <span className="text-sm font-medium text-red-600">{violatedPercent}% Violated</span>
+                  <span className="text-sm font-medium text-red-600">
+                    {violatedPercent}% Violated
+                  </span>
                 </div>
                 <Progress value={violatedPercent} className="h-2" />
               </div>
