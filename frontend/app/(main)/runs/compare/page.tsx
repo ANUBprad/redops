@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { LoadingState } from "@/components/ui/loading-state";
+import { RegressionResultView } from "@/components/run/regression-result";
 import type { TraceComparison } from "@/types/api";
 
 export default function ComparePage() {
@@ -59,6 +60,13 @@ export default function ComparePage() {
       {error && <div className="text-destructive">Error loading comparison data</div>}
 
       {data && <ComparisonResult result={data as TraceComparison} />}
+
+      {baselineId && comparisonId && (
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold">Regression Analysis</h2>
+          <RegressionResultView baselineRunId={baselineId} currentRunId={comparisonId} />
+        </div>
+      )}
     </div>
   );
 }
