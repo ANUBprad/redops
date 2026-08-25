@@ -149,7 +149,7 @@ async def create_agent_run(
             AgentRunWorkflow.run,
             AgentRunWorkflowInput(
                 run_id=str(run.id),
-                total_steps=body.max_steps,
+                max_steps=body.max_steps,
             ),
             id=workflow_id,
             task_queue=config.temporal_task_queue,

@@ -148,14 +148,20 @@ def _result_to_dict(result: Any) -> dict[str, Any]:
 
 async def _run_compare(args: argparse.Namespace) -> int:
     """Execute the compare command. Returns exit code."""
-    from app.core.dependencies import get_db_session
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+    from app.core.config import get_config
     from app.evaluation.regression import RegressionConfig, analyze_regression
+    from app.evaluation.reliability.fingerprint import compute_fingerprint
     from app.evaluation.replay.composite_repository import CompositeTraceRepository
     from app.evaluation.replay.database_repository import DatabaseTraceRepository
     from app.evaluation.replay.service import ReplayService
 
-    # Load traces from database
-    async with get_db_session() as session:
+    app_config = get_config()
+    engine = create_async_engine(app_config.database_url)
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with session_factory() as session:
         db_repo = DatabaseTraceRepository(session)
         service = ReplayService(db_repo)
 
@@ -170,37 +176,40 @@ async def _run_compare(args: argparse.Namespace) -> int:
             return 4
 
     # Extract metrics from traces
-    baseline_metrics: dict[str, float | None] = {}
+    baseline_scores: dict[str, list[float]] = {}
     for item in baseline_trace.item_traces:
         for mt in item.metric_traces:
-            if mt.metric_name not in baseline_metrics:
-                baseline_metrics[mt.metric_name] = []
-            baseline_metrics[mt.metric_name].append(mt.normalized_score)
+            if mt.metric_name not in baseline_scores:
+                baseline_scores[mt.metric_name] = []
+            baseline_scores[mt.metric_name].append(mt.normalized_score)
 
-    current_metrics: dict[str, float | None] = {}
+    current_scores: dict[str, list[float]] = {}
     for item in current_trace.item_traces:
         for mt in item.metric_traces:
-            if mt.metric_name not in current_metrics:
-                current_metrics[mt.metric_name] = []
-            current_metrics[mt.metric_name].append(mt.normalized_score)
+            if mt.metric_name not in current_scores:
+                current_scores[mt.metric_name] = []
+            current_scores[mt.metric_name].append(mt.normalized_score)
 
     # Average scores per metric
     baseline_avg = {
         name: sum(scores) / len(scores) if scores else None
-        for name, scores in baseline_metrics.items()
+        for name, scores in baseline_scores.items()
     }
     current_avg = {
         name: sum(scores) / len(scores) if scores else None
-        for name, scores in current_metrics.items()
+        for name, scores in current_scores.items()
     }
+
+    baseline_fingerprint = compute_fingerprint(**baseline_trace.configuration)
+    current_fingerprint = compute_fingerprint(**current_trace.configuration)
 
     # Run regression analysis
     config = RegressionConfig(default_tolerance=args.tolerance)
     result = analyze_regression(
         baseline_run_id=args.baseline,
         current_run_id=args.current,
-        baseline_fingerprint=baseline_trace.fingerprint or "",
-        current_fingerprint=current_trace.fingerprint or "",
+        baseline_fingerprint=baseline_fingerprint.fingerprint,
+        current_fingerprint=current_fingerprint.fingerprint,
         baseline_metrics=baseline_avg,
         current_metrics=current_avg,
         config=config,

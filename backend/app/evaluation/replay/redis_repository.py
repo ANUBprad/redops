@@ -40,16 +40,16 @@ class RedisTraceRepository(TraceRepository):
         key = f"{TRACE_KEY_PREFIX}{run_id}"
         data = json.dumps(trace_data, default=str)
         await self._redis.set(key, data)
-        await self._redis.sadd(TRACE_INDEX_KEY, run_id)
+        await self._redis.sadd(TRACE_INDEX_KEY, run_id)  # type: ignore[misc]
 
     async def delete(self, run_id: str) -> bool:
         key = f"{TRACE_KEY_PREFIX}{run_id}"
         deleted_count = await self._redis.delete(key)
-        await self._redis.srem(TRACE_INDEX_KEY, run_id)
+        await self._redis.srem(TRACE_INDEX_KEY, run_id)  # type: ignore[misc]
         return bool(deleted_count)
 
     async def list_runs(self, limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:
-        run_ids = await self._redis.smembers(TRACE_INDEX_KEY)
+        run_ids = await self._redis.smembers(TRACE_INDEX_KEY)  # type: ignore[misc]
         if not run_ids:
             return []
 

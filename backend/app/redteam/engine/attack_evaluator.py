@@ -72,7 +72,7 @@ class AttackEvaluator:
         reasoning = self._build_reasoning(verdict, safety_scores, metric_score, semantic_result)
 
         # Build semantic fields for AttackEffectiveness
-        semantic_fields: dict = {}
+        semantic_fields: dict[str, Any] = {}
         if semantic_result is not None:
             evaluation_source = "error" if semantic_result.has_error else "semantic_judge"
             semantic_fields = {

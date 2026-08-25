@@ -46,7 +46,7 @@ def _try_get_redis_fallback() -> Any:
         from app.evaluation.replay.redis_repository import RedisTraceRepository
 
         redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
-        client = aioredis.from_url(redis_url, decode_responses=False)
+        client = aioredis.from_url(redis_url, decode_responses=False)  # type: ignore[no-untyped-call]
         return RedisTraceRepository(client)
     except Exception:
         logger.debug("Redis unavailable for replay fallback, using database only")
@@ -194,8 +194,8 @@ async def analyze_regression_endpoint(
     Compares metric results, checks fingerprint compatibility,
     and produces a per-metric regression analysis with an overall verdict.
     """
-    from app.evaluation.reliability.fingerprint import compute_fingerprint
     from app.evaluation.regression import RegressionConfig, analyze_regression
+    from app.evaluation.reliability.fingerprint import compute_fingerprint
 
     baseline = await service.load_trace(baseline_run_id)
     if baseline is None:
@@ -205,8 +205,8 @@ async def analyze_regression_endpoint(
     if current is None:
         raise HTTPException(status_code=404, detail=f"Current trace not found: {current_run_id}")
 
-    baseline_fingerprint = compute_fingerprint(baseline.configuration)
-    current_fingerprint = compute_fingerprint(current.configuration)
+    baseline_fingerprint = compute_fingerprint(**baseline.configuration)
+    current_fingerprint = compute_fingerprint(**current.configuration)
 
     baseline_metrics = {
         name: agg.get("mean")
@@ -222,8 +222,8 @@ async def analyze_regression_endpoint(
     result = analyze_regression(
         baseline_run_id=baseline_run_id,
         current_run_id=current_run_id,
-        baseline_fingerprint=baseline_fingerprint,
-        current_fingerprint=current_fingerprint,
+        baseline_fingerprint=baseline_fingerprint.fingerprint,
+        current_fingerprint=current_fingerprint.fingerprint,
         baseline_metrics=baseline_metrics,
         current_metrics=current_metrics,
         config=RegressionConfig(),
