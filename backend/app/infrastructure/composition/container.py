@@ -15,6 +15,7 @@ from app.agents.temporal.activities import (
     cancel_agent_run_activity,
     complete_agent_run_activity,
     create_agent_run_activity,
+    execute_agent_loop_activity,
     fail_agent_run_activity,
     queue_agent_run_activity,
     start_agent_run_activity,
@@ -29,6 +30,7 @@ from app.evaluation.temporal.activities import (
     create_run_activity,
     execute_item_activity,
     fail_run_activity,
+    finalize_run_integrity_activity,
     persist_metric_results_activity,
     queue_run_activity,
     start_run_activity,
@@ -210,6 +212,7 @@ class InfrastructureContainer:
         activity_registry.register(cancel_run_activity)
         activity_registry.register(execute_item_activity)
         activity_registry.register(persist_metric_results_activity)
+        activity_registry.register(finalize_run_integrity_activity)
 
         activity_registry.register(create_agent_run_activity)
         activity_registry.register(queue_agent_run_activity)
@@ -218,6 +221,7 @@ class InfrastructureContainer:
         activity_registry.register(complete_agent_run_activity)
         activity_registry.register(fail_agent_run_activity)
         activity_registry.register(cancel_agent_run_activity)
+        activity_registry.register(execute_agent_loop_activity)
 
         workflow_registry = WorkflowRegistry()
         workflow_registry.register(EvaluationRunWorkflow)
