@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -13,7 +13,7 @@ import { LogViewer } from "@/components/run/log-viewer";
 import { MetricChart } from "@/components/metrics/metric-chart";
 import { ReplayViewer } from "@/components/run/replay-viewer";
 import { LoadingState } from "@/components/ui/loading-state";
-import { RotateCw, XCircle, Play, ArrowLeftRight } from "lucide-react";
+import { RotateCw, XCircle, ArrowLeftRight } from "lucide-react";
 
 interface RunDetail {
   id: string;

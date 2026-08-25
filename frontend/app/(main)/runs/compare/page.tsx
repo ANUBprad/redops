@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -17,9 +16,9 @@ export default function ComparePage() {
   const [baselineId, setBaselineId] = useState(searchParams.get("baseline") ?? "");
   const [comparisonId, setComparisonId] = useState(searchParams.get("comparison") ?? "");
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<TraceComparison | undefined>({
     queryKey: ["compare", baselineId, comparisonId],
-    queryFn: () => api.compareRuns(baselineId, comparisonId),
+    queryFn: () => api.compareRuns(baselineId, comparisonId) as Promise<TraceComparison>,
     enabled: !!baselineId && !!comparisonId,
   });
 
@@ -59,7 +58,7 @@ export default function ComparePage() {
       {isLoading && <LoadingState />}
       {error && <div className="text-destructive">Error loading comparison data</div>}
 
-      {data && <ComparisonResult result={data as TraceComparison} />}
+      {data && <ComparisonResult result={data} />}
 
       {baselineId && comparisonId && (
         <div className="space-y-4">
