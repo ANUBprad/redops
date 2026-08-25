@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Timeline } from "@/components/run/timeline";
 import { LogViewer } from "@/components/run/log-viewer";
 import { MetricChart } from "@/components/metrics/metric-chart";
+import { ReplayViewer } from "@/components/run/replay-viewer";
 import { LoadingState } from "@/components/ui/loading-state";
 import { RotateCw, XCircle, Play, ArrowLeftRight } from "lucide-react";
 
@@ -240,6 +241,17 @@ export default function RunDetailPage() {
           <MetricChart runId={runId} />
         </CardContent>
       </Card>
+
+      {runData.status === "completed" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Replay Trace</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReplayViewer runId={runId} />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex justify-end gap-2">
         {runData.status === "completed" && (
