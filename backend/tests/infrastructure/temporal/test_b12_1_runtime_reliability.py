@@ -7,10 +7,21 @@ configured, and explicit retry policies are applied to workflow activities.
 from __future__ import annotations
 
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
+from app.agents.temporal.activities import (
+    cancel_agent_run_activity,
+    complete_agent_run_activity,
+    create_agent_run_activity,
+    execute_agent_loop_activity,
+    fail_agent_run_activity,
+    queue_agent_run_activity,
+    start_agent_run_activity,
+    update_agent_run_progress_activity,
+)
+from app.agents.temporal.workflow import AgentRunWorkflow
 from app.evaluation.temporal.activities import (
     cancel_run_activity,
     complete_run_activity,
@@ -24,19 +35,7 @@ from app.evaluation.temporal.activities import (
     update_progress_activity,
 )
 from app.evaluation.temporal.workflow import EvaluationRunWorkflow
-from app.agents.temporal.activities import (
-    cancel_agent_run_activity,
-    complete_agent_run_activity,
-    create_agent_run_activity,
-    execute_agent_loop_activity,
-    fail_agent_run_activity,
-    queue_agent_run_activity,
-    start_agent_run_activity,
-    update_agent_run_progress_activity,
-)
-from app.agents.temporal.workflow import AgentRunWorkflow
 from app.infrastructure.temporal.worker import ActivityRegistry
-
 
 # ---------------------------------------------------------------------------
 # P0-1: finalize_run_integrity_activity registered
@@ -151,9 +150,7 @@ class TestAgentActivityConfiguration:
         old = mod._agent_provider_registry
         try:
             mod._agent_provider_registry = None
-            with pytest.raises(
-                RuntimeError, match="Provider registry not configured"
-            ):
+            with pytest.raises(RuntimeError, match="Provider registry not configured"):
                 # Directly call the check that happens at the top of the activity
                 if mod._agent_provider_registry is None:
                     msg = "Provider registry not configured. Call configure_agent_provider_registry first."
