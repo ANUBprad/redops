@@ -386,9 +386,7 @@ class AgentTrajectory:
             conversation_history=tuple(data.get("conversation_history", [])),
             started_at=datetime.fromisoformat(data["started_at"]),
             completed_at=(
-                datetime.fromisoformat(data["completed_at"])
-                if data.get("completed_at")
-                else None
+                datetime.fromisoformat(data["completed_at"]) if data.get("completed_at") else None
             ),
             error=data.get("error"),
             metadata=data.get("metadata", {}),
@@ -437,18 +435,12 @@ def compute_trajectory_metrics(steps: tuple[TrajectoryStep, ...]) -> TrajectoryM
         total_duration = int((last_ts - first_ts).total_seconds() * 1000)
 
     tool_error_count = sum(
-        1
-        for step in steps
-        if step.tool_call is not None and step.tool_call.is_error
+        1 for step in steps if step.tool_call is not None and step.tool_call.is_error
     )
     tool_error_rate = tool_error_count / tool_calls if tool_calls > 0 else 0.0
 
-    avg_llm = (
-        sum(llm_latencies) / len(llm_latencies) if llm_latencies else 0.0
-    )
-    avg_tool = (
-        sum(tool_latencies) / len(tool_latencies) if tool_latencies else 0.0
-    )
+    avg_llm = sum(llm_latencies) / len(llm_latencies) if llm_latencies else 0.0
+    avg_tool = sum(tool_latencies) / len(tool_latencies) if tool_latencies else 0.0
 
     return TrajectoryMetrics(
         total_steps=len(steps),

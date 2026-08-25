@@ -124,6 +124,3 @@ class ExecutionResult:
     def failed_stages(self) -> list[StageResult]:
         """Return stage results that failed."""
         return [sr for sr in self.stage_results if not sr.is_success]
-
-
-

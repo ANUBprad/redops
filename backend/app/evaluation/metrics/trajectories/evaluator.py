@@ -45,11 +45,7 @@ class TrajectoryEvaluationResult:
 
     @property
     def metric_scores(self) -> dict[str, float]:
-        return {
-            r.metric_name: r.normalized_score
-            for r in self.metric_results
-            if r.is_success
-        }
+        return {r.metric_name: r.normalized_score for r in self.metric_results if r.is_success}
 
     @property
     def failed_metrics(self) -> tuple[MetricResult, ...]:
@@ -146,9 +142,7 @@ class TrajectoryEvaluator:
 
         successful = [r for r in results if r.is_success]
         if successful:
-            overall = sum(r.normalized_score for r in successful) / len(
-                successful
-            )
+            overall = sum(r.normalized_score for r in successful) / len(successful)
         else:
             overall = 0.0
 
@@ -202,8 +196,4 @@ class TrajectoryEvaluator:
 
     def get_available_metrics(self) -> tuple[str, ...]:
         """Return names of available trajectory metrics."""
-        return tuple(
-            name
-            for name in TRAJECTORY_METRIC_NAMES
-            if self._engine.has_metric(name)
-        )
+        return tuple(name for name in TRAJECTORY_METRIC_NAMES if self._engine.has_metric(name))

@@ -89,9 +89,7 @@ class AgentRunWorkflow:
 
         await workflow.execute_activity(
             start_agent_run_activity,
-            StartAgentRunInput(
-                run_id=input.run_id, total_steps=input.max_steps
-            ),
+            StartAgentRunInput(run_id=input.run_id, total_steps=input.max_steps),
             start_to_close_timeout=activity_start_to_close,
             schedule_to_close_timeout=activity_schedule_to_close,
         )
@@ -112,20 +110,18 @@ class AgentRunWorkflow:
                 status="cancelled",
             )
 
-        loop_result: ExecuteAgentLoopResult = (
-            await workflow.execute_activity(
-                execute_agent_loop_activity,
-                ExecuteAgentLoopInput(
-                    run_id=input.run_id,
-                    provider_name=input.provider_name,
-                    model_id=input.model_id,
-                    system_prompt=input.system_prompt,
-                    tools=input.tools,
-                    max_steps=input.max_steps,
-                ),
-                start_to_close_timeout=timedelta(minutes=10),
-                schedule_to_close_timeout=timedelta(minutes=15),
-            )
+        loop_result: ExecuteAgentLoopResult = await workflow.execute_activity(
+            execute_agent_loop_activity,
+            ExecuteAgentLoopInput(
+                run_id=input.run_id,
+                provider_name=input.provider_name,
+                model_id=input.model_id,
+                system_prompt=input.system_prompt,
+                tools=input.tools,
+                max_steps=input.max_steps,
+            ),
+            start_to_close_timeout=timedelta(minutes=10),
+            schedule_to_close_timeout=timedelta(minutes=15),
         )
 
         if not loop_result.success:

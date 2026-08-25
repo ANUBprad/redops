@@ -65,9 +65,8 @@ class TrajectoryCompletenessMetric(Metric):
             if step.get("step_type") == "final_answer":
                 final_response = step.get("content", "")
                 break
-            if (
-                step.get("step_type") == "llm_call"
-                and not step.get("llm_call", {}).get("tool_calls_requested")
+            if step.get("step_type") == "llm_call" and not step.get("llm_call", {}).get(
+                "tool_calls_requested"
             ):
                 final_response = step.get("content", "")
                 break

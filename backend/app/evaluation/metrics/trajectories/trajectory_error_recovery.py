@@ -122,23 +122,17 @@ class TrajectoryErrorRecoveryMetric(Metric):
 
         recovery_rate = recovered_count / total_errors if total_errors > 0 else 0.0
         score += recovery_rate * 0.5
-        reasoning_parts.append(
-            f"recovered from {recovered_count}/{total_errors} errors"
-        )
+        reasoning_parts.append(f"recovered from {recovered_count}/{total_errors} errors")
 
         if post_error_steps > 0:
             score += 0.3
-            reasoning_parts.append(
-                f"continued execution after {post_error_steps} errors"
-            )
+            reasoning_parts.append(f"continued execution after {post_error_steps} errors")
         else:
             reasoning_parts.append("did not continue after errors")
 
         if recovery_attempts > 0:
             score += 0.2
-            reasoning_parts.append(
-                f"made {recovery_attempts} recovery attempts"
-            )
+            reasoning_parts.append(f"made {recovery_attempts} recovery attempts")
         else:
             reasoning_parts.append("no alternative approaches attempted")
 

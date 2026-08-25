@@ -80,18 +80,12 @@ class TrajectoryEfficiencyMetric(Metric):
             steps_per_tool = total_steps / tool_calls
             if steps_per_tool <= 2.0:
                 score += 0.4
-                reasoning_parts.append(
-                    f"good steps/tool ratio ({steps_per_tool:.1f})"
-                )
+                reasoning_parts.append(f"good steps/tool ratio ({steps_per_tool:.1f})")
             elif steps_per_tool <= 4.0:
                 score += 0.2
-                reasoning_parts.append(
-                    f"moderate steps/tool ratio ({steps_per_tool:.1f})"
-                )
+                reasoning_parts.append(f"moderate steps/tool ratio ({steps_per_tool:.1f})")
             else:
-                reasoning_parts.append(
-                    f"high steps/tool ratio ({steps_per_tool:.1f})"
-                )
+                reasoning_parts.append(f"high steps/tool ratio ({steps_per_tool:.1f})")
         else:
             score += 0.3
             reasoning_parts.append("no tool calls (text-only trajectory)")
@@ -99,9 +93,7 @@ class TrajectoryEfficiencyMetric(Metric):
         error_penalty = tool_error_rate * 0.3
         score += max(0.0, 0.3 - error_penalty)
         if tool_error_rate > 0:
-            reasoning_parts.append(
-                f"tool error rate {tool_error_rate:.1%}"
-            )
+            reasoning_parts.append(f"tool error rate {tool_error_rate:.1%}")
         else:
             reasoning_parts.append("no tool errors")
 

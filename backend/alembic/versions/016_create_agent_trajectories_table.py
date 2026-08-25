@@ -59,9 +59,7 @@ def upgrade() -> None:
         ),
     )
     op.create_index("ix_agent_trajectories_run_id", "agent_trajectories", ["run_id"])
-    op.create_index(
-        "ix_agent_trajectories_created_at", "agent_trajectories", ["created_at"]
-    )
+    op.create_index("ix_agent_trajectories_created_at", "agent_trajectories", ["created_at"])
 
 
 def downgrade() -> None:

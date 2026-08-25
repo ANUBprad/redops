@@ -88,20 +88,22 @@ class TrajectoryRecorder:
         self._steps.append(step)
         self._step_counter += 1
 
-        self._conversation_history.append({
-            "role": "assistant",
-            "content": response_content,
-            "tool_calls": [
-                {
-                    "id": tc.tool_call_id,
-                    "name": tc.tool_name,
-                    "arguments": tc.arguments,
-                }
-                for tc in tool_calls_requested
-            ]
-            if tool_calls_requested
-            else [],
-        })
+        self._conversation_history.append(
+            {
+                "role": "assistant",
+                "content": response_content,
+                "tool_calls": [
+                    {
+                        "id": tc.tool_call_id,
+                        "name": tc.tool_name,
+                        "arguments": tc.arguments,
+                    }
+                    for tc in tool_calls_requested
+                ]
+                if tool_calls_requested
+                else [],
+            }
+        )
 
         return step
 
@@ -135,11 +137,13 @@ class TrajectoryRecorder:
         self._steps.append(step)
         self._step_counter += 1
 
-        self._conversation_history.append({
-            "role": "tool",
-            "tool_call_id": tool_call_id,
-            "content": result,
-        })
+        self._conversation_history.append(
+            {
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "content": result,
+            }
+        )
 
         return step
 
@@ -194,10 +198,12 @@ class TrajectoryRecorder:
         self._steps.append(step)
         self._step_counter += 1
 
-        self._conversation_history.append({
-            "role": "assistant",
-            "content": content,
-        })
+        self._conversation_history.append(
+            {
+                "role": "assistant",
+                "content": content,
+            }
+        )
 
         return step
 
