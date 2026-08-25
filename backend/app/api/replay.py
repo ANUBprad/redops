@@ -16,7 +16,9 @@ from app.schemas.replay import (
     ItemComparisonResponse,
     ItemReportResponse,
     MetricExplanationResponse,
+    MetricRegressionResponse,
     MetricSummaryResponse,
+    RegressionResultResponse,
     ReplayReportResponse,
     ReplaySummaryResponse,
     TimelineEntryResponse,
@@ -175,6 +177,83 @@ async def delete_trace(
         if not deleted:
             raise HTTPException(status_code=404, detail=f"Trace not found: {run_id}")
     return {"status": "deleted", "run_id": run_id}
+
+
+@router.get(
+    "/regression/{baseline_run_id}/{current_run_id}",
+    response_model=RegressionResultResponse,
+)
+async def analyze_regression_endpoint(
+    baseline_run_id: str,
+    current_run_id: str,
+    service: ReplayService = Depends(get_replay_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> RegressionResultResponse:
+    """Analyze regression between a baseline and current run.
+
+    Compares metric results, checks fingerprint compatibility,
+    and produces a per-metric regression analysis with an overall verdict.
+    """
+    from app.evaluation.reliability.fingerprint import compute_fingerprint
+    from app.evaluation.regression import RegressionConfig, analyze_regression
+
+    baseline = await service.load_trace(baseline_run_id)
+    if baseline is None:
+        raise HTTPException(status_code=404, detail=f"Baseline trace not found: {baseline_run_id}")
+
+    current = await service.load_trace(current_run_id)
+    if current is None:
+        raise HTTPException(status_code=404, detail=f"Current trace not found: {current_run_id}")
+
+    baseline_fingerprint = compute_fingerprint(baseline.configuration)
+    current_fingerprint = compute_fingerprint(current.configuration)
+
+    baseline_metrics = {
+        name: agg.get("mean")
+        for name, agg in (baseline.aggregated_metrics or {}).items()
+        if isinstance(agg, dict)
+    }
+    current_metrics = {
+        name: agg.get("mean")
+        for name, agg in (current.aggregated_metrics or {}).items()
+        if isinstance(agg, dict)
+    }
+
+    result = analyze_regression(
+        baseline_run_id=baseline_run_id,
+        current_run_id=current_run_id,
+        baseline_fingerprint=baseline_fingerprint,
+        current_fingerprint=current_fingerprint,
+        baseline_metrics=baseline_metrics,
+        current_metrics=current_metrics,
+        config=RegressionConfig(),
+    )
+
+    return RegressionResultResponse(
+        baseline_run_id=result.baseline_run_id,
+        current_run_id=result.current_run_id,
+        baseline_fingerprint=result.baseline_fingerprint,
+        current_fingerprint=result.current_fingerprint,
+        fingerprints_compatible=result.fingerprints_compatible,
+        metric_comparisons=[
+            MetricRegressionResponse(
+                metric_name=mc.metric_name,
+                baseline_score=mc.baseline_score,
+                current_score=mc.current_score,
+                delta=mc.delta,
+                direction=mc.direction.value,
+                tolerance=mc.tolerance,
+                status=mc.status.value,
+                reasoning=mc.reasoning,
+            )
+            for mc in result.metric_comparisons
+        ],
+        verdict=result.verdict.value,
+        regression_count=result.regression_count,
+        error_count=result.error_count,
+        not_comparable_count=result.not_comparable_count,
+        reasoning=result.reasoning,
+    )
 
 
 def _summary_to_response(summary: ReplaySummary) -> ReplaySummaryResponse:

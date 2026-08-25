@@ -583,3 +583,112 @@ export interface CreateAgentRunPayload {
   project_id?: string;
   tags?: string[];
 }
+
+// ─── Replay Types ─────────────────────────────────────────────
+
+export interface MetricExplanation {
+  metric_name: string;
+  score: number;
+  normalized_score: number;
+  confidence: number;
+  reasoning: string;
+  explanation: string;
+  version: string;
+  judge_model: string;
+}
+
+export interface ItemReport {
+  item_index: number;
+  prompt_preview: string;
+  provider_response_preview: string;
+  provider_error: string | null;
+  metric_explanations: MetricExplanation[];
+  total_latency_ms: number;
+  total_cost_usd: number;
+  error: string | null;
+}
+
+export interface MetricSummary {
+  metric_name: string;
+  mean: number;
+  min_score: number;
+  max_score: number;
+  count: number;
+}
+
+export interface ReplaySummary {
+  run_id: string;
+  evaluation_name: string;
+  provider: string;
+  model: string;
+  status: string;
+  total_items: number;
+  successful_items: number;
+  failed_items: number;
+  total_cost_usd: number;
+  total_tokens_input: number;
+  total_tokens_output: number;
+  total_latency_ms: number;
+  metric_summaries: Record<string, MetricSummary>;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface ReplayReport {
+  summary: ReplaySummary;
+  item_reports: ItemReport[];
+  timeline: TimelineEvent[];
+  configuration: Record<string, unknown>;
+}
+
+export interface ItemComparison {
+  item_index: number;
+  metric_deltas: Record<string, { baseline: number; comparison: number }>;
+  latency_delta: number;
+  cost_delta: number;
+}
+
+export interface TraceComparison {
+  baseline_run_id: string;
+  comparison_run_id: string;
+  baseline_provider: string;
+  comparison_provider: string;
+  baseline_model: string;
+  comparison_model: string;
+  metric_deltas: Record<string, { baseline_mean: number; comparison_mean: number; delta: number; delta_pct: number }>;
+  cost_delta: number;
+  latency_delta: number;
+  item_comparisons: ItemComparison[];
+  winner: string;
+  confidence: number;
+}
+
+// ─── Regression Types ─────────────────────────────────────────
+
+export type RegressionVerdict = "pass" | "fail" | "not_comparable" | "error";
+export type MetricRegressionStatus = "pass" | "regression" | "improvement" | "no_change" | "not_comparable" | "added" | "removed" | "error";
+
+export interface MetricRegression {
+  metric_name: string;
+  baseline_score: number | null;
+  current_score: number | null;
+  delta: number;
+  direction: string;
+  tolerance: number;
+  status: MetricRegressionStatus;
+  reasoning: string;
+}
+
+export interface RegressionResult {
+  baseline_run_id: string;
+  current_run_id: string;
+  baseline_fingerprint: string;
+  current_fingerprint: string;
+  fingerprints_compatible: boolean;
+  metric_comparisons: MetricRegression[];
+  verdict: RegressionVerdict;
+  regression_count: number;
+  error_count: number;
+  not_comparable_count: number;
+  reasoning: string;
+}

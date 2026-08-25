@@ -140,6 +140,14 @@ export const api = {
     return new EventSource(url);
   },
 
+  // Replay
+  getTrace: (runId: UUID) => request<unknown>(`/replay/traces/${runId}`),
+  getReplayReport: (runId: UUID) => request<unknown>(`/replay/traces/${runId}/report`),
+  compareRuns: (baselineRunId: UUID, comparisonRunId: UUID) =>
+    request<unknown>(`/replay/compare/${baselineRunId}/${comparisonRunId}`),
+  analyzeRegression: (baselineRunId: UUID, currentRunId: UUID) =>
+    request<unknown>(`/replay/regression/${baselineRunId}/${currentRunId}`),
+
   // Metrics
   listMetrics: (category?: string) => {
     const query = category ? `?category=${encodeURIComponent(category)}` : "";
