@@ -9,6 +9,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from app.agents.temporal.activities import (
+    configure_agent_provider_registry,
+    configure_agent_session_factory,
+)
 from app.evaluation.metrics.engine import MetricEngine
 from app.evaluation.temporal.activities import (
     configure_cost_calculator,
@@ -63,6 +67,7 @@ class InfrastructureServices:
         """Register database lifecycle services and health."""
         engine = self._container.resolve(DatabaseEngine)
         configure_session_factory(engine.session_factory)
+        configure_agent_session_factory(engine.session_factory)
         self._service_registry.register("database", engine)
         self._health_registry.register(DatabaseHealthContributor(engine))
 
@@ -81,6 +86,9 @@ class InfrastructureServices:
         configure_provider_registry(provider_registry)
         configure_metric_engine(metric_engine)
         configure_cost_calculator(cost_calculator)
+
+        agent_provider_registry = self._container.resolve(ProviderRegistry)
+        configure_agent_provider_registry(agent_provider_registry)
 
     def _register_event_bus_services(self) -> None:
         """Register event bus lifecycle services and health."""
