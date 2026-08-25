@@ -15,6 +15,8 @@ from datetime import timedelta
 from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
+    from temporalio.common import RetryPolicy
+
     from app.agents.temporal.activities import (
         CancelAgentRunInput,
         ExecuteAgentLoopInput,
@@ -80,11 +82,30 @@ class AgentRunWorkflow:
         activity_start_to_close = timedelta(seconds=30)
         activity_schedule_to_close = timedelta(minutes=5)
 
+        # Retry policies for agent activity categories.
+        lifecycle_retry = RetryPolicy(
+            maximum_attempts=3,
+            initial_interval=timedelta(seconds=1),
+            backoff_coefficient=2.0,
+            maximum_interval=timedelta(seconds=10),
+            non_retryable_error_types=["ValueError", "KeyError"],
+        )
+        # The agent loop is long-running and has internal cancellation
+        # monitoring. Retry only for transient infrastructure errors.
+        agent_loop_retry = RetryPolicy(
+            maximum_attempts=2,
+            initial_interval=timedelta(seconds=5),
+            backoff_coefficient=2.0,
+            maximum_interval=timedelta(seconds=30),
+            non_retryable_error_types=["ValueError", "KeyError"],
+        )
+
         await workflow.execute_activity(
             queue_agent_run_activity,
             RunIdInput(run_id=input.run_id),
             start_to_close_timeout=activity_start_to_close,
             schedule_to_close_timeout=activity_schedule_to_close,
+            retry_policy=lifecycle_retry,
         )
 
         await workflow.execute_activity(
@@ -92,6 +113,7 @@ class AgentRunWorkflow:
             StartAgentRunInput(run_id=input.run_id, total_steps=input.max_steps),
             start_to_close_timeout=activity_start_to_close,
             schedule_to_close_timeout=activity_schedule_to_close,
+            retry_policy=lifecycle_retry,
         )
 
         if self._cancel_requested:
@@ -104,6 +126,7 @@ class AgentRunWorkflow:
                 ),
                 start_to_close_timeout=activity_start_to_close,
                 schedule_to_close_timeout=activity_schedule_to_close,
+                retry_policy=lifecycle_retry,
             )
             return AgentRunWorkflowResult(
                 run_id=input.run_id,
@@ -122,6 +145,7 @@ class AgentRunWorkflow:
             ),
             start_to_close_timeout=timedelta(minutes=10),
             schedule_to_close_timeout=timedelta(minutes=15),
+            retry_policy=agent_loop_retry,
         )
 
         if not loop_result.success:
@@ -134,6 +158,7 @@ class AgentRunWorkflow:
                 ),
                 start_to_close_timeout=activity_start_to_close,
                 schedule_to_close_timeout=activity_schedule_to_close,
+                retry_policy=lifecycle_retry,
             )
             return AgentRunWorkflowResult(
                 run_id=input.run_id,

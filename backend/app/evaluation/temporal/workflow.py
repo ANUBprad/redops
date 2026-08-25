@@ -16,6 +16,8 @@ from typing import Any
 from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
+    from temporalio.common import RetryPolicy
+
     from app.evaluation.temporal.activities import (
         CancelRunInput,
         ExecuteItemInput,
@@ -173,6 +175,36 @@ class EvaluationRunWorkflow:
         activity_start_to_close = timedelta(seconds=30)
         activity_schedule_to_close = timedelta(minutes=5)
 
+        # Retry policies for different activity categories.
+        # Lifecycle activities (queue/start/complete/fail/cancel) are
+        # idempotent state transitions — safe to retry for transient DB errors.
+        lifecycle_retry = RetryPolicy(
+            maximum_attempts=3,
+            initial_interval=timedelta(seconds=1),
+            backoff_coefficient=2.0,
+            maximum_interval=timedelta(seconds=10),
+            non_retryable_error_types=["ValueError", "KeyError"],
+        )
+        # Item execution retries handle transient provider failures (rate
+        # limits, network errors) while the activity itself has internal
+        # idempotency checks.
+        item_retry = RetryPolicy(
+            maximum_attempts=3,
+            initial_interval=timedelta(seconds=2),
+            backoff_coefficient=2.0,
+            maximum_interval=timedelta(seconds=30),
+            non_retryable_error_types=["ValueError", "KeyError"],
+        )
+        # Persistence and integrity activities handle transient DB and I/O
+        # errors; non-retryable for invalid input.
+        persist_retry = RetryPolicy(
+            maximum_attempts=3,
+            initial_interval=timedelta(seconds=1),
+            backoff_coefficient=2.0,
+            maximum_interval=timedelta(seconds=15),
+            non_retryable_error_types=["ValueError", "KeyError"],
+        )
+
         # Trace: record run start
         started_at = datetime.now(UTC).isoformat()
         item_traces: list[dict[str, Any]] = []
@@ -195,6 +227,7 @@ class EvaluationRunWorkflow:
             RunIdInput(run_id=input.run_id),
             start_to_close_timeout=activity_start_to_close,
             schedule_to_close_timeout=activity_schedule_to_close,
+            retry_policy=lifecycle_retry,
         )
 
         await workflow.execute_activity(
@@ -202,6 +235,7 @@ class EvaluationRunWorkflow:
             StartRunInput(run_id=input.run_id, total_items=input.total_items),
             start_to_close_timeout=activity_start_to_close,
             schedule_to_close_timeout=activity_schedule_to_close,
+            retry_policy=lifecycle_retry,
         )
 
         items_completed = 0
@@ -218,6 +252,7 @@ class EvaluationRunWorkflow:
                     ),
                     start_to_close_timeout=activity_start_to_close,
                     schedule_to_close_timeout=activity_schedule_to_close,
+                    retry_policy=lifecycle_retry,
                 )
                 return EvaluationRunWorkflowResult(
                     run_id=input.run_id,
@@ -251,6 +286,7 @@ class EvaluationRunWorkflow:
                     ),
                     start_to_close_timeout=timedelta(seconds=120),
                     schedule_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=item_retry,
                 )
 
                 items_completed += 1
@@ -274,6 +310,7 @@ class EvaluationRunWorkflow:
                         ),
                         start_to_close_timeout=activity_start_to_close,
                         schedule_to_close_timeout=activity_schedule_to_close,
+                        retry_policy=persist_retry,
                     )
 
                 await workflow.execute_activity(
@@ -289,6 +326,7 @@ class EvaluationRunWorkflow:
                     ),
                     start_to_close_timeout=activity_start_to_close,
                     schedule_to_close_timeout=activity_schedule_to_close,
+                    retry_policy=lifecycle_retry,
                 )
 
             except Exception:
@@ -306,6 +344,7 @@ class EvaluationRunWorkflow:
                     ),
                     start_to_close_timeout=activity_start_to_close,
                     schedule_to_close_timeout=activity_schedule_to_close,
+                    retry_policy=lifecycle_retry,
                 )
 
         # Build trace data from accumulated item traces
@@ -342,6 +381,7 @@ class EvaluationRunWorkflow:
                 ),
                 start_to_close_timeout=activity_start_to_close,
                 schedule_to_close_timeout=activity_schedule_to_close,
+                retry_policy=lifecycle_retry,
             )
 
             # Finalize integrity with error verdict
@@ -355,6 +395,7 @@ class EvaluationRunWorkflow:
                 ),
                 start_to_close_timeout=activity_start_to_close,
                 schedule_to_close_timeout=activity_schedule_to_close,
+                retry_policy=persist_retry,
             )
 
             return EvaluationRunWorkflowResult(
@@ -373,6 +414,7 @@ class EvaluationRunWorkflow:
             RunIdInput(run_id=input.run_id),
             start_to_close_timeout=activity_start_to_close,
             schedule_to_close_timeout=activity_schedule_to_close,
+            retry_policy=lifecycle_retry,
         )
 
         # Finalize integrity: evaluate thresholds, capture provenance, persist
@@ -386,6 +428,7 @@ class EvaluationRunWorkflow:
             ),
             start_to_close_timeout=activity_start_to_close,
             schedule_to_close_timeout=activity_schedule_to_close,
+            retry_policy=persist_retry,
         )
 
         return EvaluationRunWorkflowResult(
