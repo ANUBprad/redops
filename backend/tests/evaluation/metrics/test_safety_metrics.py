@@ -6,9 +6,7 @@ are recognized as LLM judge metrics.
 
 from __future__ import annotations
 
-import pytest
-
-from app.evaluation.metrics.domain import MetricCategory, MetricInput, MetricScale
+from app.evaluation.metrics.domain import MetricCategory, MetricScale
 from app.evaluation.metrics.implementations import ALL_METRICS
 from app.evaluation.metrics.implementations.jailbreak_metric import JailbreakMetric
 from app.evaluation.metrics.implementations.llm_judge_base import LLMJudgeMetric

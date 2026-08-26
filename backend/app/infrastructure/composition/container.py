@@ -37,8 +37,6 @@ from app.evaluation.temporal.activities import (
     update_progress_activity,
 )
 from app.evaluation.temporal.workflow import EvaluationRunWorkflow
-from app.redteam.temporal.activities import red_team_campaign_activity
-from app.redteam.temporal.workflow import RedTeamWorkflow
 from app.infrastructure.config.database import DatabaseConfiguration
 from app.infrastructure.config.logging import LoggingConfiguration
 from app.infrastructure.config.redis import RedisConfiguration
@@ -69,6 +67,8 @@ from app.providers.cost.calculator import CostCalculator
 from app.providers.cost.defaults import build_default_cost_calculator
 from app.providers.openai.provider import OpenAIProvider
 from app.providers.registry.registry import ProviderRegistry
+from app.redteam.temporal.activities import red_team_campaign_activity
+from app.redteam.temporal.workflow import RedTeamWorkflow
 
 if TYPE_CHECKING:
     from app.core.config import AppConfig

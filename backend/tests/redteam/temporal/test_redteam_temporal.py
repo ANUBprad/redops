@@ -20,7 +20,6 @@ from app.redteam.temporal.activities import (
 )
 from app.redteam.temporal.workflow import RedTeamWorkflow
 
-
 # ---------------------------------------------------------------------------
 # Activity registration
 # ---------------------------------------------------------------------------

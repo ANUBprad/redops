@@ -88,8 +88,10 @@ __all__ = [
     "GroundednessMetric",
     "HallucinationMetric",
     "InstructionFollowingMetric",
+    "JailbreakMetric",
     "JsonValidityMetric",
     "LatencyMetric",
+    "PromptInjectionMetric",
     "ReasoningQualityMetric",
     "RegexValidationMetric",
     "ResponseLengthMetric",
@@ -99,6 +101,4 @@ __all__ = [
     "TokenUsageMetric",
     "ToolCallCorrectnessMetric",
     "ToxicityMetric",
-    "PromptInjectionMetric",
-    "JailbreakMetric",
 ]

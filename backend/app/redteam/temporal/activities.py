@@ -7,13 +7,12 @@ configured during worker startup.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from temporalio import activity
 
 from app.redteam.domain.campaign import AdaptiveCampaign, CampaignBudget, CampaignResult
-from app.redteam.domain.campaign_enums import MutationPhase
 from app.redteam.domain.enums import AttackCategory
 from app.redteam.engine.campaign_engine import AdaptiveCampaignEngine
 
@@ -155,9 +154,7 @@ async def red_team_campaign_activity(
 
         categories: tuple[AttackCategory, ...] = ()
         if input.attack_categories:
-            categories = tuple(
-                AttackCategory(c) for c in input.attack_categories
-            )
+            categories = tuple(AttackCategory(c) for c in input.attack_categories)
 
         budget = CampaignBudget(
             max_rounds=input.max_rounds,

@@ -36,8 +36,6 @@ from app.evaluation.temporal.activities import (
 )
 from app.evaluation.temporal.workflow import EvaluationRunWorkflow
 from app.infrastructure.temporal.worker import ActivityRegistry
-from app.redteam.temporal.activities import red_team_campaign_activity
-from app.redteam.temporal.workflow import RedTeamWorkflow
 
 # ---------------------------------------------------------------------------
 # P0-1: finalize_run_integrity_activity registered

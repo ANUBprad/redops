@@ -20,7 +20,6 @@ from app.evaluation.temporal.activities import (
     configure_provider_registry,
     configure_session_factory,
 )
-from app.redteam.temporal.activities import configure_redteam_provider_registry
 from app.infrastructure.database.engine import DatabaseEngine
 from app.infrastructure.event_bus.redis_event_bus import RedisStreamsEventBus
 from app.infrastructure.health.database import DatabaseHealthContributor
@@ -30,6 +29,7 @@ from app.infrastructure.temporal.client import TemporalClientFactory
 from app.infrastructure.temporal.lifecycle import TemporalWorkerLifecycle
 from app.providers.cost.calculator import CostCalculator
 from app.providers.registry.registry import ProviderRegistry
+from app.redteam.temporal.activities import configure_redteam_provider_registry
 
 if TYPE_CHECKING:
     from app.kernel.container.di_container import DIContainer

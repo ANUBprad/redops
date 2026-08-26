@@ -168,7 +168,7 @@ class CampaignCompleted(DomainEvent):
     state: str = ""
     total_rounds: int = 0
     violation_count: int = 0
-    cost_summary: dict = field(default_factory=dict)
+    cost_summary: dict[str, object] = field(default_factory=dict)
 
     @property
     def event_type(self) -> str:
