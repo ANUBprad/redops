@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -110,6 +110,20 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
         model.version = run.version
         model.started_at = run.started_at
         model.completed_at = run.completed_at
+
+    async def persist_campaign_results(
+        self,
+        run_id: UUIDv7,
+        campaign_results: dict[str, Any],
+    ) -> None:
+        """Persist campaign results JSON to the attack run."""
+        stmt = select(AttackRunModel).where(AttackRunModel.id == str(run_id))
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if not model:
+            return
+        model.campaign_results = campaign_results
+        model.updated_at = datetime.now(UTC)
 
     async def find_by_date_range(
         self,
