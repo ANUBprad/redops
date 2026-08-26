@@ -22,6 +22,8 @@ from app.agents.temporal.activities import (
     update_agent_run_progress_activity,
 )
 from app.agents.temporal.workflow import AgentRunWorkflow
+from app.analytics.temporal.activities import generate_export_activity
+from app.analytics.temporal.workflow import ExportReportWorkflow
 from app.evaluation.metrics.engine import MetricEngine
 from app.evaluation.metrics.implementations import ALL_METRICS
 from app.evaluation.temporal.activities import (
@@ -227,10 +229,13 @@ class InfrastructureContainer:
 
         activity_registry.register(red_team_campaign_activity)
 
+        activity_registry.register(generate_export_activity)
+
         workflow_registry = WorkflowRegistry()
         workflow_registry.register(EvaluationRunWorkflow)
         workflow_registry.register(AgentRunWorkflow)
         workflow_registry.register(RedTeamWorkflow)
+        workflow_registry.register(ExportReportWorkflow)
 
         self._container.register_singleton(
             ActivityRegistry,

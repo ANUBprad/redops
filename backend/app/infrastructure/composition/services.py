@@ -13,6 +13,9 @@ from app.agents.temporal.activities import (
     configure_agent_provider_registry,
     configure_agent_session_factory,
 )
+from app.analytics.temporal.activities import (
+    configure_export_session_factory,
+)
 from app.evaluation.metrics.engine import MetricEngine
 from app.evaluation.temporal.activities import (
     configure_cost_calculator,
@@ -249,6 +252,7 @@ class InfrastructureServices:
         engine = self._container.resolve(DatabaseEngine)
         configure_session_factory(engine.session_factory)
         configure_agent_session_factory(engine.session_factory)
+        configure_export_session_factory(engine.session_factory)
         self._service_registry.register("database", engine)
         self._health_registry.register(DatabaseHealthContributor(engine))
 

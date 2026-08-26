@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,7 +39,7 @@ from app.analytics.schemas.responses import (
     TrendPointResponse,
     TrendSeriesResponse,
 )
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session
+from app.core.dependencies import CurrentUser, get_current_user, get_db_session, get_temporal_client
 from app.infrastructure.database.repositories.attack_run_repository import (
     SqlAlchemyAttackRunRepository,
 )
@@ -613,3 +615,51 @@ async def get_pass_fail_summary(
         return await service.get_summary(run_id=run_id, thresholds=parsed_thresholds)
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
+
+
+@analytics_router.post("/export")
+async def start_export_workflow(
+    report_type: str = Query(default="executive_summary"),
+    project_id: str | None = Query(default=None),
+    evaluation_id: str | None = Query(default=None),
+    run_id: str | None = Query(default=None),
+    days: int = Query(default=30, ge=1, le=365),
+    export_format: str = Query(default="json", pattern="^(json|csv|pdf)$"),
+    current_user: CurrentUser = Depends(get_current_user),
+    temporal_client: Any = Depends(get_temporal_client),
+) -> dict:
+    """Start an async export workflow via Temporal.
+
+    For large reports that may exceed HTTP timeouts, this endpoint
+    starts a Temporal workflow and returns the workflow ID for polling.
+    """
+    from uuid import uuid4
+
+    from app.analytics.temporal.activities import GenerateExportInput
+    from app.analytics.temporal.workflow import ExportReportWorkflow
+
+    workflow_id = f"export-{uuid4().hex[:16]}"
+    input_data = GenerateExportInput(
+        report_type=report_type,
+        project_id=project_id or "",
+        evaluation_id=evaluation_id or "",
+        run_id=run_id or "",
+        days=days,
+        export_format=export_format,
+        generated_by=current_user.user_id,
+    )
+
+    handle = await temporal_client.start_workflow(
+        ExportReportWorkflow.run,
+        input_data,
+        id=workflow_id,
+        task_queue="redops-temporal",
+    )
+
+    return {
+        "workflow_id": workflow_id,
+        "workflow_run_id": handle.result_run_id,
+        "status": "started",
+        "report_type": report_type,
+        "export_format": export_format,
+    }
