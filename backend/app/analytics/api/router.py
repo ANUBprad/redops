@@ -173,6 +173,7 @@ def _latency_to_response(latency: LatencyAnalysis) -> LatencyAnalysisResponse:
     return LatencyAnalysisResponse(
         average_latency_ms=latency.average_latency_ms,
         median_latency_ms=latency.median_latency_ms,
+        p50_latency_ms=latency.p50_latency_ms,
         p95_latency_ms=latency.p95_latency_ms,
         p99_latency_ms=latency.p99_latency_ms,
         min_latency_ms=latency.min_latency_ms,
@@ -535,3 +536,80 @@ async def generate_report(
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
     return _report_to_response(report)
+
+
+@analytics_router.get("/experiment-comparison")
+async def get_experiment_comparison(
+    experiment_id: str = Query(..., description="Experiment ID"),
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> ComparisonResultResponse:
+    """Compare all runs within an experiment against the baseline."""
+    _, run_repo, metric_repo, _ = _get_repositories(session)
+    from app.analytics.services.experiment_analytics import ExperimentComparisonService
+    from app.infrastructure.database.repositories.experiment_repository import (
+        SqlAlchemyExperimentRepository,
+    )
+
+    experiment_repo = SqlAlchemyExperimentRepository(session)
+    service = ExperimentComparisonService(
+        experiment_repo=experiment_repo,
+        run_repo=run_repo,
+        metric_repo=metric_repo,
+    )
+    try:
+        result = await service.compare_experiment_runs(experiment_id)
+    except BaseError as exc:
+        raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
+    return _comparison_to_response(result)
+
+
+@analytics_router.get("/metric-distribution")
+async def get_metric_distribution(
+    run_id: str | None = Query(default=None, description="Run ID"),
+    metric_name: str | None = Query(default=None, description="Metric name"),
+    bins: int = Query(default=10, ge=2, le=50, description="Number of histogram bins"),
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """Get metric score distribution as histogram bins."""
+    _, _, metric_repo, _ = _get_repositories(session)
+    from app.analytics.services.experiment_analytics import MetricDistributionService
+
+    service = MetricDistributionService(metric_repo=metric_repo)
+    try:
+        return await service.get_distribution(run_id=run_id, metric_name=metric_name, bins=bins)
+    except BaseError as exc:
+        raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
+
+
+@analytics_router.get("/pass-fail-summary")
+async def get_pass_fail_summary(
+    run_id: str = Query(..., description="Run ID"),
+    thresholds: str = Query(
+        default="",
+        description="Comma-separated metric:threshold pairs (e.g. hallucination:0.3,toxicity:0.1)",
+    ),
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """Get pass/fail summary for a run against thresholds."""
+    _, _, metric_repo, _ = _get_repositories(session)
+    from app.analytics.services.experiment_analytics import PassFailSummaryService
+
+    service = PassFailSummaryService(metric_repo=metric_repo)
+
+    parsed_thresholds: dict[str, float] = {}
+    if thresholds:
+        for pair in thresholds.split(","):
+            if ":" in pair:
+                name, val = pair.split(":", 1)
+                try:
+                    parsed_thresholds[name.strip()] = float(val.strip())
+                except ValueError:
+                    pass
+
+    try:
+        return await service.get_summary(run_id=run_id, thresholds=parsed_thresholds)
+    except BaseError as exc:
+        raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc

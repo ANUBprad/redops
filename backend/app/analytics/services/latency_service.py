@@ -52,6 +52,7 @@ class LatencyService:
 
         avg_latency = sum(sorted_lat) / count
         median_latency = sorted_lat[count // 2]
+        p50_idx = min(int(count * 0.50), count - 1)
         p95_idx = min(int(count * 0.95), count - 1)
         p99_idx = min(int(count * 0.99), count - 1)
 
@@ -61,6 +62,7 @@ class LatencyService:
         return LatencyAnalysis(
             average_latency_ms=round(avg_latency, 1),
             median_latency_ms=round(median_latency, 1),
+            p50_latency_ms=round(sorted_lat[p50_idx], 1),
             p95_latency_ms=round(sorted_lat[p95_idx], 1),
             p99_latency_ms=round(sorted_lat[p99_idx], 1),
             min_latency_ms=round(sorted_lat[0], 1),
