@@ -7,9 +7,11 @@ from app.analytics.api.router import analytics_router
 from app.api.agent import agent_router
 from app.api.evaluation import evaluation_router
 from app.api.evaluation_run import run_router
+from app.api.experiment import experiment_router
 from app.api.health import health_router
 from app.api.metrics import metrics_router
 from app.api.observability import observability_router
+from app.api.profile import profile_router
 from app.api.redteam import redteam_router
 from app.api.replay import router as replay_router
 from app.apikeys.api import apikeys_router
@@ -29,6 +31,8 @@ api_router.include_router(apikeys_router)
 api_router.include_router(schedules_router)
 api_router.include_router(evaluation_router)
 api_router.include_router(run_router)
+api_router.include_router(experiment_router)
+api_router.include_router(profile_router)
 api_router.include_router(metrics_router)
 api_router.include_router(agent_router)
 api_router.include_router(agent_run_router)
