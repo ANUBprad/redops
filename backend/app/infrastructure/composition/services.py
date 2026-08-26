@@ -177,8 +177,27 @@ def _subscribe_event_handlers(event_bus: RedisStreamsEventBus, di_container: DIC
     audit_repo = SqlAlchemyAuditLogRepository(session_factory())
     audit_service = AuditService(audit_repo)
     audit_subscriber = AuditEventSubscriber(audit_service)
-    event_bus.subscribe("evaluation.*", audit_subscriber.handle, group="audit")
-    event_bus.subscribe("safety.*", audit_subscriber.handle, group="audit")
+    for event_type in (
+        "evaluation.created",
+        "evaluation.queued",
+        "evaluation.started",
+        "evaluation.completed",
+        "evaluation.cancelled",
+        "evaluation.failed",
+        "evaluation.timed_out",
+        "evaluation.item.completed",
+        "evaluation.item.failed",
+        "evaluation.metric.computed",
+        "evaluation.checkpoint.created",
+        "safety.attack_run.created",
+        "safety.attack_run.started",
+        "safety.attack_run.completed",
+        "safety.attack_run.failed",
+        "safety.attack_run.cancelled",
+        "safety.finding.detected",
+        "safety.campaign.completed",
+    ):
+        event_bus.subscribe(event_type, audit_subscriber.handle, group="audit")
 
     notif_repo = SqlAlchemyNotificationRepository(session_factory())
     notif_service = NotificationService(notif_repo)
