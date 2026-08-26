@@ -37,6 +37,8 @@ from app.evaluation.temporal.activities import (
     update_progress_activity,
 )
 from app.evaluation.temporal.workflow import EvaluationRunWorkflow
+from app.redteam.temporal.activities import red_team_campaign_activity
+from app.redteam.temporal.workflow import RedTeamWorkflow
 from app.infrastructure.config.database import DatabaseConfiguration
 from app.infrastructure.config.logging import LoggingConfiguration
 from app.infrastructure.config.redis import RedisConfiguration
@@ -223,9 +225,12 @@ class InfrastructureContainer:
         activity_registry.register(cancel_agent_run_activity)
         activity_registry.register(execute_agent_loop_activity)
 
+        activity_registry.register(red_team_campaign_activity)
+
         workflow_registry = WorkflowRegistry()
         workflow_registry.register(EvaluationRunWorkflow)
         workflow_registry.register(AgentRunWorkflow)
+        workflow_registry.register(RedTeamWorkflow)
 
         self._container.register_singleton(
             ActivityRegistry,

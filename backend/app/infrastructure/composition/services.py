@@ -20,6 +20,7 @@ from app.evaluation.temporal.activities import (
     configure_provider_registry,
     configure_session_factory,
 )
+from app.redteam.temporal.activities import configure_redteam_provider_registry
 from app.infrastructure.database.engine import DatabaseEngine
 from app.infrastructure.event_bus.redis_event_bus import RedisStreamsEventBus
 from app.infrastructure.health.database import DatabaseHealthContributor
@@ -86,6 +87,8 @@ class InfrastructureServices:
         configure_provider_registry(provider_registry)
         configure_metric_engine(metric_engine)
         configure_cost_calculator(cost_calculator)
+
+        configure_redteam_provider_registry(provider_registry)
 
         agent_provider_registry = self._container.resolve(ProviderRegistry)
         configure_agent_provider_registry(agent_provider_registry)
