@@ -790,7 +790,14 @@ async def finalize_run_integrity_activity(
                 "requirements_hash": env_snapshot.requirements_hash,
                 "platform_info": env_snapshot.platform_info,
             },
-            "metric_versions": dict.fromkeys(input.metric_names, "1.0.0"),
+            "metric_versions": {
+                name: (
+                    _metric_engine._definitions[name].version
+                    if _metric_engine is not None and name in _metric_engine._definitions
+                    else "1.0.0"
+                )
+                for name in input.metric_names
+            },
             "threshold_evaluations": threshold_evaluations,
         }
 
