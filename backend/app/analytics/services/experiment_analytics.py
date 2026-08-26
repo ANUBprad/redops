@@ -59,11 +59,11 @@ class ExperimentComparisonService:
         from app.evaluation.domain.contracts.evaluation_contracts import RunQuery
 
         run_query = RunQuery(page_size=1000)
-        all_runs = await self._run_repo.list(run_query)
+        paginated = await self._run_repo.list(run_query)
 
         # Filter runs belonging to this experiment
         experiment_runs = [
-            r for r in all_runs if getattr(r, "experiment_id", None) == experiment_id
+            r for r in paginated.items if getattr(r, "experiment_id", None) == experiment_id
         ]
 
         if not experiment_runs:
@@ -100,7 +100,7 @@ class ExperimentComparisonService:
             ComparisonMetric(
                 metric_name="Cost",
                 values=tuple(cost_values),
-                best_entity_id=min(experiment_runs, key=lambda r: r.cost).id
+                best_entity_id=str(min(experiment_runs, key=lambda r: r.cost).id)
                 if experiment_runs
                 else "",
             )
@@ -120,11 +120,11 @@ class ExperimentComparisonService:
             ComparisonMetric(
                 metric_name="Latency",
                 values=tuple(latency_values),
-                best_entity_id=min(
+                best_entity_id=str(min(
                     (r for r in experiment_runs if r.average_latency_ms > 0),
                     key=lambda r: r.average_latency_ms,
                     default=experiment_runs[0],
-                ).id
+                ).id)
                 if experiment_runs
                 else "",
             )
