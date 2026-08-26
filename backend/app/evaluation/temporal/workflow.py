@@ -10,7 +10,7 @@ handlers, ensuring no duplicate business logic.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
 from temporalio import workflow
@@ -206,7 +206,7 @@ class EvaluationRunWorkflow:
         )
 
         # Trace: record run start
-        started_at = datetime.now(UTC).isoformat()
+        started_at = workflow.now().isoformat()
         item_traces: list[dict[str, Any]] = []
         total_cost_usd = 0.0
         total_tokens_input = 0
@@ -348,7 +348,7 @@ class EvaluationRunWorkflow:
                 )
 
         # Build trace data from accumulated item traces
-        completed_at = datetime.now(UTC).isoformat()
+        completed_at = workflow.now().isoformat()
         trace_data: dict[str, Any] = {
             "run_id": input.run_id,
             "evaluation_name": "",

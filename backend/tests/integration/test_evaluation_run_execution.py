@@ -221,14 +221,15 @@ async def _run_workflow(
         task_queue=task_queue,
         workflows=[EvaluationRunWorkflow],
         activities=[
-            activity_module.queue_run_activity,
-            activity_module.start_run_activity,
-            activity_module.execute_item_activity,
-            activity_module.persist_metric_results_activity,
-            activity_module.update_progress_activity,
-            activity_module.complete_run_activity,
-            activity_module.fail_run_activity,
-            activity_module.cancel_run_activity,
+              activity_module.queue_run_activity,
+              activity_module.start_run_activity,
+              activity_module.execute_item_activity,
+              activity_module.persist_metric_results_activity,
+              activity_module.update_progress_activity,
+              activity_module.complete_run_activity,
+              activity_module.fail_run_activity,
+              activity_module.cancel_run_activity,
+              activity_module.finalize_run_integrity_activity,
         ],
     ):
         result = await client.execute_workflow(
