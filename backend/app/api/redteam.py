@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, timedelta, datetime
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.core.dependencies import get_current_user, get_db_session
+from app.core.dependencies import get_current_user, get_db_session, get_temporal_client
 from app.infrastructure.database.repositories.attack_definition_repository import (
     SqlAlchemyAttackDefinitionRepository,
 )
@@ -48,6 +48,8 @@ from app.redteam.application.handlers import (
     UpdateAttackDefinitionHandler,
 )
 from app.redteam.domain.entities import AttackDefinition, AttackRun
+from app.redteam.temporal.activities import RedTeamWorkflowInput
+from app.redteam.temporal.workflow import RedTeamWorkflow
 from app.schemas.redteam import (
     AttackDefinitionListResponse,
     AttackDefinitionResponse,
@@ -64,6 +66,7 @@ from app.schemas.redteam import (
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+    from temporalio.client import Client as TemporalClient
 
     from app.core.dependencies import CurrentUser
     from app.redteam.contracts.repositories import PaginatedAttackDefinitions, PaginatedAttackRuns
@@ -398,12 +401,36 @@ async def start_attack_run(
     body: StartAttackRunRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    temporal_client: TemporalClient = Depends(get_temporal_client),
 ) -> AttackRunResponse:
     repo = _get_run_repo(session)
     handler = StartAttackRunHandler(repo)
     command = StartAttackRunCommand(run_id=run_id, total_items=body.total_items)
     try:
         run = await handler.handle(command)
+        await session.flush()
+
+        workflow_id = f"red-team-run-{run_id}"
+        config = run.configuration or {}
+        categories = config.get("categories", [])
+        await temporal_client.start_workflow(
+            RedTeamWorkflow.run,
+            RedTeamWorkflowInput(
+                attack_run_id=run_id,
+                target_provider=config.get("target_provider", ""),
+                target_model=config.get("target_model", ""),
+                attack_categories=tuple(categories),
+                max_rounds=config.get("max_rounds", 10),
+                max_attacks=config.get("max_attacks", 100),
+                max_total_tokens=config.get("max_total_tokens", 1_000_000),
+                max_cost_usd=config.get("max_cost_usd", 50.0),
+                max_duration_seconds=config.get("max_duration_seconds", 3600),
+                effectiveness_threshold=config.get("effectiveness_threshold", 0.8),
+            ),
+            id=workflow_id,
+            task_queue="redops-task-queue",
+            execution_timeout=timedelta(hours=3),
+        )
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
     return _run_to_response(run)
