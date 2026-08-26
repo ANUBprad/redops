@@ -21,7 +21,23 @@ from app.evaluation.temporal.activities import (
     configure_session_factory,
 )
 from app.infrastructure.database.engine import DatabaseEngine
+from app.infrastructure.database.repositories.audit_repository import (
+    SqlAlchemyAuditLogRepository,
+)
+from app.infrastructure.database.repositories.notification_repository import (
+    SqlAlchemyNotificationRepository,
+)
 from app.infrastructure.event_bus.redis_event_bus import RedisStreamsEventBus
+from app.infrastructure.event_bus.subscribers.audit_subscriber import AuditEventSubscriber
+from app.infrastructure.event_bus.subscribers.notification_subscriber import (
+    NotificationEventSubscriber,
+)
+from app.infrastructure.event_bus.subscribers.report_refresh_subscriber import (
+    ReportRefreshSubscriber,
+)
+from app.infrastructure.event_bus.subscribers.webhook_subscriber import (
+    WebhookDeliverySubscriber,
+)
 from app.infrastructure.health.database import DatabaseHealthContributor
 from app.infrastructure.health.redis import RedisHealthContributor
 from app.infrastructure.health.temporal import TemporalHealthContributor
@@ -35,6 +51,163 @@ if TYPE_CHECKING:
     from app.kernel.container.di_container import DIContainer
     from app.kernel.health.health import HealthRegistry
     from app.kernel.service_registry.service_registry import ServiceRegistry
+
+
+def _register_event_types(event_bus: RedisStreamsEventBus) -> None:
+    """Register all known domain event types with the serializer.
+
+    This ensures the JsonEventSerializer can deserialize events
+    arriving from Redis Streams back into their concrete dataclass types.
+    """
+    from app.agents.domain.events.agent_events import (
+        AgentCheckpointCreated,
+        AgentCheckpointLoaded,
+        AgentRunCancelled,
+        AgentRunCompleted,
+        AgentRunCreated,
+        AgentRunFailed,
+        AgentRunQueued,
+        AgentRunStarted,
+        AgentRunTimedOut,
+        AgentStepCompleted,
+        AgentStepFailed,
+        AgentStepStarted,
+    )
+    from app.evaluation.domain.events.evaluation_events import (
+        CheckpointCreated,
+        CheckpointLoaded,
+        EvaluationCancelled,
+        EvaluationCompleted,
+        EvaluationCreated,
+        EvaluationFailed,
+        EvaluationPaused,
+        EvaluationQueued,
+        EvaluationResumed,
+        EvaluationStarted,
+        EvaluationTimedOut,
+        ItemCancelled,
+        ItemCompleted,
+        ItemFailed,
+        ItemRetried,
+        ItemSkipped,
+        ItemStarted,
+        MetricAggregated,
+        MetricComputed,
+        MetricFailed,
+    )
+    from app.redteam.domain.events import (
+        AttackDefinitionActivated,
+        AttackDefinitionArchived,
+        AttackDefinitionCreated,
+        AttackDefinitionUpdated,
+        AttackRunCancelled,
+        AttackRunCompleted,
+        AttackRunCreated,
+        AttackRunFailed,
+        AttackRunQueued,
+        AttackRunStarted,
+        CampaignCompleted,
+        FindingDetected,
+    )
+
+    serializer = event_bus._serializer
+    for cls in (
+        EvaluationCreated,
+        EvaluationQueued,
+        EvaluationStarted,
+        EvaluationPaused,
+        EvaluationResumed,
+        EvaluationCompleted,
+        EvaluationCancelled,
+        EvaluationFailed,
+        EvaluationTimedOut,
+        ItemStarted,
+        ItemCompleted,
+        ItemFailed,
+        ItemRetried,
+        ItemCancelled,
+        ItemSkipped,
+        MetricComputed,
+        MetricFailed,
+        MetricAggregated,
+        CheckpointCreated,
+        CheckpointLoaded,
+        AttackDefinitionCreated,
+        AttackDefinitionUpdated,
+        AttackDefinitionActivated,
+        AttackDefinitionArchived,
+        AttackRunCreated,
+        AttackRunQueued,
+        AttackRunStarted,
+        AttackRunCompleted,
+        AttackRunFailed,
+        AttackRunCancelled,
+        FindingDetected,
+        CampaignCompleted,
+        AgentRunCreated,
+        AgentRunQueued,
+        AgentRunStarted,
+        AgentRunCompleted,
+        AgentRunFailed,
+        AgentRunCancelled,
+        AgentRunTimedOut,
+        AgentStepStarted,
+        AgentStepCompleted,
+        AgentStepFailed,
+        AgentCheckpointCreated,
+        AgentCheckpointLoaded,
+    ):
+        event_instance = cls()
+        serializer.register_event_type(event_instance.event_type, cls)
+
+
+def _subscribe_event_handlers(event_bus: RedisStreamsEventBus, di_container: DIContainer) -> None:
+    """Create and subscribe all event handlers to the EventBus.
+
+    Subscribers are registered BEFORE the event bus starts consuming,
+    ensuring no events are missed during startup.
+    """
+    from app.analytics.services.report_refresh_service import ReportRefreshService
+    from app.audit.services.audit_service import AuditService
+    from app.notification.providers.webhook_provider import WebhookNotificationProvider
+    from app.notification.services.notification_service import NotificationService
+
+    session_factory = di_container.resolve(DatabaseEngine).session_factory
+
+    audit_repo = SqlAlchemyAuditLogRepository(session_factory())
+    audit_service = AuditService(audit_repo)
+    audit_subscriber = AuditEventSubscriber(audit_service)
+    event_bus.subscribe("evaluation.*", audit_subscriber.handle, group="audit")
+    event_bus.subscribe("safety.*", audit_subscriber.handle, group="audit")
+
+    notif_repo = SqlAlchemyNotificationRepository(session_factory())
+    notif_service = NotificationService(notif_repo)
+    notif_subscriber = NotificationEventSubscriber(notif_service)
+    event_bus.subscribe("evaluation.completed", notif_subscriber.handle, group="notifications")
+    event_bus.subscribe("evaluation.failed", notif_subscriber.handle, group="notifications")
+    event_bus.subscribe("safety.finding.detected", notif_subscriber.handle, group="notifications")
+    event_bus.subscribe("safety.campaign.completed", notif_subscriber.handle, group="notifications")
+
+    webhook_provider = WebhookNotificationProvider()
+    webhook_subscriber = WebhookDeliverySubscriber(webhook_provider)
+    event_bus.subscribe("evaluation.completed", webhook_subscriber.handle, group="webhooks")
+    event_bus.subscribe("safety.campaign.completed", webhook_subscriber.handle, group="webhooks")
+    event_bus.subscribe("safety.finding.detected", webhook_subscriber.handle, group="webhooks")
+
+    report_refresh_service = ReportRefreshService()
+    report_subscriber = ReportRefreshSubscriber(report_refresh_service)
+    event_bus.subscribe("evaluation.completed", report_subscriber.handle, group="report_refresh")
+    event_bus.subscribe("evaluation.failed", report_subscriber.handle, group="report_refresh")
+    event_bus.subscribe(
+        "evaluation.metric.computed", report_subscriber.handle, group="report_refresh"
+    )
+    event_bus.subscribe(
+        "safety.attack_run.completed", report_subscriber.handle, group="report_refresh"
+    )
+    event_bus.subscribe("safety.finding.detected", report_subscriber.handle, group="report_refresh")
+    event_bus.subscribe(
+        "safety.campaign.completed", report_subscriber.handle, group="report_refresh"
+    )
 
 
 class InfrastructureServices:
@@ -94,9 +267,17 @@ class InfrastructureServices:
         configure_agent_provider_registry(agent_provider_registry)
 
     def _register_event_bus_services(self) -> None:
-        """Register event bus lifecycle services and health."""
+        """Register event bus lifecycle services, event types, and subscribers.
+
+        Event types are registered with the serializer so events can
+        be deserialized from Redis Streams. Subscribers are registered
+        before the event bus starts consuming.
+        """
         event_bus = self._container.resolve(RedisStreamsEventBus)
         redis_client = event_bus.redis
+
+        _register_event_types(event_bus)
+        _subscribe_event_handlers(event_bus, self._container)
 
         self._service_registry.register(
             "event_bus",
