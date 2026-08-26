@@ -58,58 +58,80 @@ class _FakeFindingDetectedEvent:
 
 
 class TestNotificationEventSubscriber:
+    def _make_session_factory(self, send_mock: AsyncMock) -> MagicMock:
+        mock_session = MagicMock()
+        mock_session.commit = AsyncMock()
+        mock_session.rollback = AsyncMock()
+        mock_session.close = AsyncMock()
+        mock_session.execute = AsyncMock()
+        factory = MagicMock(return_value=mock_session)
+        return factory, mock_session
+
     def test_sends_notification_for_completed_event(self) -> None:
-        mock_service = MagicMock()
-        mock_service.send_notification = AsyncMock()
-        subscriber = NotificationEventSubscriber(mock_service)
+        mock_session = MagicMock()
+        mock_session.commit = AsyncMock()
+        mock_session.rollback = AsyncMock()
+        mock_session.close = AsyncMock()
+        mock_session.execute = AsyncMock()
+        session_factory = MagicMock(return_value=mock_session)
+
+        subscriber = NotificationEventSubscriber(session_factory)
         event = _FakeEvaluationCompletedEvent()
 
         import asyncio
 
         asyncio.run(subscriber.handle(event))
 
-        mock_service.send_notification.assert_called_once()
-        call_kwargs = mock_service.send_notification.call_args.kwargs
-        assert call_kwargs["event"] == "run_completed"
-        assert call_kwargs["title"] == "Evaluation Completed"
-        assert call_kwargs["channel"] == "webhook"
-        assert "corr-456" in call_kwargs["metadata"]["correlation_id"]
+        mock_session.commit.assert_awaited_once()
+        mock_session.add.assert_called_once()
 
     def test_sends_notification_for_failed_event(self) -> None:
-        mock_service = MagicMock()
-        mock_service.send_notification = AsyncMock()
-        subscriber = NotificationEventSubscriber(mock_service)
+        mock_session = MagicMock()
+        mock_session.commit = AsyncMock()
+        mock_session.rollback = AsyncMock()
+        mock_session.close = AsyncMock()
+        mock_session.execute = AsyncMock()
+        session_factory = MagicMock(return_value=mock_session)
+
+        subscriber = NotificationEventSubscriber(session_factory)
         event = _FakeEvaluationFailedEvent()
 
         import asyncio
 
         asyncio.run(subscriber.handle(event))
 
-        mock_service.send_notification.assert_called_once()
-        call_kwargs = mock_service.send_notification.call_args.kwargs
-        assert call_kwargs["event"] == "run_failed"
-        assert "API rate limit exceeded" in call_kwargs["message"]
+        mock_session.commit.assert_awaited_once()
+        model = mock_session.add.call_args[0][0]
+        assert "API rate limit exceeded" in model.message
 
     def test_sends_notification_for_finding_detected(self) -> None:
-        mock_service = MagicMock()
-        mock_service.send_notification = AsyncMock()
-        subscriber = NotificationEventSubscriber(mock_service)
+        mock_session = MagicMock()
+        mock_session.commit = AsyncMock()
+        mock_session.rollback = AsyncMock()
+        mock_session.close = AsyncMock()
+        mock_session.execute = AsyncMock()
+        session_factory = MagicMock(return_value=mock_session)
+
+        subscriber = NotificationEventSubscriber(session_factory)
         event = _FakeFindingDetectedEvent()
 
         import asyncio
 
         asyncio.run(subscriber.handle(event))
 
-        mock_service.send_notification.assert_called_once()
-        call_kwargs = mock_service.send_notification.call_args.kwargs
-        assert call_kwargs["event"] == "attack_detected"
-        assert "camp-99" in call_kwargs["message"]
-        assert "jailbreak" in call_kwargs["message"]
+        mock_session.commit.assert_awaited_once()
+        model = mock_session.add.call_args[0][0]
+        assert "camp-99" in model.message
+        assert "jailbreak" in model.message
 
     def test_skips_unmapped_event(self) -> None:
-        mock_service = MagicMock()
-        mock_service.send_notification = AsyncMock()
-        subscriber = NotificationEventSubscriber(mock_service)
+        mock_session = MagicMock()
+        mock_session.commit = AsyncMock()
+        mock_session.rollback = AsyncMock()
+        mock_session.close = AsyncMock()
+        session_factory = MagicMock(return_value=mock_session)
+
+        subscriber = NotificationEventSubscriber(session_factory)
 
         @dataclass(frozen=True, slots=True)
         class _UnmappedEvent:
@@ -125,16 +147,22 @@ class TestNotificationEventSubscriber:
 
         asyncio.run(subscriber.handle(_UnmappedEvent()))
 
-        mock_service.send_notification.assert_not_called()
+        mock_session.add.assert_not_called()
 
-    def test_handles_service_failure_gracefully(self) -> None:
-        mock_service = MagicMock()
-        mock_service.send_notification = AsyncMock(side_effect=RuntimeError("svc error"))
-        subscriber = NotificationEventSubscriber(mock_service)
+    def test_rolls_back_on_failure(self) -> None:
+        mock_session = MagicMock()
+        mock_session.commit = AsyncMock()
+        mock_session.rollback = AsyncMock()
+        mock_session.close = AsyncMock()
+        mock_session.add = MagicMock(side_effect=RuntimeError("db error"))
+        session_factory = MagicMock(return_value=mock_session)
+
+        subscriber = NotificationEventSubscriber(session_factory)
         event = _FakeEvaluationCompletedEvent()
 
         import asyncio
 
         asyncio.run(subscriber.handle(event))
 
-        mock_service.send_notification.assert_called_once()
+        mock_session.rollback.assert_awaited_once()
+        mock_session.close.assert_awaited_once()

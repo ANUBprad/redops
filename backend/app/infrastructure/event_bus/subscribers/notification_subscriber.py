@@ -3,6 +3,9 @@
 Consumes domain events from the EventBus and dispatches notifications
 through the existing NotificationService, using configured channels
 (email, Slack, webhook) based on notification preferences.
+
+Each event creates a fresh database session to ensure proper
+transaction boundaries and prevent session leaks.
 """
 
 from __future__ import annotations
@@ -12,7 +15,9 @@ from typing import TYPE_CHECKING, Any
 from structlog import get_logger
 
 if TYPE_CHECKING:
-    from app.notification.services.notification_service import NotificationService
+    from collections.abc import AsyncSessionFactory
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = get_logger("redops_eval.event_subscribers.notification")
 
@@ -52,10 +57,13 @@ class NotificationEventSubscriber:
     Maps selected domain events to notification templates and sends
     them through the existing NotificationService. Events not in the
     mapping are silently skipped.
+
+    A fresh database session is created per event to ensure proper
+    transaction boundaries.
     """
 
-    def __init__(self, notification_service: NotificationService) -> None:
-        self._notification_service = notification_service
+    def __init__(self, session_factory: AsyncSessionFactory) -> None:
+        self._session_factory = session_factory
 
     async def handle(self, event: Any) -> None:
         """Handle a domain event by dispatching a notification."""
@@ -73,8 +81,16 @@ class NotificationEventSubscriber:
         if correlation_id:
             metadata["correlation_id"] = correlation_id
 
+        from app.infrastructure.database.repositories.notification_repository import (
+            SqlAlchemyNotificationRepository,
+        )
+        from app.notification.services.notification_service import NotificationService
+
+        session: AsyncSession = self._session_factory()
         try:
-            await self._notification_service.send_notification(
+            repo = SqlAlchemyNotificationRepository(session)
+            notif_service = NotificationService(repo)
+            await notif_service.send_notification(
                 organization_id="system",
                 user_id="system",
                 channel="webhook",
@@ -83,11 +99,15 @@ class NotificationEventSubscriber:
                 message=message,
                 metadata=metadata,
             )
+            await session.commit()
         except Exception:
+            await session.rollback()
             logger.exception(
                 "Failed to dispatch notification for event",
                 event_type=event_type,
             )
+        finally:
+            await session.close()
 
     @staticmethod
     def _format_message(template: str, event: Any) -> str:

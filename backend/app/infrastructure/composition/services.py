@@ -21,12 +21,6 @@ from app.evaluation.temporal.activities import (
     configure_session_factory,
 )
 from app.infrastructure.database.engine import DatabaseEngine
-from app.infrastructure.database.repositories.audit_repository import (
-    SqlAlchemyAuditLogRepository,
-)
-from app.infrastructure.database.repositories.notification_repository import (
-    SqlAlchemyNotificationRepository,
-)
 from app.infrastructure.event_bus.redis_event_bus import RedisStreamsEventBus
 from app.infrastructure.event_bus.subscribers.audit_subscriber import AuditEventSubscriber
 from app.infrastructure.event_bus.subscribers.notification_subscriber import (
@@ -168,15 +162,11 @@ def _subscribe_event_handlers(event_bus: RedisStreamsEventBus, di_container: DIC
     ensuring no events are missed during startup.
     """
     from app.analytics.services.report_refresh_service import ReportRefreshService
-    from app.audit.services.audit_service import AuditService
     from app.notification.providers.webhook_provider import WebhookNotificationProvider
-    from app.notification.services.notification_service import NotificationService
 
     session_factory = di_container.resolve(DatabaseEngine).session_factory
 
-    audit_repo = SqlAlchemyAuditLogRepository(session_factory())
-    audit_service = AuditService(audit_repo)
-    audit_subscriber = AuditEventSubscriber(audit_service)
+    audit_subscriber = AuditEventSubscriber(session_factory)
     for event_type in (
         "evaluation.created",
         "evaluation.queued",
@@ -199,9 +189,7 @@ def _subscribe_event_handlers(event_bus: RedisStreamsEventBus, di_container: DIC
     ):
         event_bus.subscribe(event_type, audit_subscriber.handle, group="audit")
 
-    notif_repo = SqlAlchemyNotificationRepository(session_factory())
-    notif_service = NotificationService(notif_repo)
-    notif_subscriber = NotificationEventSubscriber(notif_service)
+    notif_subscriber = NotificationEventSubscriber(session_factory)
     event_bus.subscribe("evaluation.completed", notif_subscriber.handle, group="notifications")
     event_bus.subscribe("evaluation.failed", notif_subscriber.handle, group="notifications")
     event_bus.subscribe("safety.finding.detected", notif_subscriber.handle, group="notifications")

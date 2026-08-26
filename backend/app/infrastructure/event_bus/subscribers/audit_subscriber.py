@@ -3,6 +3,9 @@
 Consumes domain events from the EventBus and converts them into
 AuditLog entries through the existing AuditService, providing an
 immutable audit trail of all significant system actions.
+
+Each event creates a fresh database session to ensure proper
+transaction boundaries and prevent session leaks.
 """
 
 from __future__ import annotations
@@ -14,7 +17,9 @@ from structlog import get_logger
 from app.audit.domain.entities import AuditAction, AuditResourceType
 
 if TYPE_CHECKING:
-    from app.audit.services.audit_service import AuditService
+    from collections.abc import AsyncSessionFactory
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = get_logger("redops_eval.event_subscribers.audit")
 
@@ -47,10 +52,13 @@ class AuditEventSubscriber:
     Each event is mapped to an AuditAction and AuditResourceType using
     the event_type string. Events not in the mapping are silently
     skipped to avoid noise from low-level events.
+
+    A fresh database session is created per event to ensure proper
+    transaction boundaries.
     """
 
-    def __init__(self, audit_service: AuditService) -> None:
-        self._audit_service = audit_service
+    def __init__(self, session_factory: AsyncSessionFactory) -> None:
+        self._session_factory = session_factory
 
     async def handle(self, event: Any) -> None:
         """Handle a domain event by recording an audit log entry."""
@@ -67,8 +75,17 @@ class AuditEventSubscriber:
         correlation_id = getattr(event, "correlation_id", None)
         metadata = self._build_metadata(event, event_type)
 
+        from app.audit.contracts.repositories import AuditLogRepository
+        from app.audit.services.audit_service import AuditService
+        from app.infrastructure.database.repositories.audit_repository import (
+            SqlAlchemyAuditLogRepository,
+        )
+
+        session: AsyncSession = self._session_factory()
         try:
-            await self._audit_service.record(
+            repo: AuditLogRepository = SqlAlchemyAuditLogRepository(session)
+            audit_service = AuditService(repo)
+            await audit_service.record(
                 user_id="system",
                 action=action,
                 resource_type=resource_type,
@@ -76,12 +93,16 @@ class AuditEventSubscriber:
                 metadata=metadata,
                 request_id=correlation_id,
             )
+            await session.commit()
         except Exception:
+            await session.rollback()
             logger.exception(
                 "Failed to record audit log for event",
                 event_type=event_type,
                 resource_id=resource_id,
             )
+        finally:
+            await session.close()
 
     @staticmethod
     def _extract_resource_id(event: Any) -> str:
