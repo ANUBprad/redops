@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -12,6 +12,14 @@ import { RegressionResultView } from "@/components/run/regression-result";
 import type { TraceComparison } from "@/types/api";
 
 export default function ComparePage() {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <CompareContent />
+    </Suspense>
+  );
+}
+
+function CompareContent() {
   const searchParams = useSearchParams();
   const [baselineId, setBaselineId] = useState(searchParams.get("baseline") ?? "");
   const [comparisonId, setComparisonId] = useState(searchParams.get("comparison") ?? "");
