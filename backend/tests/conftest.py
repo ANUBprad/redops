@@ -1,10 +1,27 @@
 """Pytest configuration and shared fixtures for RedOps Eval."""
 
+import os
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.router import api_router
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _ensure_secret_key():
+    """Guarantee APP_SECRET_KEY is set so JWT signing works in CI.
+
+    CI has no .env file; the config default is empty which makes PyJWT
+    reject HMAC signing.  We inject a test-only key and clear the
+    cached AppConfig so it picks up the new value.
+    """
+    os.environ.setdefault("APP_SECRET_KEY", "test-secret-not-for-production")
+
+    from app.core.config import get_config
+
+    get_config.cache_clear()
 
 
 @pytest.fixture
