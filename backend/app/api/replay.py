@@ -46,7 +46,7 @@ def _try_get_redis_fallback() -> Any:
         from app.evaluation.replay.redis_repository import RedisTraceRepository
 
         redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
-        client = aioredis.from_url(redis_url, decode_responses=False)  # type: ignore[no-untyped-call]
+        client = aioredis.from_url(redis_url, decode_responses=False)
         return RedisTraceRepository(client)
     except Exception:
         logger.debug("Redis unavailable for replay fallback, using database only")
