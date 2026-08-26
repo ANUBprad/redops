@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 
 from app.evaluation.metrics.domain import (
+    EvaluatorType,
     Metric,
     MetricCategory,
     MetricDefinition,
@@ -32,6 +33,8 @@ class CostMetric(Metric):
             description="Measures API cost efficiency (lower is better)",
             category=MetricCategory.COST,
             scale=MetricScale.CONTINUOUS,
+            evaluator_type=EvaluatorType.HEURISTIC,
+            required_inputs=("metadata",),
             tags=("cost", "efficiency"),
         )
 

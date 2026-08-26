@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 
 from app.evaluation.metrics.domain import (
+    EvaluatorType,
     MetricCategory,
     MetricDefinition,
     MetricInput,
@@ -24,6 +25,8 @@ class GroundednessMetric(EmbeddingMetric):
             description="Measures if the response is supported by the context",
             category=MetricCategory.QUALITY,
             scale=MetricScale.CONTINUOUS,
+            evaluator_type=EvaluatorType.HEURISTIC,
+            required_inputs=("prompt", "response", "context"),
             requires_context=True,
             tags=("quality", "faithfulness", "rag", "embedding"),
         )

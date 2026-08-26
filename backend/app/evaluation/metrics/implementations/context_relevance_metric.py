@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 
 from app.evaluation.metrics.domain import (
+    EvaluatorType,
     MetricCategory,
     MetricDefinition,
     MetricInput,
@@ -24,6 +25,8 @@ class ContextRelevanceMetric(EmbeddingMetric):
             description="Measures how relevant the context is to the prompt",
             category=MetricCategory.QUALITY,
             scale=MetricScale.CONTINUOUS,
+            evaluator_type=EvaluatorType.EMBEDDING,
+            required_inputs=("prompt", "context"),
             requires_context=True,
             tags=("quality", "rag", "relevance", "embedding"),
         )

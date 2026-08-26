@@ -6,6 +6,7 @@ import re
 import time
 
 from app.evaluation.metrics.domain import (
+    EvaluatorType,
     Metric,
     MetricCategory,
     MetricDefinition,
@@ -28,6 +29,8 @@ class RegexValidationMetric(Metric):
             description="Validates that the response matches a regex pattern",
             category=MetricCategory.VALIDATION,
             scale=MetricScale.BINARY,
+            evaluator_type=EvaluatorType.HEURISTIC,
+            required_inputs=("response",),
             tags=("validation", "format", "regex"),
         )
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 
 from app.evaluation.metrics.domain import (
+    EvaluatorType,
     MetricCategory,
     MetricDefinition,
     MetricInput,
@@ -24,6 +25,8 @@ class SemanticSimilarityMetric(EmbeddingMetric):
             description="Measures semantic similarity between response and reference using embeddings",
             category=MetricCategory.QUALITY,
             scale=MetricScale.CONTINUOUS,
+            evaluator_type=EvaluatorType.EMBEDDING,
+            required_inputs=("response", "reference"),
             tags=("quality", "semantic", "embedding"),
         )
 

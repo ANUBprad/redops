@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 
 from app.evaluation.metrics.domain import (
+    EvaluatorType,
     Metric,
     MetricCategory,
     MetricDefinition,
@@ -27,6 +28,8 @@ class ResponseLengthMetric(Metric):
             description="Measures response length efficiency relative to expected length",
             category=MetricCategory.VALIDATION,
             scale=MetricScale.CONTINUOUS,
+            evaluator_type=EvaluatorType.HEURISTIC,
+            required_inputs=("response",),
             tags=("validation", "length"),
         )
 

@@ -6,6 +6,7 @@ import json
 import time
 
 from app.evaluation.metrics.domain import (
+    EvaluatorType,
     Metric,
     MetricCategory,
     MetricDefinition,
@@ -29,6 +30,8 @@ class JsonValidityMetric(Metric):
             description="Validates that the response is parseable JSON",
             category=MetricCategory.VALIDATION,
             scale=MetricScale.BINARY,
+            evaluator_type=EvaluatorType.HEURISTIC,
+            required_inputs=("response",),
             tags=("validation", "format"),
         )
 
