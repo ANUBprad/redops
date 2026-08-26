@@ -42,6 +42,7 @@ class GroundednessMetric(EmbeddingMetric):
                 0.0,
                 start,
                 reasoning="Missing response",
+                error="Missing response",
             )
 
         validation_error = self.validate_input(input_data)
@@ -51,17 +52,21 @@ class GroundednessMetric(EmbeddingMetric):
                 0.0,
                 start,
                 reasoning=validation_error,
+                error=validation_error,
             )
 
         try:
-            response_emb = await self._get_embedding(input_data.response, input_data)
-            context_emb = await self._get_embedding(input_data.context, input_data)
+            response_emb, model, provider_name = await self._get_embedding(
+                input_data.response, input_data
+            )
+            context_emb, _, _ = await self._get_embedding(input_data.context, input_data)
         except RuntimeError as exc:
             return self._build_embedding_result(
                 "groundedness",
                 0.0,
                 start,
                 reasoning=str(exc),
+                error=str(exc),
             )
 
         groundedness = self._cosine_similarity(response_emb, context_emb)
@@ -71,5 +76,9 @@ class GroundednessMetric(EmbeddingMetric):
             groundedness,
             start,
             reasoning=f"Response-context groundedness: {groundedness:.4f}",
-            metadata={"method": "cosine_similarity"},
+            metadata={
+                "method": "cosine_similarity",
+                "embedding_model": model,
+                "embedding_provider": provider_name,
+            },
         )

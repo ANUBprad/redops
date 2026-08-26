@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client as TemporalClient
 
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session, get_temporal_client
+from app.core.config import AppConfig
+from app.core.dependencies import (
+    CurrentUser,
+    get_config_dependency,
+    get_current_user,
+    get_db_session,
+    get_temporal_client,
+)
 from app.evaluation.application.run_commands import (
     CancelEvaluationRunCommand,
     CreateEvaluationRunCommand,
@@ -94,6 +102,7 @@ def _run_to_response(run: EvaluationRun) -> RunResponse:
         failure_reason=(
             run.failure_summary.first_failure if run.failure_summary is not None else None
         ),
+        verdict=run.verdict,
         version=run.version,
         started_at=run.started_at.isoformat() if run.started_at else None,
         completed_at=run.completed_at.isoformat() if run.completed_at else None,
@@ -141,6 +150,7 @@ async def create_run(
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
     temporal_client: TemporalClient = Depends(get_temporal_client),
+    config: AppConfig = Depends(get_config_dependency),
 ) -> RunResponse:
     """Create a new evaluation run and schedule its execution."""
     repo = _get_repository(session)
@@ -180,7 +190,8 @@ async def create_run(
                 system_prompt=body.system_prompt,
             ),
             id=workflow_id,
-            task_queue="redops-evaluations",
+            task_queue=config.temporal_task_queue,
+            execution_timeout=timedelta(hours=24),
         )
 
         queue_handler = QueueEvaluationRunHandler(repo)

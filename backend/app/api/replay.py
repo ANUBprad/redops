@@ -2,31 +2,78 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.evaluation.replay.service import ReplayService
+from app.core.dependencies import CurrentUser, get_current_user, get_db_session
+from app.evaluation.replay.composite_repository import CompositeTraceRepository
+from app.evaluation.replay.database_repository import DatabaseTraceRepository
+from app.evaluation.replay.service import ItemReport, ReplayService, ReplaySummary
 from app.schemas.replay import (
+    ItemComparisonResponse,
+    ItemReportResponse,
+    MetricExplanationResponse,
+    MetricRegressionResponse,
+    MetricSummaryResponse,
+    RegressionResultResponse,
     ReplayReportResponse,
+    ReplaySummaryResponse,
+    TimelineEntryResponse,
     TraceComparisonResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/replay", tags=["Replay"])
 
 
-def _get_replay_service() -> ReplayService:
-    """Get replay service from dependency injection."""
-    from app.infrastructure.composition.service_registry import ServiceRegistry
+def _try_get_redis_fallback() -> Any:
+    """Try to create a Redis trace repository for fallback.
 
-    registry = ServiceRegistry.get_instance()
-    return registry.resolve(ReplayService)
+    Returns None if Redis is not configured or unavailable.
+    This allows the replay API to work without Redis when
+    traces are stored in the database.
+    """
+    try:
+        # Try to connect to Redis using the same URL from app config
+        import os
+
+        from redis import asyncio as aioredis
+
+        from app.evaluation.replay.redis_repository import RedisTraceRepository
+
+        redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+        client = aioredis.from_url(redis_url, decode_responses=False)
+        return RedisTraceRepository(client)
+    except Exception:
+        logger.debug("Redis unavailable for replay fallback, using database only")
+        return None
+
+
+def get_replay_service(
+    session: AsyncSession = Depends(get_db_session),
+) -> ReplayService:
+    """Provide a replay service backed by database-primary, Redis-fallback.
+
+    The database (evaluation_runs.trace_data) is the authoritative source
+    for traces produced by the evaluation workflow. Redis is retained as
+    a fallback for traces written directly by external consumers.
+    """
+    primary = DatabaseTraceRepository(session)
+    fallback = _try_get_redis_fallback()
+    return ReplayService(CompositeTraceRepository(primary, fallback))
 
 
 @router.get("/traces/{run_id}", response_model=dict[str, Any])
-async def get_trace(run_id: str) -> dict[str, Any]:
+async def get_trace(
+    run_id: str,
+    service: ReplayService = Depends(get_replay_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> dict[str, Any]:
     """Get the execution trace for a run."""
-    service = _get_replay_service()
     trace = await service.load_trace(run_id)
     if trace is None:
         raise HTTPException(status_code=404, detail=f"Trace not found for run {run_id}")
@@ -34,13 +81,16 @@ async def get_trace(run_id: str) -> dict[str, Any]:
 
 
 @router.get("/traces/{run_id}/report", response_model=ReplayReportResponse)
-async def get_replay_report(run_id: str) -> ReplayReportResponse:
+async def get_replay_report(
+    run_id: str,
+    service: ReplayService = Depends(get_replay_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> ReplayReportResponse:
     """Get a detailed replay report for a run.
 
     Explains why each score was produced, including prompt context,
     provider responses, and metric reasoning.
     """
-    service = _get_replay_service()
     trace = await service.load_trace(run_id)
     if trace is None:
         raise HTTPException(status_code=404, detail=f"Trace not found for run {run_id}")
@@ -51,14 +101,14 @@ async def get_replay_report(run_id: str) -> ReplayReportResponse:
         summary=_summary_to_response(report.summary),
         item_reports=[_item_to_response(ir) for ir in report.item_reports],
         timeline=[
-            {
-                "timestamp": t.timestamp,
-                "event_type": t.event_type,
-                "sequence": t.sequence,
-                "duration_ms": t.duration_ms,
-                "data": t.data,
-                "error": t.error,
-            }
+            TimelineEntryResponse(
+                timestamp=t.timestamp,
+                event_type=t.event_type,
+                sequence=t.sequence,
+                duration_ms=t.duration_ms,
+                data=t.data,
+                error=t.error,
+            )
             for t in report.timeline
         ],
         configuration=report.configuration,
@@ -71,14 +121,14 @@ async def get_replay_report(run_id: str) -> ReplayReportResponse:
 async def compare_runs(
     baseline_run_id: str,
     comparison_run_id: str,
+    service: ReplayService = Depends(get_replay_service),
+    _user: CurrentUser = Depends(get_current_user),
 ) -> TraceComparisonResponse:
     """Compare two evaluation runs.
 
     Shows metric deltas, cost differences, latency differences,
     and determines a winner with confidence score.
     """
-    service = _get_replay_service()
-
     baseline = await service.load_trace(baseline_run_id)
     if baseline is None:
         raise HTTPException(status_code=404, detail=f"Baseline trace not found: {baseline_run_id}")
@@ -102,12 +152,12 @@ async def compare_runs(
         cost_delta=result.cost_delta,
         latency_delta=result.latency_delta,
         item_comparisons=[
-            {
-                "item_index": ic.item_index,
-                "metric_deltas": ic.metric_deltas,
-                "latency_delta": ic.latency_delta,
-                "cost_delta": ic.cost_delta,
-            }
+            ItemComparisonResponse(
+                item_index=ic.item_index,
+                metric_deltas=ic.metric_deltas,
+                latency_delta=ic.latency_delta,
+                cost_delta=ic.cost_delta,
+            )
             for ic in result.item_comparisons
         ],
         winner=result.winner,
@@ -116,9 +166,12 @@ async def compare_runs(
 
 
 @router.delete("/traces/{run_id}")
-async def delete_trace(run_id: str) -> dict[str, str]:
+async def delete_trace(
+    run_id: str,
+    service: ReplayService = Depends(get_replay_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> dict[str, str]:
     """Delete an execution trace."""
-    service = _get_replay_service()
     if service._trace_repository is not None:
         deleted = await service._trace_repository.delete(run_id)
         if not deleted:
@@ -126,57 +179,134 @@ async def delete_trace(run_id: str) -> dict[str, str]:
     return {"status": "deleted", "run_id": run_id}
 
 
-def _summary_to_response(summary: Any) -> dict[str, Any]:
-    """Convert ReplaySummary to response dict."""
-    return {
-        "run_id": summary.run_id,
-        "evaluation_name": summary.evaluation_name,
-        "provider": summary.provider,
-        "model": summary.model,
-        "status": summary.status,
-        "total_items": summary.total_items,
-        "successful_items": summary.successful_items,
-        "failed_items": summary.failed_items,
-        "total_cost_usd": summary.total_cost_usd,
-        "total_tokens_input": summary.total_tokens_input,
-        "total_tokens_output": summary.total_tokens_output,
-        "total_latency_ms": summary.total_latency_ms,
-        "metric_summaries": {
-            name: {
-                "metric_name": ms.metric_name,
-                "mean": ms.mean,
-                "min_score": ms.min_score,
-                "max_score": ms.max_score,
-                "count": ms.count,
-            }
+@router.get(
+    "/regression/{baseline_run_id}/{current_run_id}",
+    response_model=RegressionResultResponse,
+)
+async def analyze_regression_endpoint(
+    baseline_run_id: str,
+    current_run_id: str,
+    service: ReplayService = Depends(get_replay_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> RegressionResultResponse:
+    """Analyze regression between a baseline and current run.
+
+    Compares metric results, checks fingerprint compatibility,
+    and produces a per-metric regression analysis with an overall verdict.
+    """
+    from app.evaluation.regression import RegressionConfig, analyze_regression
+    from app.evaluation.reliability.fingerprint import compute_fingerprint
+
+    baseline = await service.load_trace(baseline_run_id)
+    if baseline is None:
+        raise HTTPException(status_code=404, detail=f"Baseline trace not found: {baseline_run_id}")
+
+    current = await service.load_trace(current_run_id)
+    if current is None:
+        raise HTTPException(status_code=404, detail=f"Current trace not found: {current_run_id}")
+
+    baseline_fingerprint = compute_fingerprint(**baseline.configuration)
+    current_fingerprint = compute_fingerprint(**current.configuration)
+
+    baseline_metrics = {
+        name: agg.get("mean")
+        for name, agg in (baseline.aggregated_metrics or {}).items()
+        if isinstance(agg, dict)
+    }
+    current_metrics = {
+        name: agg.get("mean")
+        for name, agg in (current.aggregated_metrics or {}).items()
+        if isinstance(agg, dict)
+    }
+
+    result = analyze_regression(
+        baseline_run_id=baseline_run_id,
+        current_run_id=current_run_id,
+        baseline_fingerprint=baseline_fingerprint.fingerprint,
+        current_fingerprint=current_fingerprint.fingerprint,
+        baseline_metrics=baseline_metrics,
+        current_metrics=current_metrics,
+        config=RegressionConfig(),
+    )
+
+    return RegressionResultResponse(
+        baseline_run_id=result.baseline_run_id,
+        current_run_id=result.current_run_id,
+        baseline_fingerprint=result.baseline_fingerprint,
+        current_fingerprint=result.current_fingerprint,
+        fingerprints_compatible=result.fingerprints_compatible,
+        metric_comparisons=[
+            MetricRegressionResponse(
+                metric_name=mc.metric_name,
+                baseline_score=mc.baseline_score,
+                current_score=mc.current_score,
+                delta=mc.delta,
+                direction=mc.direction.value,
+                tolerance=mc.tolerance,
+                status=mc.status.value,
+                reasoning=mc.reasoning,
+            )
+            for mc in result.metric_comparisons
+        ],
+        verdict=result.verdict.value,
+        regression_count=result.regression_count,
+        error_count=result.error_count,
+        not_comparable_count=result.not_comparable_count,
+        reasoning=result.reasoning,
+    )
+
+
+def _summary_to_response(summary: ReplaySummary) -> ReplaySummaryResponse:
+    """Convert a ReplaySummary to its response model."""
+    return ReplaySummaryResponse(
+        run_id=summary.run_id,
+        evaluation_name=summary.evaluation_name,
+        provider=summary.provider,
+        model=summary.model,
+        status=summary.status,
+        total_items=summary.total_items,
+        successful_items=summary.successful_items,
+        failed_items=summary.failed_items,
+        total_cost_usd=summary.total_cost_usd,
+        total_tokens_input=summary.total_tokens_input,
+        total_tokens_output=summary.total_tokens_output,
+        total_latency_ms=summary.total_latency_ms,
+        metric_summaries={
+            name: MetricSummaryResponse(
+                metric_name=ms.metric_name,
+                mean=ms.mean,
+                min_score=ms.min_score,
+                max_score=ms.max_score,
+                count=ms.count,
+            )
             for name, ms in summary.metric_summaries.items()
         },
-        "started_at": summary.started_at,
-        "completed_at": summary.completed_at,
-    }
+        started_at=summary.started_at,
+        completed_at=summary.completed_at,
+    )
 
 
-def _item_to_response(item: Any) -> dict[str, Any]:
-    """Convert ItemReport to response dict."""
-    return {
-        "item_index": item.item_index,
-        "prompt_preview": item.prompt_preview,
-        "provider_response_preview": item.provider_response_preview,
-        "provider_error": item.provider_error,
-        "metric_explanations": [
-            {
-                "metric_name": me.metric_name,
-                "score": me.score,
-                "normalized_score": me.normalized_score,
-                "confidence": me.confidence,
-                "reasoning": me.reasoning,
-                "explanation": me.explanation,
-                "version": me.version,
-                "judge_model": me.judge_model,
-            }
+def _item_to_response(item: ItemReport) -> ItemReportResponse:
+    """Convert an ItemReport to its response model."""
+    return ItemReportResponse(
+        item_index=item.item_index,
+        prompt_preview=item.prompt_preview,
+        provider_response_preview=item.provider_response_preview,
+        provider_error=item.provider_error,
+        metric_explanations=[
+            MetricExplanationResponse(
+                metric_name=me.metric_name,
+                score=me.score,
+                normalized_score=me.normalized_score,
+                confidence=me.confidence,
+                reasoning=me.reasoning,
+                explanation=me.explanation,
+                version=me.version,
+                judge_model=me.judge_model,
+            )
             for me in item.metric_explanations
         ],
-        "total_latency_ms": item.total_latency_ms,
-        "total_cost_usd": item.total_cost_usd,
-        "error": item.error,
-    }
+        total_latency_ms=item.total_latency_ms,
+        total_cost_usd=item.total_cost_usd,
+        error=item.error,
+    )

@@ -614,6 +614,22 @@ class MetricDispatchStage(ExecutionStage):
         metadata["_judge_provider"] = judge_provider
         metadata["_judge_provider_name"] = judge_provider_name or ""
         metadata["_judge_model"] = judge_model
+
+        embedding_provider_name = context.metadata.embedding_provider if context.metadata else None
+        embedding_model = context.metadata.embedding_model if context.metadata else ""
+        embedding_provider = None
+        if embedding_provider_name and self._provider_registry is not None:
+            try:
+                candidate = self._provider_registry.resolve(embedding_provider_name)
+            except KeyError:
+                candidate = None
+            if candidate is not None and hasattr(candidate, "embed"):
+                embedding_provider = candidate
+        if embedding_provider is None and hasattr(judge_provider, "embed"):
+            embedding_provider = judge_provider
+
+        metadata["_embedding_provider"] = embedding_provider
+        metadata["_embedding_model"] = embedding_model
         return metadata
 
     async def rollback(self, context: PipelineContext, result: StageResult) -> None:
@@ -717,30 +733,34 @@ class PersistenceStage(ExecutionStage):
         persisted_count = 0
         if self._metric_result_repo is not None:
             for item_index, results in metric_results_by_item.items():
-                for result in results:
-                    try:
-                        await self._metric_result_repo.save(
-                            run_id=str(context.run_id),
-                            item_id=str(item_index),
+                try:
+                    domain_results = [
+                        MetricResult(
                             metric_name=result.metric_name,
                             score=result.score,
                             normalized_score=result.normalized_score,
                             raw_output=result.raw_output,
                             reasoning=result.reasoning,
-                            metadata=result.metadata,
+                            metadata={
+                                **result.metadata,
+                                "run_id": str(context.run_id),
+                                "item_id": result.metadata.get("item_id", str(item_index)),
+                            },
                             execution_time_ms=result.execution_time_ms,
                             error=result.error,
                             confidence=result.confidence,
                             version=result.version,
                             cost_usd=result.cost_usd,
                         )
-                        persisted_count += 1
-                    except Exception:
-                        logger.exception(
-                            "Failed to persist metric result: metric=%s item_index=%s",
-                            result.metric_name,
-                            item_index,
-                        )
+                        for result in results
+                    ]
+                    await self._metric_result_repo.save_many(domain_results)
+                    persisted_count += len(domain_results)
+                except Exception:
+                    logger.exception(
+                        "Failed to persist metric results for item_index=%s",
+                        item_index,
+                    )
 
         elapsed = int((time.monotonic() - start) * 1000)
 

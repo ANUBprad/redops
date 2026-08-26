@@ -22,6 +22,7 @@ from app.evaluation.replay.domain import (
 )
 from app.evaluation.replay.recorder import TraceRecorder
 from app.evaluation.replay.service import ReplayService
+from app.providers.models.responses import EmbeddingResponse, Usage
 from app.redteam.engine.campaign_report import CampaignReportGenerator
 from app.redteam.engine.mutation import (
     AdaptiveRefiner,
@@ -55,9 +56,14 @@ class MockEmbeddingProvider:
     """Mock embedding provider for testing."""
 
     async def embed(self, texts: list[str], model: str = "", options: Any = None) -> Any:
-        response = MagicMock()
-        response.embeddings = [tuple(0.1 for _ in range(128)) for _ in texts]
-        return response
+        embedding = tuple(0.1 for _ in range(128))
+        return EmbeddingResponse(
+            model=model or "mock-model",
+            provider="mock",
+            usage=Usage(),
+            embedding=embedding,
+            dimensions=len(embedding),
+        )
 
 
 # --- Metric Engine Integration Tests ---
@@ -76,9 +82,9 @@ class TestMetricEngineIntegration:
 
     @pytest.mark.asyncio
     async def test_all_metrics_registered(self, engine: MetricEngine) -> None:
-        """Verify all 22 metrics are registered."""
+        """Verify all 21 metrics are registered."""
         resolved = engine.resolve_metrics([m.definition().name for m in engine._metrics.values()])
-        assert len(resolved) >= 22
+        assert len(resolved) >= 21
 
     @pytest.mark.asyncio
     async def test_cost_metric_executes(self, engine: MetricEngine) -> None:

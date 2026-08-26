@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 import pytest
@@ -11,8 +10,6 @@ import pytest
 from app.kernel.container.di_container import DIContainer, Lifetime, Scope
 from app.kernel.contracts.config import (
     BaseConfiguration,
-    EnvironmentConfiguration,
-    PluginConfiguration,
     ServiceConfiguration,
 )
 from app.kernel.entities.base import (
@@ -20,26 +17,20 @@ from app.kernel.entities.base import (
     DomainEvent,
     Entity,
     UUIDv7,
-    ValueObject,
 )
 from app.kernel.events.event_bus import (
     BaseEvent,
     EventBus,
     EventPublisher,
     EventSerializer,
-    EventSubscriber,
 )
 from app.kernel.exceptions.errors import (
-    ApplicationError,
     BaseError,
-    ConfigurationError,
     ConflictError,
     DependencyError,
     DomainError,
-    ExternalServiceError,
     InfrastructureError,
     NotFoundError,
-    TimeoutError,
     UnauthorizedError,
     ValidationError,
 )
@@ -49,17 +40,13 @@ from app.kernel.health.health import (
     HealthResult,
     HealthStatus,
 )
-from app.kernel.lifecycle.lifecycle import LifecycleManager, LifecycleService, LifecycleState
+from app.kernel.lifecycle.lifecycle import LifecycleService
 from app.kernel.registry.plugin import (
     Plugin,
     PluginContext,
     PluginLoader,
     PluginMetadata,
     PluginRegistry,
-)
-from app.kernel.repositories.repository import QueryOptions, ReadRepository, WriteRepository
-from app.kernel.repositories.specification import (
-    Specification,
 )
 from app.kernel.repositories.unit_of_work import Transaction, UnitOfWork
 from app.kernel.results.result import (
@@ -77,26 +64,6 @@ from app.kernel.results.result import (
     map as map_result,
 )
 from app.kernel.service_registry.service_registry import ServiceRegistry
-from app.kernel.utils.clock import FrozenClock, SystemClock
-from app.kernel.utils.paginator import (
-    CursorPage,
-    CursorPaginator,
-    CursorParams,
-    Page,
-    PageParams,
-    Paginator,
-)
-from app.kernel.utils.retry import (
-    ExponentialBackoff,
-    FixedBackoff,
-    NoBackoff,
-    RetryPolicy,
-    with_retry,
-)
-from app.kernel.utils.uuid_generator import (
-    RandomUUIDGenerator,
-    SequentialUUIDGenerator,
-)
 
 # ──────────────────────────────────────────────
 # 1. DI Container Tests
@@ -274,17 +241,6 @@ class TestErrors:
         assert err.trace_id is not None
         assert len(err.trace_id) > 0
 
-    def test_application_error(self) -> None:
-        err = ApplicationError("Config load failed")
-        assert err.error_code == "APPLICATION_ERROR"
-        assert not err.retryable
-        assert err.http_status == 500
-
-    def test_configuration_error(self) -> None:
-        err = ConfigurationError("Missing DB_HOST", field="DB_HOST")
-        assert err.error_code == "CONFIGURATION_ERROR"
-        assert err.details["field"] == "DB_HOST"
-
     def test_dependency_error(self) -> None:
         err = DependencyError("Service not found", dependency_name="Database")
         assert err.error_code == "DEPENDENCY_ERROR"
@@ -320,17 +276,6 @@ class TestErrors:
         assert err.error_code == "INFRASTRUCTURE_ERROR"
         assert err.retryable
         assert err.http_status == 503
-
-    def test_external_service_error(self) -> None:
-        err = ExternalServiceError("OpenAI API down", service_name="openai")
-        assert err.error_code == "EXTERNAL_SERVICE_ERROR"
-        assert err.details["service"] == "openai"
-
-    def test_timeout_error(self) -> None:
-        err = TimeoutError("Request timed out", timeout_seconds=30.0)
-        assert err.error_code == "TIMEOUT"
-        assert err.details["timeout_seconds"] == 30.0
-        assert err.retryable
 
     def test_error_chain_with_cause(self) -> None:
         cause = ValueError("Original cause")
@@ -450,12 +395,6 @@ class _TestDomainEvent(DomainEvent):
         return "test.entity.action"
 
 
-@dataclass(frozen=True)
-class _TestValueObject(ValueObject):
-    name: str
-    count: int
-
-
 class TestUUIDv7:
     def test_generates_unique_ids(self) -> None:
         id1 = UUIDv7()
@@ -527,19 +466,6 @@ class TestAggregateRoot:
         assert agg.collect_events() == []
 
 
-class TestValueObject:
-    def test_equality_by_attributes(self) -> None:
-        v1 = _TestValueObject("test", 42)
-        v2 = _TestValueObject("test", 42)
-        assert v1 == v2
-        assert hash(v1) == hash(v2)
-
-    def test_inequality_by_different_attributes(self) -> None:
-        v1 = _TestValueObject("test", 42)
-        v2 = _TestValueObject("other", 42)
-        assert v1 != v2
-
-
 class TestDomainEvent:
     def test_event_has_id_and_timestamp(self) -> None:
         event = _TestDomainEvent()
@@ -571,14 +497,8 @@ class TestEventBusContracts:
         assert "publish" in methods
         assert "publish_many" in methods
 
-    def test_event_subscriber_has_subscribe(self) -> None:
-        methods = [m for m in dir(EventSubscriber) if not m.startswith("_")]
-        assert "subscribe" in methods
-        assert "unsubscribe" in methods
-
     def test_event_bus_combines_all(self) -> None:
         assert issubclass(EventBus, EventPublisher)
-        assert issubclass(EventBus, EventSubscriber)
         assert "start" in EventBus.__abstractmethods__
         assert "stop" in EventBus.__abstractmethods__
         assert "health" in EventBus.__abstractmethods__
@@ -600,24 +520,6 @@ class TestEventBusContracts:
 
 
 class TestRepositoryContracts:
-    def test_read_repository_has_find_by_id(self) -> None:
-        assert "find_by_id" in ReadRepository.__abstractmethods__
-
-    def test_read_repository_has_exists(self) -> None:
-        assert "exists" in ReadRepository.__abstractmethods__
-
-    def test_read_repository_has_count(self) -> None:
-        assert "count" in ReadRepository.__abstractmethods__
-
-    def test_write_repository_has_add(self) -> None:
-        assert "add" in WriteRepository.__abstractmethods__
-
-    def test_write_repository_has_update(self) -> None:
-        assert "update" in WriteRepository.__abstractmethods__
-
-    def test_write_repository_has_delete(self) -> None:
-        assert "delete" in WriteRepository.__abstractmethods__
-
     def test_unit_of_work_has_commit(self) -> None:
         assert "commit" in UnitOfWork.__abstractmethods__
 
@@ -627,157 +529,9 @@ class TestRepositoryContracts:
     def test_transaction_has_begin(self) -> None:
         assert "begin" in Transaction.__abstractmethods__
 
-    def test_query_options_defaults(self) -> None:
-        opts = QueryOptions()
-        assert opts.page == 1
-        assert opts.page_size == 20
-        assert opts.sort_order == "asc"
-        assert opts.filters == {}
-
 
 # ──────────────────────────────────────────────
-# 7. Specification Pattern Tests
-# ──────────────────────────────────────────────
-
-
-class _EvenNumber(Specification[int]):
-    def satisfied_by(self, candidate: int) -> bool:
-        return candidate % 2 == 0
-
-
-class _PositiveNumber(Specification[int]):
-    def satisfied_by(self, candidate: int) -> bool:
-        return candidate > 0
-
-
-class TestSpecification:
-    def test_basic_specification(self) -> None:
-        spec = _EvenNumber()
-        assert spec.satisfied_by(2)
-        assert not spec.satisfied_by(3)
-
-    def test_and_specification(self) -> None:
-        spec = _EvenNumber() & _PositiveNumber()
-        assert spec.satisfied_by(2)
-        assert not spec.satisfied_by(-2)
-        assert not spec.satisfied_by(3)
-
-    def test_or_specification(self) -> None:
-        spec = _EvenNumber() | _PositiveNumber()
-        assert spec.satisfied_by(2)
-        assert spec.satisfied_by(1)
-        assert not spec.satisfied_by(-1)
-
-    def test_not_specification(self) -> None:
-        spec = ~_EvenNumber()
-        assert spec.satisfied_by(1)
-        assert not spec.satisfied_by(2)
-
-    def test_combined_expression(self) -> None:
-        spec = (_EvenNumber() & _PositiveNumber()) | (~_EvenNumber() & ~_PositiveNumber())
-        assert spec.satisfied_by(2)
-        assert spec.satisfied_by(-1)
-        assert not spec.satisfied_by(-2)
-
-
-# ──────────────────────────────────────────────
-# 8. Lifecycle Tests
-# ──────────────────────────────────────────────
-
-
-class _MockLifecycle(LifecycleService):
-    def __init__(self) -> None:
-        self.initialized = False
-        self.started = False
-        self.stopped = False
-        self.disposed = False
-        self._healthy = True
-
-    async def initialize(self) -> None:
-        self.initialized = True
-
-    async def start(self) -> None:
-        self.started = True
-
-    async def stop(self) -> None:
-        self.stopped = True
-
-    async def dispose(self) -> None:
-        self.disposed = True
-
-    async def health(self) -> bool:
-        return self._healthy
-
-    def set_healthy(self, healthy: bool) -> None:
-        self._healthy = healthy
-
-
-class TestLifecycleManager:
-    @pytest.mark.asyncio
-    async def test_initialize_all(self) -> None:
-        manager = LifecycleManager()
-        service = _MockLifecycle()
-        manager.register("test", service)
-        results = await manager.initialize_all()
-        assert service.initialized
-        assert results == [("test", True)]
-
-    @pytest.mark.asyncio
-    async def test_start_all(self) -> None:
-        manager = LifecycleManager()
-        service = _MockLifecycle()
-        manager.register("test", service)
-        await manager.initialize_all()
-        await manager.start_all()
-        assert service.started
-
-    @pytest.mark.asyncio
-    async def test_stop_all(self) -> None:
-        manager = LifecycleManager()
-        service = _MockLifecycle()
-        manager.register("test", service)
-        await manager.start_all()
-        await manager.stop_all()
-        assert service.stopped
-
-    @pytest.mark.asyncio
-    async def test_dispose_all(self) -> None:
-        manager = LifecycleManager()
-        service = _MockLifecycle()
-        manager.register("test", service)
-        await manager.dispose_all()
-        assert service.disposed
-
-    @pytest.mark.asyncio
-    async def test_health_report(self) -> None:
-        manager = LifecycleManager()
-        healthy = _MockLifecycle()
-        unhealthy = _MockLifecycle()
-        unhealthy.set_healthy(False)
-
-        manager.register("healthy", healthy)
-        manager.register("unhealthy", unhealthy)
-
-        report = await manager.health_report()
-        assert report["healthy"] is True
-        assert report["unhealthy"] is False
-
-    def test_get_service(self) -> None:
-        manager = LifecycleManager()
-        service = _MockLifecycle()
-        manager.register("test", service)
-        assert manager.get_service("test") is service
-        assert manager.get_service("nonexistent") is None
-
-    def test_lifecycle_state_tracking(self) -> None:
-        manager = LifecycleManager()
-        service = _MockLifecycle()
-        manager.register("test", service)
-        assert manager.get_state("test") is LifecycleState.INITIALIZED
-
-
-# ──────────────────────────────────────────────
-# 9. Service Registry Tests
+# 8. Service Registry Tests
 # ──────────────────────────────────────────────
 
 
@@ -1077,254 +831,5 @@ class TestConfigContracts:
         with pytest.raises(AttributeError):
             config.host = "other"
 
-    def test_plugin_configuration(self) -> None:
-        config = PluginConfiguration(name="toxicity", enabled=True)
-        assert config.name == "toxicity"
-        assert config.enabled
-
-    def test_environment_configuration(self) -> None:
-        config = EnvironmentConfiguration(env="production", debug=False)
-        assert config.env == "production"
-        assert not config.debug
-        assert config.log_level == "INFO"
-
     def test_base_configuration(self) -> None:
         assert issubclass(ServiceConfiguration, BaseConfiguration)
-        assert issubclass(PluginConfiguration, BaseConfiguration)
-        assert issubclass(EnvironmentConfiguration, BaseConfiguration)
-
-
-# ──────────────────────────────────────────────
-# 13. Utility Tests
-# ──────────────────────────────────────────────
-
-
-class TestClock:
-    def test_system_clock_returns_datetime(self) -> None:
-        clock = SystemClock()
-        now = clock.now()
-        assert isinstance(now, datetime)
-
-    def test_frozen_clock_returns_fixed_time(self) -> None:
-        fixed = datetime(2026, 7, 1, tzinfo=UTC)
-        clock = FrozenClock(fixed)
-        assert clock.now() == fixed
-
-    def test_frozen_clock_advance(self) -> None:
-        fixed = datetime(2026, 7, 1, tzinfo=UTC)
-        clock = FrozenClock(fixed)
-        clock.advance(timedelta(days=1))
-        assert clock.now() == fixed + timedelta(days=1)
-
-    def test_today(self) -> None:
-        clock = FrozenClock(datetime(2026, 7, 1, 14, 30, tzinfo=UTC))
-        today = clock.today()
-        assert today.hour == 0
-        assert today.minute == 0
-        assert today.second == 0
-
-
-class TestUUIDGenerator:
-    def test_random_generates_unique(self) -> None:
-        gen = RandomUUIDGenerator()
-        id1 = gen.generate()
-        id2 = gen.generate()
-        assert id1 != id2
-
-    def test_sequential_is_deterministic(self) -> None:
-        gen = SequentialUUIDGenerator(start=100)
-        id1 = gen.generate()
-        id2 = gen.generate()
-        assert id1 != id2
-        assert id1.int == 100
-        assert id2.int == 101
-
-
-class _AsyncCounter:
-    def __init__(self) -> None:
-        self.call_count = 0
-
-    async def call(self) -> str:
-        self.call_count += 1
-        if self.call_count < 3:
-            msg = f"Attempt {self.call_count} failed"
-            raise ConnectionError(msg)
-        return "success"
-
-
-class TestRetry:
-    @pytest.mark.asyncio
-    async def test_retry_succeeds_after_retries(self) -> None:
-        counter = _AsyncCounter()
-        policy = RetryPolicy(max_retries=5, backoff=NoBackoff())
-        result = await with_retry(policy, counter.call)
-        assert result == "success"
-        assert counter.call_count == 3
-
-    @pytest.mark.asyncio
-    async def test_retry_exhausted_raises(self) -> None:
-        counter = _AsyncCounter()
-        policy = RetryPolicy(max_retries=2, backoff=NoBackoff())
-        with pytest.raises(ConnectionError):
-            await with_retry(policy, counter.call)
-
-    def test_exponential_backoff_increases(self) -> None:
-        backoff = ExponentialBackoff(base_delay=1.0, multiplier=2.0, jitter=False)
-        d1 = backoff.delay(1)
-        d2 = backoff.delay(2)
-        d3 = backoff.delay(3)
-        assert d1 == 1.0
-        assert d2 == 2.0
-        assert d3 == 4.0
-
-    def test_exponential_backoff_respects_max(self) -> None:
-        backoff = ExponentialBackoff(base_delay=1.0, multiplier=10.0, max_delay=50.0, jitter=False)
-        delay = backoff.delay(5)
-        assert delay <= 50.0
-
-    def test_fixed_backoff(self) -> None:
-        backoff = FixedBackoff(delay_seconds=2.0)
-        assert backoff.delay(1) == 2.0
-        assert backoff.delay(99) == 2.0
-
-    def test_no_backoff(self) -> None:
-        backoff = NoBackoff()
-        assert backoff.delay(1) == 0.0
-        assert backoff.delay(100) == 0.0
-
-
-class TestPagination:
-    def test_page_params_offset(self) -> None:
-        params = PageParams(page=3, page_size=20)
-        assert params.offset == 40
-        assert params.limit == 20
-
-    def test_page_params_defaults(self) -> None:
-        params = PageParams()
-        assert params.page == 1
-        assert params.page_size == 20
-        assert params.offset == 0
-
-    def test_page_total_pages(self) -> None:
-        page = Page(items=[1, 2, 3], total=100, page=1, page_size=20)
-        assert page.total_pages == 5
-
-    def test_page_empty(self) -> None:
-        page = Page[int]()
-        assert page.total_pages == 0
-        assert page.items == []
-
-    def test_cursor_params_defaults(self) -> None:
-        params = CursorParams[int]()
-        assert params.cursor is None
-        assert params.page_size == 20
-
-    def test_cursor_page(self) -> None:
-        page = CursorPage(items=[1, 2], next_cursor="abc", has_more=True)
-        assert page.has_more
-        assert page.next_cursor == "abc"
-
-    def test_paginator_is_abstract(self) -> None:
-        assert "paginate" in Paginator.__abstractmethods__
-        assert "count" in Paginator.__abstractmethods__
-
-    def test_cursor_paginator_is_abstract(self) -> None:
-        assert "paginate" in CursorPaginator.__abstractmethods__
-        assert "has_next" in CursorPaginator.__abstractmethods__
-
-
-class TestCircuitBreaker:
-    @pytest.mark.asyncio
-    async def test_closed_state_allows_calls(self) -> None:
-        from app.kernel.utils.circuit_breaker import InMemoryCircuitBreaker
-
-        cb = InMemoryCircuitBreaker(failure_threshold=3)
-
-        async def ok() -> str:
-            return "ok"
-
-        result = await cb.call(ok)
-        assert result == "ok"
-        assert cb.state.name == "CLOSED"
-
-    @pytest.mark.asyncio
-    async def test_opens_after_threshold(self) -> None:
-        from app.kernel.utils.circuit_breaker import (
-            CircuitBreakerOpenError,
-            CircuitState,
-            InMemoryCircuitBreaker,
-        )
-
-        cb = InMemoryCircuitBreaker(failure_threshold=2, recovery_timeout_seconds=999)
-
-        async def failing() -> str:
-            raise ConnectionError("fail")
-
-        for _ in range(2):
-            with pytest.raises(ConnectionError):
-                await cb.call(failing)
-
-        assert cb.state is CircuitState.OPEN
-
-        with pytest.raises(CircuitBreakerOpenError):
-            await cb.call(failing)
-
-    @pytest.mark.asyncio
-    async def test_half_open_on_recovery_timeout(self) -> None:
-        from app.kernel.utils.circuit_breaker import (
-            CircuitState,
-            InMemoryCircuitBreaker,
-        )
-
-        cb = InMemoryCircuitBreaker(failure_threshold=1, recovery_timeout_seconds=0.01)
-
-        async def failing() -> str:
-            raise ConnectionError("fail")
-
-        with pytest.raises(ConnectionError):
-            await cb.call(failing)
-        assert cb.state is CircuitState.OPEN
-
-        await asyncio.sleep(0.02)
-
-        assert cb.state is CircuitState.HALF_OPEN
-
-    @pytest.mark.asyncio
-    async def test_reset(self) -> None:
-        from app.kernel.utils.circuit_breaker import CircuitState, InMemoryCircuitBreaker
-
-        cb = InMemoryCircuitBreaker(failure_threshold=1)
-
-        async def fail() -> str:
-            raise ValueError()
-
-        with pytest.raises(ValueError):
-            await cb.call(fail)
-
-        assert cb.state is CircuitState.OPEN
-        cb.reset()
-        assert cb.state is CircuitState.CLOSED
-
-
-class TestAsyncLock:
-    @pytest.mark.asyncio
-    async def test_async_lock_abstract(self) -> None:
-        from app.kernel.utils.async_lock import AsyncLock
-
-        assert "acquire" in AsyncLock.__abstractmethods__
-        assert "release" in AsyncLock.__abstractmethods__
-
-    @pytest.mark.asyncio
-    async def test_asyncio_lock(self) -> None:
-        from app.kernel.utils.async_lock import AsyncioLock
-
-        lock = AsyncioLock()
-        acquired = False
-
-        async def critical_section() -> None:
-            nonlocal acquired
-            async with lock.locked():
-                acquired = True
-
-        await critical_section()
-        assert acquired

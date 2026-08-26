@@ -40,7 +40,10 @@ export default function RedTeamDefinitionsPage() {
   const pageSize = 20;
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["attack-definitions", { search, category: categoryFilter, severity: severityFilter, page, pageSize }],
+    queryKey: [
+      "attack-definitions",
+      { search, category: categoryFilter, severity: severityFilter, page, pageSize },
+    ],
     queryFn: () =>
       api.listAttackDefinitions({
         search: search || undefined,
@@ -65,9 +68,7 @@ export default function RedTeamDefinitionsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Red Team Attack Definitions</h1>
-          <p className="text-muted-foreground">
-            Manage attack templates for LLM security testing
-          </p>
+          <p className="text-muted-foreground">Manage attack templates for LLM security testing</p>
         </div>
         <Button asChild>
           <Link href="/redteam/definitions/new">
@@ -79,7 +80,7 @@ export default function RedTeamDefinitionsPage() {
 
       <div className="flex items-center gap-4">
         <div className="relative max-w-sm">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search attacks..."
             className="pl-8"
@@ -87,7 +88,10 @@ export default function RedTeamDefinitionsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={categoryFilter ?? "all"} onValueChange={(v) => setCategoryFilter(v === "all" ? null : v)}>
+        <Select
+          value={categoryFilter ?? "all"}
+          onValueChange={(v) => setCategoryFilter(v === "all" ? null : v)}
+        >
           <option value="all">All Categories</option>
           <option value="prompt_injection">Prompt Injection</option>
           <option value="jailbreak">Jailbreak</option>
@@ -100,7 +104,10 @@ export default function RedTeamDefinitionsPage() {
           <option value="policy_circumvention">Policy Circumvention</option>
           <option value="output_format_manipulation">Output Format Manipulation</option>
         </Select>
-        <Select value={severityFilter ?? "all"} onValueChange={(v) => setSeverityFilter(v === "all" ? null : v)}>
+        <Select
+          value={severityFilter ?? "all"}
+          onValueChange={(v) => setSeverityFilter(v === "all" ? null : v)}
+        >
           <option value="all">All Severities</option>
           <option value="low">Low</option>
           <option value="medium">Medium</option>
@@ -120,7 +127,9 @@ export default function RedTeamDefinitionsPage() {
                     <p className="text-sm text-muted-foreground">{def_.description}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge className={severityColors[def_.severity] ?? "bg-muted"}>{def_.severity}</Badge>
+                    <Badge className={severityColors[def_.severity] ?? "bg-muted"}>
+                      {def_.severity}
+                    </Badge>
                     <Badge variant="outline">{def_.category}</Badge>
                   </div>
                 </div>

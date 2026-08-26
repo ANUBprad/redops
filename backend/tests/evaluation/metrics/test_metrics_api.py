@@ -61,7 +61,7 @@ class TestListMetrics:
         assert len(data) > 0
 
         names = {m["name"] for m in data}
-        assert "relevance" in names
+        assert "answer_relevance" in names
         assert "correctness" in names
         assert "groundedness" in names
         assert "hallucination" in names
@@ -141,14 +141,14 @@ class TestScoreItem:
                 "item_id": "00000000-0000-0000-0000-000000000002",
                 "prompt": "test",
                 "response": "test response",
-                "metric_names": ["relevance", "correctness"],
+                "metric_names": ["answer_relevance", "correctness"],
             },
         )
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
         names = {r["metric_name"] for r in data}
-        assert names == {"relevance", "correctness"}
+        assert names == {"answer_relevance", "correctness"}
 
     def test_score_response_shape(self, client: TestClient) -> None:
         """Each metric result has the expected fields."""
@@ -190,14 +190,14 @@ class TestScoreBatch:
                         "item_id": "00000000-0000-0000-0000-000000000002",
                         "prompt": "What is Python?",
                         "response": "Python is a language.",
-                        "metric_names": ["relevance"],
+                        "metric_names": ["answer_relevance"],
                     },
                     {
                         "run_id": "00000000-0000-0000-0000-000000000001",
                         "item_id": "00000000-0000-0000-0000-000000000003",
                         "prompt": "What is Rust?",
                         "response": "Rust is a systems language.",
-                        "metric_names": ["relevance"],
+                        "metric_names": ["answer_relevance"],
                     },
                 ],
             },
@@ -233,7 +233,7 @@ class TestGetMetricResults:
         """Filter results by metric name."""
         response = client.get(
             "/metrics/runs/00000000-0000-0000-0000-000000000001/results",
-            params={"metric_name": "relevance"},
+            params={"metric_name": "answer_relevance"},
         )
         assert response.status_code == 200
 
@@ -276,7 +276,7 @@ class TestConfigureEvaluationMetrics:
         """Configuring metrics for a nonexistent evaluation returns 404."""
         response = client.patch(
             "/metrics/evaluations/00000000-0000-0000-0000-000000000001/enabled-metrics",
-            json={"metric_names": ["relevance", "correctness"]},
+            json={"metric_names": ["answer_relevance", "correctness"]},
         )
         assert response.status_code == 404
 

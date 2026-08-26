@@ -8,14 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  FileText,
-  Download,
-  Shield,
-  Target,
-  BarChart3,
-  AlertTriangle,
-} from "lucide-react";
+import { FileText, Download, Shield, Target, BarChart3, AlertTriangle } from "lucide-react";
 import type { GeneratedReport } from "@/types/api";
 
 const REPORT_TYPES = [
@@ -59,14 +52,12 @@ export default function ReportsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Reports</h1>
-          <p className="text-muted-foreground">
-            Generate and export analytics reports
-          </p>
+          <p className="text-muted-foreground">Generate and export analytics reports</p>
         </div>
         {report && (
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => handleExport("json")}>
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="mr-2 h-4 w-4" />
               Export JSON
             </Button>
           </div>
@@ -81,10 +72,7 @@ export default function ReportsPage() {
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label>Report Type</Label>
-              <Select
-                value={reportType}
-                onValueChange={setReportType}
-              >
+              <Select value={reportType} onValueChange={setReportType}>
                 {REPORT_TYPES.map((rt) => (
                   <option key={rt.value} value={rt.value}>
                     {rt.label}
@@ -94,10 +82,7 @@ export default function ReportsPage() {
             </div>
             <div className="space-y-2">
               <Label>Time Range</Label>
-              <Select
-                value={String(days)}
-                onValueChange={(v) => setDays(Number(v))}
-              >
+              <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
                 <option value="7">Last 7 days</option>
                 <option value="14">Last 14 days</option>
                 <option value="30">Last 30 days</option>
@@ -106,11 +91,7 @@ export default function ReportsPage() {
             </div>
             <div className="space-y-2">
               <Label>&nbsp;</Label>
-              <Button
-                className="w-full"
-                onClick={() => refetch()}
-                disabled={isLoading}
-              >
+              <Button className="w-full" onClick={() => refetch()} disabled={isLoading}>
                 {isLoading ? "Generating..." : "Generate Report"}
               </Button>
             </div>
@@ -138,17 +119,17 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold mb-2">Summary</h3>
+                <h3 className="mb-2 text-lg font-semibold">Summary</h3>
                 <p className="text-sm text-muted-foreground">{report.summary}</p>
               </div>
 
               {Object.keys(report.statistics).length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">Key Statistics</h3>
+                  <h3 className="mb-2 text-lg font-semibold">Key Statistics</h3>
                   <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                     {Object.entries(report.statistics).map(([key, value]) => (
-                      <div key={key} className="p-3 rounded-lg border">
-                        <div className="text-xs text-muted-foreground capitalize">
+                      <div key={key} className="rounded-lg border p-3">
+                        <div className="text-xs capitalize text-muted-foreground">
                           {key.replace(/_/g, " ")}
                         </div>
                         <div className="text-lg font-bold">
@@ -168,12 +149,12 @@ export default function ReportsPage() {
 
               {report.sections.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">Sections</h3>
+                  <h3 className="mb-2 text-lg font-semibold">Sections</h3>
                   <div className="space-y-4">
                     {report.sections.map((section, idx) => (
-                      <div key={idx} className="p-4 rounded-lg border">
-                        <h4 className="font-medium mb-2">{section.title}</h4>
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      <div key={idx} className="rounded-lg border p-4">
+                        <h4 className="mb-2 font-medium">{section.title}</h4>
+                        <p className="whitespace-pre-wrap text-sm text-muted-foreground">
                           {section.content}
                         </p>
                         {Object.keys(section.statistics).length > 0 && (
@@ -194,14 +175,14 @@ export default function ReportsPage() {
 
               {report.recommendations.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">Recommendations</h3>
+                  <h3 className="mb-2 text-lg font-semibold">Recommendations</h3>
                   <ul className="space-y-2">
                     {report.recommendations.map((rec, idx) => (
                       <li
                         key={idx}
                         className="flex items-start gap-2 text-sm text-muted-foreground"
                       >
-                        <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
                         {rec}
                       </li>
                     ))}
@@ -216,7 +197,7 @@ export default function ReportsPage() {
       {!report && !isLoading && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+            <FileText className="mb-4 h-12 w-12 text-muted-foreground" />
             <p className="text-muted-foreground">
               Select a report type and click Generate to create a report
             </p>

@@ -108,3 +108,32 @@ class TraceComparisonResponse(BaseModel):
     item_comparisons: list[ItemComparisonResponse] = Field(default_factory=list)
     winner: str = Field(default="tie", description="Winner of comparison")
     confidence: float = Field(default=0.0, description="Comparison confidence")
+
+
+class MetricRegressionResponse(BaseModel):
+    """Response model for a single metric regression analysis."""
+
+    metric_name: str
+    baseline_score: float | None = None
+    current_score: float | None = None
+    delta: float = 0.0
+    direction: str = Field(default="higher_is_better", description="Score direction")
+    tolerance: float = Field(default=0.02, description="Regression tolerance")
+    status: str = Field(..., description="Metric regression status")
+    reasoning: str = Field(default="", description="Analysis reasoning")
+
+
+class RegressionResultResponse(BaseModel):
+    """Response model for regression analysis result."""
+
+    baseline_run_id: str
+    current_run_id: str
+    baseline_fingerprint: str
+    current_fingerprint: str
+    fingerprints_compatible: bool
+    metric_comparisons: list[MetricRegressionResponse] = Field(default_factory=list)
+    verdict: str = Field(..., description="Regression verdict: pass, fail, not_comparable, error")
+    regression_count: int = 0
+    error_count: int = 0
+    not_comparable_count: int = 0
+    reasoning: str = Field(default="", description="Overall reasoning")

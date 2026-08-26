@@ -16,7 +16,7 @@ class AttackRunModel(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     evaluation_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
     attack_definition_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     configuration: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     items_total: Mapped[int] = mapped_column(Integer, default=0)

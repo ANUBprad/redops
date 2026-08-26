@@ -53,7 +53,12 @@ class JudgeRequest:
 
 @dataclass(frozen=True, slots=True)
 class JudgeResponse:
-    """Structured response from the judge engine."""
+    """Structured response from the judge engine.
+
+    ``error`` is set when the judge could not produce a trustworthy
+    score (provider failure or malformed output). In that case the
+    score fields are placeholders and MUST NOT be consumed.
+    """
 
     score: float
     confidence: float
@@ -67,3 +72,4 @@ class JudgeResponse:
     cost_usd: float = 0.0
     tokens_input: int = 0
     tokens_output: int = 0
+    error: str | None = None

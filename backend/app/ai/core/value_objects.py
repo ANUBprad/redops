@@ -55,6 +55,8 @@ class ExecutionMetadata:
     description: str | None = None
     judge_provider: str | None = None
     judge_model: str | None = None
+    embedding_provider: str | None = None
+    embedding_model: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

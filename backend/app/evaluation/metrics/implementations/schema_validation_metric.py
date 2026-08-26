@@ -47,6 +47,11 @@ class SchemaValidationMetric(Metric):
             )
 
         schema = input_data.metadata.get("schema")
+        if isinstance(schema, str) and schema:
+            try:
+                schema = json.loads(schema)
+            except (json.JSONDecodeError, ValueError):
+                schema = None
         if not schema or not isinstance(schema, dict):
             return MetricResult(
                 metric_name="schema_validation",

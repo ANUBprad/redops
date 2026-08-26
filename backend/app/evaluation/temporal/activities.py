@@ -8,8 +8,10 @@ session via the configured session factory.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import field as dataclasses_field
 from typing import TYPE_CHECKING, Any
 
+import sqlalchemy as sa
 from temporalio import activity
 
 from app.evaluation.application.run_commands import (
@@ -186,6 +188,27 @@ class ExecuteItemInput:
 
 
 @dataclass(frozen=True, slots=True)
+class MetricResultPayload:
+    """Serializable metric evaluation result.
+
+    Transport shape between the item execution activity and the
+    metric result persistence activity.
+    """
+
+    metric_name: str
+    score: float = 0.0
+    normalized_score: float = 0.0
+    raw_output: str = ""
+    reasoning: str = ""
+    metadata: dict[str, Any] = dataclasses_field(default_factory=dict)
+    execution_time_ms: int = 0
+    error: str | None = None
+    confidence: float = 0.0
+    version: str = "1.0.0"
+    cost_usd: float = 0.0
+
+
+@dataclass(frozen=True, slots=True)
 class ExecuteItemResult:
     """Result returned by execute_item activity."""
 
@@ -197,11 +220,22 @@ class ExecuteItemResult:
     latency_ms: int = 0
     failed: bool = False
     error: str | None = None
+    item_id: str = ""
+    metrics: tuple[MetricResultPayload, ...] = ()
 
 
 # ---------------------------------------------------------------------------
 # Activity results
 # ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class PersistMetricResultsInput:
+    """Input for the persist_metric_results activity."""
+
+    run_id: str
+    item_id: str
+    results: tuple[MetricResultPayload, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,6 +245,21 @@ class RunResult:
     run_id: str
     status: str
     evaluation_name: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class FinalizeRunIntegrityInput:
+    """Input for the finalize_run_integrity activity.
+
+    Carries trace data, provenance, fingerprint, and metric names
+    needed to evaluate thresholds and persist the full evaluation record.
+    """
+
+    run_id: str
+    metric_names: tuple[str, ...] = ()
+    trace_data: dict[str, Any] = dataclasses_field(default_factory=dict)
+    provenance: dict[str, Any] = dataclasses_field(default_factory=dict)
+    fingerprint: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -359,8 +408,13 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
     """Execute a single evaluation item against the provider.
 
     Builds the real prompt for the item, invokes the configured
-    chat provider through the shared provider registry, and returns
-    a result carrying real token usage, estimated cost, and latency.
+    chat provider through the shared provider registry, evaluates
+    the requested metrics against the generated response, and
+    returns a result carrying real token usage, estimated cost,
+    latency, and metric scores.
+
+    Heartbeats are sent at meaningful boundaries so Temporal can
+    detect stuck activities and honour cancellation requests.
     """
     import time
 
@@ -373,6 +427,22 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
     start = time.monotonic()
 
     try:
+        if activity.in_activity():
+            activity.heartbeat(f"preparing item {input.item_index}")
+
+        # Idempotency check: if metric results already exist for this
+        # (run_id, item_id), the previous execution succeeded.  Return
+        # the cached result instead of re-calling the provider.
+        item_id = input.item_id or str(input.item_index)
+        existing_metrics = await _load_existing_metrics(input.run_id, item_id)
+        if existing_metrics is not None:
+            activity.logger.info(
+                "Returning cached result for item run_id=%s item_index=%d (idempotent)",
+                input.run_id,
+                input.item_index,
+            )
+            return existing_metrics
+
         from app.evaluation.data.dataset import DatasetItem
         from app.evaluation.execution.item_executor import ItemExecutor
         from app.evaluation.execution.prompt_builder import PromptTemplate
@@ -394,6 +464,9 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
         )
         executor = ItemExecutor(_get_cost_calculator(), prompt_template=template)
 
+        if activity.in_activity():
+            activity.heartbeat(f"calling provider for item {input.item_index}")
+
         result = await executor.execute(
             provider,
             provider_name=input.provider_name,
@@ -403,6 +476,18 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
         )
 
         elapsed_ms = int((time.monotonic() - start) * 1000)
+        metrics: tuple[MetricResultPayload, ...] = ()
+        if result.is_success:
+            if activity.in_activity():
+                activity.heartbeat(f"evaluating metrics for item {input.item_index}")
+            metrics = await _evaluate_metrics(
+                engine=_metric_engine,
+                run_id=input.run_id,
+                item_id=item_id,
+                metric_names=input.metric_names,
+                execution=result,
+                judge_provider=provider,
+            )
 
         return ExecuteItemResult(
             item_index=input.item_index,
@@ -413,6 +498,8 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
             latency_ms=elapsed_ms,
             failed=result.failed,
             error=result.error,
+            item_id=item_id,
+            metrics=metrics,
         )
     except Exception as exc:
         elapsed_ms = int((time.monotonic() - start) * 1000)
@@ -422,3 +509,306 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
             error=str(exc),
             latency_ms=elapsed_ms,
         )
+
+
+async def _evaluate_metrics(
+    *,
+    engine: Any,
+    run_id: str,
+    item_id: str,
+    metric_names: tuple[str, ...],
+    execution: Any,
+    judge_provider: Any,
+) -> tuple[MetricResultPayload, ...]:
+    """Evaluate the selected metrics against an executed item.
+
+    The resolved chat provider is injected as the LLM judge so
+    judge-backed metrics perform a real second LLM call. When that
+    provider also implements the embedding contract (e.g. OpenAI),
+    it is injected for embedding-backed metrics as well; otherwise
+    those metrics produce explicit error results rather than fake
+    scores.
+    """
+    if engine is None or not metric_names:
+        return ()
+
+    from app.evaluation.metrics.domain import MetricInput
+
+    resolved = engine.resolve_metrics(metric_names)
+    if not resolved:
+        activity.logger.warning(
+            "No requested metrics are registered run_id=%s requested=%s",
+            run_id,
+            list(metric_names),
+        )
+        return ()
+
+    metadata = execution.to_metric_metadata()
+    embedding_provider = judge_provider if hasattr(judge_provider, "embed") else None
+    metadata.update(
+        {
+            "run_id": run_id,
+            "item_id": item_id,
+            "_judge_provider": judge_provider,
+            "_judge_provider_name": execution.provider_name,
+            "_judge_model": execution.model_id,
+            "_embedding_provider": embedding_provider,
+        }
+    )
+    metric_input = MetricInput(
+        prompt=execution.prompt,
+        response=execution.response,
+        reference=execution.reference or "",
+        context=execution.context or "",
+        metadata=metadata,
+    )
+
+    results = await engine.evaluate_batch(resolved, metric_input)
+    return tuple(_to_payload(r) for r in results)
+
+
+def _to_payload(result: Any) -> MetricResultPayload:
+    """Convert a domain MetricResult to its serializable payload."""
+    return MetricResultPayload(
+        metric_name=result.metric_name,
+        score=result.score,
+        normalized_score=result.normalized_score,
+        raw_output=result.raw_output,
+        reasoning=result.reasoning,
+        metadata=dict(result.metadata),
+        execution_time_ms=result.execution_time_ms,
+        error=result.error,
+        confidence=result.confidence,
+        version=result.version,
+        cost_usd=result.cost_usd,
+    )
+
+
+async def _load_existing_metrics(run_id: str, item_id: str) -> ExecuteItemResult | None:
+    """Check if metric results already exist for this (run_id, item_id).
+
+    Returns an ExecuteItemResult reconstructed from persisted data if
+    results exist, enabling idempotent retries.  Returns None when no
+    prior results are found (first execution).
+    """
+    from app.infrastructure.database.repositories.metric_result_repository import (
+        SqlAlchemyMetricResultRepository,
+    )
+    from app.kernel.entities.base import UUIDv7
+
+    try:
+        run_uuid = UUIDv7.from_string(run_id)
+        item_uuid = UUIDv7.from_string(item_id)
+    except Exception:
+        return None
+
+    async with _get_session() as session:
+        repo = SqlAlchemyMetricResultRepository(session)
+        existing = await repo.find_by_item_id(run_uuid, item_uuid)
+        if not existing:
+            return None
+
+        metrics = tuple(
+            MetricResultPayload(
+                metric_name=r.metric_name,
+                score=r.score,
+                normalized_score=r.normalized_score,
+                raw_output=r.raw_output,
+                reasoning=r.reasoning,
+                metadata=dict(r.metadata),
+                execution_time_ms=r.execution_time_ms,
+                error=r.error,
+                confidence=r.confidence,
+                version=r.version,
+                cost_usd=r.cost_usd,
+            )
+            for r in existing
+        )
+
+        total_cost = sum(m.cost_usd for m in metrics)
+        return ExecuteItemResult(
+            item_index=0,
+            response="",
+            cost_usd=total_cost,
+            item_id=item_id,
+            metrics=metrics,
+        )
+
+
+@activity.defn
+async def persist_metric_results_activity(input: PersistMetricResultsInput) -> int:
+    """Persist metric results for a single evaluated item."""
+    if not input.results:
+        return 0
+
+    from app.evaluation.metrics.domain import MetricResult
+    from app.infrastructure.database.repositories.metric_result_repository import (
+        SqlAlchemyMetricResultRepository,
+    )
+
+    activity.logger.info(
+        "Persisting metric results run_id=%s item_id=%s count=%d",
+        input.run_id,
+        input.item_id,
+        len(input.results),
+    )
+
+    def to_domain(payload: MetricResultPayload) -> MetricResult:
+        return MetricResult(
+            metric_name=payload.metric_name,
+            score=payload.score,
+            normalized_score=payload.normalized_score,
+            raw_output=payload.raw_output,
+            reasoning=payload.reasoning,
+            metadata={**payload.metadata, "run_id": input.run_id, "item_id": input.item_id},
+            execution_time_ms=payload.execution_time_ms,
+            error=payload.error,
+            confidence=payload.confidence,
+            version=payload.version,
+            cost_usd=payload.cost_usd,
+        )
+
+    async with _get_session() as session:
+        repo = SqlAlchemyMetricResultRepository(session)
+
+        # Idempotency: delete any existing results for this (run_id, item_id)
+        # before inserting, so retries do not produce duplicate rows.
+        from app.kernel.entities.base import UUIDv7 as KernelUUIDv7
+
+        try:
+            run_uuid = KernelUUIDv7.from_string(input.run_id)
+            item_uuid = KernelUUIDv7.from_string(input.item_id)
+            existing = await repo.find_by_item_id(run_uuid, item_uuid)
+            if existing:
+                from app.infrastructure.database.models.metric_result import (
+                    MetricResultModel,
+                )
+
+                await session.execute(
+                    sa.delete(MetricResultModel).where(
+                        MetricResultModel.run_id == input.run_id,
+                        MetricResultModel.item_id == input.item_id,
+                    )
+                )
+        except Exception:
+            pass  # If ID parsing fails, proceed with insert (first execution)
+
+        await repo.save_many([to_domain(p) for p in input.results])
+        await session.commit()
+    return len(input.results)
+
+
+@activity.defn
+async def finalize_run_integrity_activity(
+    input: FinalizeRunIntegrityInput,
+) -> str:
+    """Finalize evaluation run integrity: evaluate thresholds, capture provenance, persist.
+
+    This activity runs after all items complete. It:
+    1. Loads all metric results for the run
+    2. Evaluates thresholds against each metric result
+    3. Determines a run-level verdict (pass/fail/error)
+    4. Captures environment provenance
+    5. Persists trace_data, provenance, fingerprint, and verdict to the evaluation run
+
+    Returns the determined verdict string.
+    """
+    from app.evaluation.metrics.domain import MetricResult
+    from app.evaluation.reliability.provenance import capture_environment
+    from app.infrastructure.database.repositories.metric_result_repository import (
+        SqlAlchemyMetricResultRepository,
+    )
+
+    activity.logger.info(
+        "Finalizing run integrity run_id=%s metric_count=%d",
+        input.run_id,
+        len(input.metric_names),
+    )
+
+    # 1. Capture environment provenance (I/O — git commands, platform info)
+    env_snapshot = capture_environment()
+
+    # 2. Load all metric results for this run and evaluate thresholds
+    verdict = "pass"
+    async with _get_session() as session:
+        metric_repo = SqlAlchemyMetricResultRepository(session)
+        run_repo = SqlAlchemyEvaluationRunRepository(session)
+
+        # Load all persisted metric results for this run
+        from app.kernel.entities.base import UUIDv7 as KernelUUIDv7
+
+        run_uuid = KernelUUIDv7.from_string(input.run_id)
+        all_results: list[MetricResult] = []
+        for metric_name in input.metric_names:
+            results = await metric_repo.find_by_run_id(
+                run_id=run_uuid,
+                metric_name=metric_name,
+            )
+            all_results.extend(results)
+
+        # Evaluate thresholds using the metric engine definitions
+        threshold_evaluations: dict[str, bool | None] = {}
+        if _metric_engine is not None and all_results:
+            for metric_name in input.metric_names:
+                definition = _metric_engine._definitions.get(metric_name)
+                if definition is None:
+                    continue
+                threshold = definition.default_threshold
+                if threshold is None:
+                    continue
+
+                metric_results = [r for r in all_results if r.metric_name == metric_name]
+                if not metric_results:
+                    threshold_evaluations[metric_name] = None
+                    continue
+
+                # Evaluate threshold against aggregated mean
+                successful = [r for r in metric_results if r.is_success]
+                if not successful:
+                    threshold_evaluations[metric_name] = None
+                    verdict = "error" if verdict != "fail" else verdict
+                    continue
+
+                mean_score = sum(r.normalized_score for r in successful) / len(successful)
+                passed = mean_score >= threshold
+                threshold_evaluations[metric_name] = passed
+
+                if not passed:
+                    verdict = "fail"
+
+        # If all thresholds passed but we had only errors, verdict is error
+        if verdict == "pass" and all(v is None for v in threshold_evaluations.values()):
+            if threshold_evaluations:
+                verdict = "error"
+
+        # 3. Build provenance dict
+        provenance_data = {
+            "environment": {
+                "git_commit_hash": env_snapshot.git_commit_hash,
+                "git_branch": env_snapshot.git_branch,
+                "python_version": env_snapshot.python_version,
+                "requirements_hash": env_snapshot.requirements_hash,
+                "platform_info": env_snapshot.platform_info,
+            },
+            "metric_versions": dict.fromkeys(input.metric_names, "1.0.0"),
+            "threshold_evaluations": threshold_evaluations,
+        }
+
+        # 4. Persist to evaluation run
+        from app.kernel.entities.base import UUIDv7 as KernelUUIDv7
+
+        run = await run_repo.find_by_id(KernelUUIDv7.from_string(input.run_id))
+        if run is not None:
+            run.verdict = verdict
+            run.trace_data = input.trace_data if input.trace_data else None
+            run.provenance = provenance_data
+            run.fingerprint = input.fingerprint if input.fingerprint else None
+            await run_repo.save(run)
+            await session.commit()
+
+    activity.logger.info(
+        "Run integrity finalized run_id=%s verdict=%s",
+        input.run_id,
+        verdict,
+    )
+    return verdict

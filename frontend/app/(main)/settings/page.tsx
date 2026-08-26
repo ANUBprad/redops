@@ -104,9 +104,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex gap-2">
-        <Button onClick={handleSave}>
-          {saved ? "Saved!" : "Save Settings"}
-        </Button>
+        <Button onClick={handleSave}>{saved ? "Saved!" : "Save Settings"}</Button>
         <Button variant="outline">Reset</Button>
       </div>
     </div>

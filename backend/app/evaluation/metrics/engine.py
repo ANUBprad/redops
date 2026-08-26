@@ -149,7 +149,16 @@ class MetricEngine:
                 error=validation_error,
             )
 
-        return await metric.evaluate(input_data)
+        result = await metric.evaluate(input_data)
+
+        # Carry run/item identity through so persisted results remain
+        # attributable regardless of which implementation produced them.
+        for key in ("run_id", "item_id"):
+            value = input_data.metadata.get(key)
+            if value is not None and key not in result.metadata:
+                result.metadata[key] = str(value)
+
+        return result
 
     async def evaluate_batch(
         self,

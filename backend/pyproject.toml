@@ -22,6 +22,7 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "openai>=1.0",
     "anthropic>=0.20",
+    "jsonschema>=4.21",
     "opentelemetry-api>=1.25",
     "opentelemetry-sdk>=1.25",
     "prometheus-client>=0.20",
@@ -37,6 +38,8 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.6",
     "mypy>=1.10",
+    "types-jsonschema>=4.23",
+    "aiosqlite>=0.20",
 ]
 
 [tool.ruff]
@@ -84,6 +87,7 @@ ignore = [
     "S108",    # hardcoded-temp-file
     "S110",    # try-except-pass (intentional in some patterns)
     "S311",    # suspicious-non-cryptographic-random-usage
+    "S607",    # starting-process-with-partial-executable-path (git is safe)
     "TC001",   # typing-only-first-party-import (defer to later)
     "TC002",   # typing-only-third-party-import (defer to later)
     "TC003",   # typing-only-standard-library-import (defer to later)

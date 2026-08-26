@@ -14,16 +14,21 @@ function getRankIcon(rank: number) {
   if (rank === 1) return <Trophy className="h-5 w-5 text-yellow-500" />;
   if (rank === 2) return <Medal className="h-5 w-5 text-gray-400" />;
   if (rank === 3) return <Medal className="h-5 w-5 text-amber-600" />;
-  return <span className="text-sm font-medium text-muted-foreground w-5 text-center">{rank}</span>;
+  return <span className="w-5 text-center text-sm font-medium text-muted-foreground">{rank}</span>;
 }
 
 function getRankingIcon(rankingBy: string) {
   switch (rankingBy) {
-    case "score": return <TrendingUp className="h-4 w-4" />;
-    case "latency": return <Zap className="h-4 w-4" />;
-    case "cost": return <DollarSign className="h-4 w-4" />;
-    case "reliability": return <Shield className="h-4 w-4" />;
-    default: return <TrendingUp className="h-4 w-4" />;
+    case "score":
+      return <TrendingUp className="h-4 w-4" />;
+    case "latency":
+      return <Zap className="h-4 w-4" />;
+    case "cost":
+      return <DollarSign className="h-4 w-4" />;
+    case "reliability":
+      return <Shield className="h-4 w-4" />;
+    default:
+      return <TrendingUp className="h-4 w-4" />;
   }
 }
 
@@ -47,18 +52,13 @@ export default function LeaderboardsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Leaderboards</h1>
-        <p className="text-muted-foreground">
-          Rank models and providers by performance metrics
-        </p>
+        <p className="text-muted-foreground">Rank models and providers by performance metrics</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label>Ranking By</Label>
-          <Select
-            value={rankingBy}
-            onValueChange={setRankingBy}
-          >
+          <Select value={rankingBy} onValueChange={setRankingBy}>
             <option value="score">Overall Score</option>
             <option value="latency">Lowest Latency</option>
             <option value="cost">Lowest Cost</option>
@@ -67,10 +67,7 @@ export default function LeaderboardsPage() {
         </div>
         <div className="space-y-2">
           <Label>Time Range</Label>
-          <Select
-            value={String(days)}
-            onValueChange={(v) => setDays(Number(v))}
-          >
+          <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
             <option value="7">Last 7 days</option>
             <option value="14">Last 14 days</option>
             <option value="30">Last 30 days</option>
@@ -91,7 +88,7 @@ export default function LeaderboardsPage() {
             </div>
           ) : leaderboard.entries.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Medal className="h-12 w-12 text-muted-foreground mb-4" />
+              <Medal className="mb-4 h-12 w-12 text-muted-foreground" />
               <p className="text-muted-foreground">No data available for this ranking</p>
             </div>
           ) : (
@@ -99,7 +96,7 @@ export default function LeaderboardsPage() {
               {leaderboard.entries.map((entry) => (
                 <div
                   key={entry.entity_id}
-                  className={`flex items-center justify-between p-4 rounded-lg border ${
+                  className={`flex items-center justify-between rounded-lg border p-4 ${
                     entry.rank <= 3
                       ? "border-yellow-200 bg-yellow-50/50 dark:border-yellow-900/30 dark:bg-yellow-900/5"
                       : "border-border"

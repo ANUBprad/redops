@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING
+
+from fastapi.responses import Response
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.requests import Request
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
+    from starlette.responses import Response as StarletteResponse
 
 _metrics_registered = False
 
@@ -20,7 +26,6 @@ def setup_prometheus_metrics(app: FastAPI) -> None:
         return
 
     try:
-        from fastapi.responses import Response
         from prometheus_client import (
             Counter,
             Gauge,
@@ -66,13 +71,13 @@ def setup_prometheus_metrics(app: FastAPI) -> None:
             ["provider"],
         )
 
-        async def metrics() -> Response:
+        async def metrics_endpoint() -> Response:
             return Response(
                 content=generate_latest(),
                 media_type="text/plain",
             )
 
-        app.add_api_route("/metrics", metrics, methods=["GET"])
+        app.add_api_route("/metrics", metrics_endpoint, methods=["GET"])
 
         app.state.prometheus = {
             "request_count": REQUEST_COUNT,
@@ -84,6 +89,27 @@ def setup_prometheus_metrics(app: FastAPI) -> None:
             "token_usage": TOKEN_USAGE,
             "cost_total": COST_TOTAL,
         }
+
+        class PrometheusMiddleware(BaseHTTPMiddleware):
+            """Middleware that records request count and latency."""
+
+            async def dispatch(
+                self, request: Request, call_next: RequestResponseEndpoint
+            ) -> StarletteResponse:
+                start = time.monotonic()
+                response = await call_next(request)
+                elapsed = time.monotonic() - start
+
+                method = request.method
+                path = request.url.path
+                status = str(response.status_code)
+
+                REQUEST_COUNT.labels(method=method, endpoint=path, status=status).inc()
+                REQUEST_LATENCY.labels(method=method, endpoint=path).observe(elapsed)
+
+                return response
+
+        app.add_middleware(PrometheusMiddleware)
         _metrics_registered = True
     except ImportError:
         pass

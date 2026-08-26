@@ -13,10 +13,13 @@ export default function OrganizationsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.listOrganizations().then((data) => {
-      setOrganizations(data as Organization[]);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    api
+      .listOrganizations()
+      .then((data) => {
+        setOrganizations(data as Organization[]);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   return (
@@ -52,9 +55,7 @@ export default function OrganizationsPage() {
                   <p className="text-sm text-muted-foreground">
                     {org.description || "No description"}
                   </p>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Slug: {org.slug}
-                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">Slug: {org.slug}</p>
                 </CardContent>
               </Card>
             </Link>

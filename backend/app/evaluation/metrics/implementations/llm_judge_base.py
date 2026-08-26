@@ -41,9 +41,16 @@ class LLMJudgeMetric(Metric):
     def _get_judge_config(self, input_data: MetricInput) -> JudgeConfig:
         """Resolve the judge config."""
         return self._judge_config or JudgeConfig(
-            provider_name=str(input_data.metadata.get("_judge_provider_name", "")),
-            model=str(input_data.metadata.get("_judge_model", "")),
+            provider_name=str(input_data.metadata.get("_judge_provider_name") or ""),
+            model=str(input_data.metadata.get("_judge_model") or ""),
         )
+
+    def _resolve_provider_name(self, input_data: MetricInput, provider: Any) -> str:
+        """Record which provider executed the judge call."""
+        configured = input_data.metadata.get("_judge_provider_name")
+        if configured:
+            return str(configured)
+        return str(getattr(provider, "provider_name", ""))
 
     async def evaluate(self, input_data: MetricInput) -> MetricResult:
         """Evaluate using LLM judge."""
@@ -99,6 +106,25 @@ class LLMJudgeMetric(Metric):
 
         judge_response = await engine.judge(request, provider=provider, config=config)
 
+        if judge_response.error is not None:
+            return MetricResult(
+                metric_name=metric_def.name,
+                score=0.0,
+                normalized_score=0.0,
+                raw_output=judge_response.raw_output,
+                reasoning=judge_response.reasoning,
+                metadata={
+                    "rubric_version": judge_response.rubric_version,
+                    "judge_model": judge_response.judge_model,
+                    "judge_prompt_version": judge_response.judge_prompt_version,
+                    "tokens_input": judge_response.tokens_input,
+                    "tokens_output": judge_response.tokens_output,
+                },
+                version=metric_def.version,
+                execution_time_ms=int((time.monotonic() - start) * 1000),
+                error=judge_response.error,
+            )
+
         return MetricResult(
             metric_name=metric_def.name,
             score=judge_response.score,
@@ -111,6 +137,7 @@ class LLMJudgeMetric(Metric):
                 "judge_prompt_version": judge_response.judge_prompt_version,
                 "tokens_input": judge_response.tokens_input,
                 "tokens_output": judge_response.tokens_output,
+                "provider": self._resolve_provider_name(input_data, provider),
             },
             confidence=judge_response.confidence,
             version=metric_def.version,

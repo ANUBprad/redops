@@ -10,10 +10,7 @@ from __future__ import annotations
 import uuid
 from abc import ABC
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from app.kernel.utils.uuid_generator import UUIDGenerator
+from typing import Any
 
 
 class UUIDv7:
@@ -30,19 +27,8 @@ class UUIDv7:
         self.value = value if value is not None else uuid.uuid4()
 
     @classmethod
-    def generate(cls, generator: UUIDGenerator | None = None) -> UUIDv7:
-        """Create a new UUIDv7 identifier.
-
-        Args:
-            generator: Optional UUID generator (injectable for testing).
-                       Defaults to a time-sortable v7 UUID.
-
-        """
-        if generator is not None:
-            return cls(value=generator.generate())
-
-        # Fallback: use uuid4 if no generator provided.
-        # In production, provide a UUIDv7 generator.
+    def generate(cls) -> UUIDv7:
+        """Create a new UUIDv7 identifier."""
         return cls(value=uuid.uuid4())
 
     @classmethod
@@ -85,29 +71,6 @@ class TimestampMixin:
     def touch(self) -> None:
         """Update the updated_at timestamp to now."""
         self.updated_at = datetime.now(UTC)
-
-
-class SoftDeleteMixin:
-    """Mixin that provides soft-delete capability.
-
-    Deleted entities are not physically removed from the database.
-    Instead, deleted_at is set to the deletion timestamp.
-    """
-
-    deleted_at: datetime | None = None
-
-    @property
-    def is_deleted(self) -> bool:
-        """Return True if this entity has been soft-deleted."""
-        return self.deleted_at is not None
-
-    def soft_delete(self) -> None:
-        """Mark this entity as deleted."""
-        self.deleted_at = datetime.now(UTC)
-
-    def restore(self) -> None:
-        """Restore a soft-deleted entity."""
-        self.deleted_at = None
 
 
 class VersionMixin:
@@ -174,22 +137,6 @@ class AggregateRoot(Entity, ABC):
         events = list(self._domain_events)
         self._domain_events.clear()
         return events
-
-
-class ValueObject(ABC):
-    """Base class for immutable value objects.
-
-    Value objects have no identity — two value objects are equal
-    if all their attributes are equal. They must be immutable.
-    """
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, type(self)):
-            return NotImplemented
-        return self.__dict__ == other.__dict__
-
-    def __hash__(self) -> int:
-        return hash(tuple(sorted(self.__dict__.items())))
 
 
 class DomainEvent:

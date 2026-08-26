@@ -80,7 +80,7 @@ export default function EvaluationsPage() {
 
       <div className="flex items-center gap-4">
         <div className="relative max-w-sm">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search evaluations..."
             className="pl-8"
@@ -88,7 +88,10 @@ export default function EvaluationsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={statusFilter ?? "all"} onValueChange={(v) => setStatusFilter(v === "all" ? null : v)}>
+        <Select
+          value={statusFilter ?? "all"}
+          onValueChange={(v) => setStatusFilter(v === "all" ? null : v)}
+        >
           <option value="all">All Status</option>
           <option value="active">Active</option>
           <option value="draft">Draft</option>

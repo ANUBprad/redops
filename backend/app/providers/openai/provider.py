@@ -12,12 +12,14 @@ from app.providers.capabilities.capability import Capability
 from app.providers.capabilities.capability_set import CapabilitySet
 from app.providers.contracts.base import BaseProvider
 from app.providers.contracts.chat import ChatProvider
+from app.providers.contracts.embedding import EmbeddingProvider
 from app.providers.contracts.reasoning import ReasoningProvider
 from app.providers.contracts.streaming import StreamingProvider
 from app.providers.contracts.tool_calling import ToolCallingProvider
 from app.providers.metadata.provider import ProviderMetadata
 from app.providers.openai.adapters.contracts import (
     OpenAIChatAdapter,
+    OpenAIEmbeddingAdapter,
     OpenAIReasoningAdapter,
     OpenAIStreamingAdapter,
     OpenAIToolCallingAdapter,
@@ -30,8 +32,8 @@ if TYPE_CHECKING:
 
     from app.providers.health.provider_health import ProviderHealth
     from app.providers.models.messages import Message
-    from app.providers.models.options import ChatOptions
-    from app.providers.models.responses import ChatResponse
+    from app.providers.models.options import ChatOptions, EmbeddingOptions
+    from app.providers.models.responses import ChatResponse, EmbeddingResponse
     from app.providers.streaming.chunk import StreamChunk
 
 PROVIDER_NAME = "openai"
@@ -62,6 +64,8 @@ _CAPABILITIES = CapabilitySet.of(
     Capability.VISION_CONTEXT,
     Capability.REASONING,
     Capability.PROMPT_CACHING,
+    Capability.EMBEDDING,
+    Capability.EMBEDDING_DIMENSIONS,
 )
 
 
@@ -71,6 +75,7 @@ class OpenAIProvider(
     StreamingProvider,
     ToolCallingProvider,
     ReasoningProvider,
+    EmbeddingProvider,
 ):
     """OpenAI provider implementing all framework chat contracts.
 
@@ -112,6 +117,7 @@ class OpenAIProvider(
         self._streaming_adapter = OpenAIStreamingAdapter(self._client)
         self._tool_adapter = OpenAIToolCallingAdapter(self._client)
         self._reasoning_adapter = OpenAIReasoningAdapter(self._client)
+        self._embedding_adapter = OpenAIEmbeddingAdapter(self._client)
         self._health_contributor = OpenAIHealthContributor(self._client)
         self._started = False
 
@@ -260,3 +266,25 @@ class OpenAIProvider(
             model=model,
             options=options,
         )
+
+    # ── Embedding ────────────────────────────────────────────────────
+
+    async def embed(
+        self,
+        texts: list[str],
+        *,
+        model: str,
+        options: EmbeddingOptions | None = None,
+    ) -> EmbeddingResponse:
+        """Generate embeddings for the given texts.
+
+        Args:
+            texts: The input texts to embed.
+            model: The embedding model identifier (e.g. 'text-embedding-3-small').
+            options: Optional embedding parameters (dimensions, encoding format).
+
+        Returns:
+            An EmbeddingResponse with the vector and usage.
+
+        """
+        return await self._embedding_adapter.embed(texts, model=model, options=options)

@@ -5,15 +5,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from app.providers.openai.mappers.request import map_chat_options, map_messages, map_tools
-from app.providers.openai.mappers.response import map_chat_response
+from app.providers.openai.mappers.response import map_chat_response, map_embedding_response
 from app.providers.openai.streaming.adapter import adapt_stream
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from app.providers.models.messages import Message
-    from app.providers.models.options import ChatOptions
-    from app.providers.models.responses import ChatResponse
+    from app.providers.models.options import ChatOptions, EmbeddingOptions
+    from app.providers.models.responses import ChatResponse, EmbeddingResponse
     from app.providers.openai.client.openai_client import OpenAIClient
     from app.providers.streaming.chunk import StreamChunk
 
@@ -157,3 +157,34 @@ class OpenAIReasoningAdapter:
         )
 
         return map_chat_response(response)
+
+
+class OpenAIEmbeddingAdapter:
+    """Adapter for embedding generation through OpenAI."""
+
+    def __init__(self, client: OpenAIClient) -> None:
+        """Initialize with OpenAI client."""
+        self._client = client
+
+    async def embed(
+        self,
+        texts: list[str],
+        *,
+        model: str,
+        options: EmbeddingOptions | None = None,
+    ) -> EmbeddingResponse:
+        """Generate embeddings for the given texts."""
+        params: dict[str, Any] = {}
+        if options is not None:
+            if options.dimensions is not None:
+                params["dimensions"] = options.dimensions
+            if options.encoding_format:
+                params["encoding_format"] = options.encoding_format
+
+        raw_response = await self._client.create_embedding(
+            model=model,
+            texts=texts,
+            **params,
+        )
+
+        return map_embedding_response(raw_response)

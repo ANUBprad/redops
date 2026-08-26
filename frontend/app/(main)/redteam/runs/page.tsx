@@ -53,12 +53,18 @@ export default function RedTeamRunsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed": return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
-      case "running": return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
-      case "failed": return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
-      case "queued": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
-      case "cancelled": return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
-      default: return "bg-muted text-muted-foreground";
+      case "completed":
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+      case "running":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
+      case "failed":
+        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
+      case "queued":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
+      case "cancelled":
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+      default:
+        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -82,7 +88,7 @@ export default function RedTeamRunsPage() {
 
       <div className="flex items-center gap-4">
         <div className="relative max-w-sm">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search runs..."
             className="pl-8"
@@ -90,7 +96,10 @@ export default function RedTeamRunsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={statusFilter ?? "all"} onValueChange={(v) => setStatusFilter(v === "all" ? null : v)}>
+        <Select
+          value={statusFilter ?? "all"}
+          onValueChange={(v) => setStatusFilter(v === "all" ? null : v)}
+        >
           <option value="all">All Status</option>
           <option value="running">Running</option>
           <option value="completed">Completed</option>
@@ -113,7 +122,7 @@ export default function RedTeamRunsPage() {
                   <th className="pb-2 text-sm font-medium">Progress</th>
                   <th className="pb-2 text-sm font-medium">Results</th>
                   <th className="pb-2 text-sm font-medium">Created</th>
-                  <th className="pb-2 text-sm font-medium text-right">Actions</th>
+                  <th className="pb-2 text-right text-sm font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>

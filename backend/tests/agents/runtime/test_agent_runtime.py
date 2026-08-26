@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.agents.domain.entities.agent_entities import AgentRun
+from app.agents.domain.tool_execution import ToolRegistry
 from app.agents.domain.value_objects.agent_value_objects import (
     AgentConfiguration,
     AgentProfile,
@@ -72,29 +73,47 @@ class TestAgentPlanner:
 class TestAgentExecutor:
     """Tests for AgentExecutor."""
 
-    @pytest.mark.asyncio
-    async def test_execute_step_success(self) -> None:
-        run = _make_run()
-        executor = AgentExecutor()
-        result = await executor.execute_step(run, step_index=0, tool_name="search")
-        assert result.success
-        assert result.step_index == 0
-
-    @pytest.mark.asyncio
-    async def test_classify_failure_timeout(self) -> None:
-        executor = AgentExecutor()
+    def test_classify_failure_timeout(self) -> None:
+        executor = AgentExecutor(provider=None, tool_registry=ToolRegistry())
         from app.agents.domain.enums.agent_enums import AgentRunFailureReason
 
         reason = executor.classify_failure("Provider timeout error")
         assert reason == AgentRunFailureReason.PROVIDER_TIMEOUT
 
-    @pytest.mark.asyncio
-    async def test_classify_failure_rate_limit(self) -> None:
-        executor = AgentExecutor()
+    def test_classify_failure_rate_limit(self) -> None:
+        executor = AgentExecutor(provider=None, tool_registry=ToolRegistry())
         from app.agents.domain.enums.agent_enums import AgentRunFailureReason
 
         reason = executor.classify_failure("Rate limit exceeded")
         assert reason == AgentRunFailureReason.RATE_LIMITED
+
+    def test_classify_failure_unavailable(self) -> None:
+        executor = AgentExecutor(provider=None, tool_registry=ToolRegistry())
+        from app.agents.domain.enums.agent_enums import AgentRunFailureReason
+
+        reason = executor.classify_failure("Provider unavailable")
+        assert reason == AgentRunFailureReason.PROVIDER_UNAVAILABLE
+
+    def test_classify_failure_auth(self) -> None:
+        executor = AgentExecutor(provider=None, tool_registry=ToolRegistry())
+        from app.agents.domain.enums.agent_enums import AgentRunFailureReason
+
+        reason = executor.classify_failure("Authentication failed")
+        assert reason == AgentRunFailureReason.AUTHENTICATION_FAILED
+
+    def test_classify_failure_tool(self) -> None:
+        executor = AgentExecutor(provider=None, tool_registry=ToolRegistry())
+        from app.agents.domain.enums.agent_enums import AgentRunFailureReason
+
+        reason = executor.classify_failure("Tool execution error")
+        assert reason == AgentRunFailureReason.TOOL_EXECUTION_ERROR
+
+    def test_classify_failure_internal(self) -> None:
+        executor = AgentExecutor(provider=None, tool_registry=ToolRegistry())
+        from app.agents.domain.enums.agent_enums import AgentRunFailureReason
+
+        reason = executor.classify_failure("Something broke")
+        assert reason == AgentRunFailureReason.INTERNAL_ERROR
 
 
 class TestAgentCheckpointManager:

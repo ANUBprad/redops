@@ -75,7 +75,7 @@ class TestScoreItemHandler:
         command = ScoreItemCommand(
             run_id="00000000-0000-0000-0000-000000000001",
             item_id="00000000-0000-0000-0000-000000000002",
-            metric_names=("relevance", "correctness"),
+            metric_names=("answer_relevance", "correctness"),
         )
         results = await handler.handle(command)
         assert len(results) == 2

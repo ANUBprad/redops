@@ -55,7 +55,8 @@ export function MetricChart({ runId }: { runId: string }) {
   if (resultsLoading || scoresLoading) return <LoadingState message="Loading metrics..." />;
 
   const results = (resultsData?.items ?? []) as MetricResult[];
-  const aggregations = ((scoresData as { aggregations?: Aggregation[] })?.aggregations ?? []) as Aggregation[];
+  const aggregations = ((scoresData as { aggregations?: Aggregation[] })?.aggregations ??
+    []) as Aggregation[];
 
   const chartData = aggregations.map((a) => ({
     name: a.metric_name,
@@ -98,7 +99,7 @@ export function MetricChart({ runId }: { runId: string }) {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols(3)">
+      <div className="lg:grid-cols(3) grid gap-4 md:grid-cols-2">
         {aggregations.map((agg) => (
           <Card key={agg.metric_name}>
             <CardContent className="pt-4">
@@ -106,7 +107,7 @@ export function MetricChart({ runId }: { runId: string }) {
                 <span className="font-medium">{agg.metric_name}</span>
                 <Badge variant="outline">{agg.item_count} items</Badge>
               </div>
-              <p className="text-2xl font-bold mt-2">{agg.mean.toFixed(3)}</p>
+              <p className="mt-2 text-2xl font-bold">{agg.mean.toFixed(3)}</p>
               <p className="text-xs text-muted-foreground">
                 Median: {agg.median.toFixed(3)} · Std: {agg.std_dev.toFixed(3)}
               </p>

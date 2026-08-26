@@ -27,7 +27,6 @@ from app.evaluation.metrics.implementations.reasoning_quality_metric import (
 from app.evaluation.metrics.implementations.regex_validation_metric import (
     RegexValidationMetric,
 )
-from app.evaluation.metrics.implementations.relevance_metric import RelevanceMetric
 from app.evaluation.metrics.implementations.response_length_metric import (
     ResponseLengthMetric,
 )
@@ -59,7 +58,6 @@ ALL_METRICS: list[type] = [
     SemanticSimilarityMetric,
     AnswerRelevanceMetric,
     ContextRelevanceMetric,
-    RelevanceMetric,
     # Tier 3 — LLM Judge
     CorrectnessMetric,
     FaithfulnessMetric,
@@ -88,7 +86,6 @@ __all__ = [
     "LatencyMetric",
     "ReasoningQualityMetric",
     "RegexValidationMetric",
-    "RelevanceMetric",
     "ResponseLengthMetric",
     "SafetyMetric",
     "SchemaValidationMetric",

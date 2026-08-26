@@ -87,7 +87,7 @@ export default function AgentRunsPage() {
 
       <div className="flex items-center gap-4">
         <div className="relative max-w-sm">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search agent runs..."
             className="pl-8"
@@ -95,7 +95,10 @@ export default function AgentRunsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={statusFilter ?? "all"} onValueChange={(v) => setStatusFilter(v === "all" ? null : v)}>
+        <Select
+          value={statusFilter ?? "all"}
+          onValueChange={(v) => setStatusFilter(v === "all" ? null : v)}
+        >
           <option value="all">All Status</option>
           <option value="running">Running</option>
           <option value="completed">Completed</option>
@@ -124,17 +127,14 @@ export default function AgentRunsPage() {
                   <th className="pb-2 text-sm font-medium">Steps</th>
                   <th className="pb-2 text-sm font-medium">Cost</th>
                   <th className="pb-2 text-sm font-medium">Created</th>
-                  <th className="pb-2 text-sm font-medium text-right">Actions</th>
+                  <th className="pb-2 text-right text-sm font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {runs.map((run) => (
                   <tr key={run.id} className="border-b">
                     <td className="py-3">
-                      <Link
-                        href={`/agents/runs/${run.id}`}
-                        className="font-medium hover:underline"
-                      >
+                      <Link href={`/agents/runs/${run.id}`} className="font-medium hover:underline">
                         {run.agent_name}
                       </Link>
                       <div className="text-sm text-muted-foreground">
@@ -142,7 +142,9 @@ export default function AgentRunsPage() {
                       </div>
                     </td>
                     <td className="py-3">
-                      <Badge className={statusColors[run.status] ?? "bg-muted text-muted-foreground"}>
+                      <Badge
+                        className={statusColors[run.status] ?? "bg-muted text-muted-foreground"}
+                      >
                         {run.status}
                       </Badge>
                     </td>

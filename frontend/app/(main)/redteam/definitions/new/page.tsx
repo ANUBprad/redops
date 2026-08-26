@@ -65,7 +65,7 @@ export default function NewAttackDefinitionPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle>Attack Details</CardTitle>
@@ -173,16 +173,28 @@ export default function NewAttackDefinitionPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Badge className="w-full justify-center" variant={severity === "low" ? "default" : "secondary"}>
+                <Badge
+                  className="w-full justify-center"
+                  variant={severity === "low" ? "default" : "secondary"}
+                >
                   Low
                 </Badge>
-                <Badge className="w-full justify-center" variant={severity === "medium" ? "default" : "secondary"}>
+                <Badge
+                  className="w-full justify-center"
+                  variant={severity === "medium" ? "default" : "secondary"}
+                >
                   Medium
                 </Badge>
-                <Badge className="w-full justify-center" variant={severity === "high" ? "default" : "secondary"}>
+                <Badge
+                  className="w-full justify-center"
+                  variant={severity === "high" ? "default" : "secondary"}
+                >
                   High
                 </Badge>
-                <Badge className="w-full justify-center" variant={severity === "critical" ? "default" : "secondary"}>
+                <Badge
+                  className="w-full justify-center"
+                  variant={severity === "critical" ? "default" : "secondary"}
+                >
                   Critical
                 </Badge>
               </div>
@@ -206,7 +218,10 @@ export default function NewAttackDefinitionPage() {
         <Button variant="outline" asChild>
           <Link href="/redteam/definitions">Cancel</Link>
         </Button>
-        <Button onClick={handleSubmit} disabled={createMutation.isPending || !name || !promptTemplate}>
+        <Button
+          onClick={handleSubmit}
+          disabled={createMutation.isPending || !name || !promptTemplate}
+        >
           <Plus className="mr-2 h-4 w-4" />
           {createMutation.isPending ? "Creating..." : "Create Attack Definition"}
         </Button>

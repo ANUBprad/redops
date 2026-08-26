@@ -45,7 +45,7 @@ export function Timeline({ runId }: { runId: string }) {
                     {event.event_type}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
-                    <Clock className="inline h-3 w-3 mr-1" />
+                    <Clock className="mr-1 inline h-3 w-3" />
                     {new Date(event.occurred_at).toLocaleTimeString()}
                   </span>
                 </div>

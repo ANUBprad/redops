@@ -38,7 +38,7 @@ function StatCard({
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
         {description && (
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
+          <p className="flex items-center gap-1 text-xs text-muted-foreground">
             {trend === "up" && <TrendingUp className="h-3 w-3 text-green-500" />}
             {trend === "down" && <TrendingDown className="h-3 w-3 text-red-500" />}
             {description}
@@ -72,7 +72,7 @@ export default function AnalyticsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center">
         <div className="text-muted-foreground">Loading analytics...</div>
       </div>
     );
@@ -95,9 +95,7 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-        <p className="text-muted-foreground">
-          Enterprise analytics and reporting overview
-        </p>
+        <p className="text-muted-foreground">Enterprise analytics and reporting overview</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -164,7 +162,7 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           {summary.recent_activity.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No recent activity</p>
+            <p className="text-sm text-muted-foreground">No recent activity</p>
           ) : (
             <div className="space-y-3">
               {summary.recent_activity.map((activity) => (
@@ -182,11 +180,9 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-muted-foreground">{activity.summary}</span>
-                    <Badge className={getStatusColor(activity.status)}>
-                      {activity.status}
-                    </Badge>
+                    <Badge className={getStatusColor(activity.status)}>{activity.status}</Badge>
                     {activity.timestamp && (
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      <span className="whitespace-nowrap text-xs text-muted-foreground">
                         {new Date(activity.timestamp).toLocaleDateString()}
                       </span>
                     )}

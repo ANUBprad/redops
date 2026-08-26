@@ -5,10 +5,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 const projects = [
-  { id: "proj-001", name: "Customer Support AI", description: "Evaluations for customer support chatbot", evals: 5, runs: 23 },
-  { id: "proj-002", name: "Code Assistant", description: "LLM code generation evaluation suite", evals: 8, runs: 41 },
-  { id: "proj-003", name: "Research Assistant", description: "Academic research assistant evaluations", evals: 3, runs: 12 },
-  { id: "proj-004", name: "Safety Testing", description: "Red team and safety evaluations", evals: 12, runs: 56 },
+  {
+    id: "proj-001",
+    name: "Customer Support AI",
+    description: "Evaluations for customer support chatbot",
+    evals: 5,
+    runs: 23,
+  },
+  {
+    id: "proj-002",
+    name: "Code Assistant",
+    description: "LLM code generation evaluation suite",
+    evals: 8,
+    runs: 41,
+  },
+  {
+    id: "proj-003",
+    name: "Research Assistant",
+    description: "Academic research assistant evaluations",
+    evals: 3,
+    runs: 12,
+  },
+  {
+    id: "proj-004",
+    name: "Safety Testing",
+    description: "Red team and safety evaluations",
+    evals: 12,
+    runs: 56,
+  },
 ];
 
 export default function NewProjectPage() {
@@ -25,7 +49,7 @@ export default function NewProjectPage() {
       </div>
 
       <div className="relative max-w-sm">
-        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input placeholder="Search projects..." className="pl-8" />
       </div>
 

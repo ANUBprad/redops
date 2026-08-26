@@ -77,7 +77,7 @@ class ReplayService:
 
         return ReplayReport(
             summary=summary,
-            item_reports=item_reports,
+            item_reports=tuple(item_reports),
             timeline=self._build_timeline(trace),
             configuration=trace.configuration,
         )
@@ -135,7 +135,7 @@ class ReplayService:
             metric_deltas=metric_deltas,
             cost_delta=cost_delta,
             latency_delta=latency_delta,
-            item_comparisons=item_comparisons,
+            item_comparisons=tuple(item_comparisons),
             winner=winner,
             confidence=self._compute_comparison_confidence(metric_deltas),
         )
@@ -159,7 +159,7 @@ class ReplayService:
             prompt_preview=prompt_preview,
             provider_response_preview=provider_response,
             provider_error=provider_error,
-            metric_explanations=metric_explanations,
+            metric_explanations=tuple(metric_explanations),
             total_latency_ms=item.total_latency_ms,
             total_cost_usd=item.total_cost_usd,
             error=item.error,
@@ -208,7 +208,7 @@ class ReplayService:
                 )
         return summaries
 
-    def _build_timeline(self, trace: ExecutionTrace) -> list[TimelineEntry]:
+    def _build_timeline(self, trace: ExecutionTrace) -> tuple[TimelineEntry, ...]:
         """Build a timeline of events."""
         entries = []
         for event in trace.events:
@@ -222,7 +222,7 @@ class ReplayService:
                     error=event.error,
                 )
             )
-        return entries
+        return tuple(entries)
 
     def _extract_all_metrics(self, trace: ExecutionTrace) -> dict[str, list[float]]:
         """Extract all metric scores grouped by name."""

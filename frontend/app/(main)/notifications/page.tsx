@@ -5,18 +5,28 @@ import { api } from "@/lib/api";
 import type { NotificationEntry } from "@/types/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.listNotifications("current-org").then((data) => {
-      const d = data as { items: NotificationEntry[] };
-      setNotifications(d.items ?? []);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    api
+      .listNotifications("current-org")
+      .then((data) => {
+        const d = data as { items: NotificationEntry[] };
+        setNotifications(d.items ?? []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   return (
@@ -49,7 +59,15 @@ export default function NotificationsPage() {
                     <TableCell>{n.channel}</TableCell>
                     <TableCell>{n.event}</TableCell>
                     <TableCell>
-                      <Badge variant={n.status === "sent" ? "default" : n.status === "failed" ? "destructive" : "secondary"}>
+                      <Badge
+                        variant={
+                          n.status === "sent"
+                            ? "default"
+                            : n.status === "failed"
+                              ? "destructive"
+                              : "secondary"
+                        }
+                      >
                         {n.status}
                       </Badge>
                     </TableCell>

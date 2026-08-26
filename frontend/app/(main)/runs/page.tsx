@@ -25,6 +25,7 @@ interface RunSummary {
   items_completed: number;
   items_failed: number;
   cost: number;
+  verdict: string | null;
   started_at: string | null;
   completed_at: string | null;
   created_at: string;
@@ -56,12 +57,31 @@ export default function RunsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed": return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
-      case "running": return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
-      case "failed": return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
-      case "queued": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
-      case "cancelled": return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
-      default: return "bg-muted text-muted-foreground";
+      case "completed":
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+      case "running":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
+      case "failed":
+        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
+      case "queued":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
+      case "cancelled":
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+      default:
+        return "bg-muted text-muted-foreground";
+    }
+  };
+
+  const getVerdictColor = (verdict: string | null) => {
+    switch (verdict) {
+      case "pass":
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+      case "fail":
+        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
+      case "error":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400";
+      default:
+        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -85,7 +105,7 @@ export default function RunsPage() {
 
       <div className="flex items-center gap-4">
         <div className="relative max-w-sm">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search runs..."
             className="pl-8"
@@ -93,7 +113,10 @@ export default function RunsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={statusFilter ?? "all"} onValueChange={(v) => setStatusFilter(v === "all" ? null : v)}>
+        <Select
+          value={statusFilter ?? "all"}
+          onValueChange={(v) => setStatusFilter(v === "all" ? null : v)}
+        >
           <option value="all">All Status</option>
           <option value="running">Running</option>
           <option value="completed">Completed</option>
@@ -116,21 +139,19 @@ export default function RunsPage() {
                 <tr className="border-b">
                   <th className="pb-2 text-sm font-medium">Run</th>
                   <th className="pb-2 text-sm font-medium">Status</th>
+                  <th className="pb-2 text-sm font-medium">Verdict</th>
                   <th className="pb-2 text-sm font-medium">Progress</th>
                   <th className="pb-2 text-sm font-medium">Items</th>
                   <th className="pb-2 text-sm font-medium">Cost</th>
                   <th className="pb-2 text-sm font-medium">Created</th>
-                  <th className="pb-2 text-sm font-medium text-right">Actions</th>
+                  <th className="pb-2 text-right text-sm font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {runs.map((run) => (
                   <tr key={run.id} className="border-b">
                     <td className="py-3">
-                      <Link
-                        href={`/runs/${run.id}`}
-                        className="font-medium hover:underline"
-                      >
+                      <Link href={`/runs/${run.id}`} className="font-medium hover:underline">
                         {run.evaluation_name}
                       </Link>
                       <div className="text-sm text-muted-foreground">
@@ -139,6 +160,13 @@ export default function RunsPage() {
                     </td>
                     <td className="py-3">
                       <Badge className={getStatusColor(run.status)}>{run.status}</Badge>
+                    </td>
+                    <td className="py-3">
+                      {run.verdict ? (
+                        <Badge className={getVerdictColor(run.verdict)}>{run.verdict}</Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="py-3">
                       <div className="text-sm">{Math.round(run.progress * 100)}%</div>

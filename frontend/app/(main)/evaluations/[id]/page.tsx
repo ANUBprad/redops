@@ -83,7 +83,15 @@ export default function EvaluationDetailPage({ params }: { params: Promise<{ id:
               </Button>
             </>
           ) : (
-            <Button onClick={() => { setIsEditing(true); setName(evalData.name); setDescription(evalData.description ?? ""); setProvider(evalData.provider); setModel(evalData.model); }}>
+            <Button
+              onClick={() => {
+                setIsEditing(true);
+                setName(evalData.name);
+                setDescription(evalData.description ?? "");
+                setProvider(evalData.provider);
+                setModel(evalData.model);
+              }}
+            >
               Edit
             </Button>
           )}
@@ -131,7 +139,9 @@ export default function EvaluationDetailPage({ params }: { params: Promise<{ id:
                 </div>
                 <div>
                   <span className="font-medium">Status:</span>{" "}
-                  <Badge variant={evalData.status === "ready" ? "default" : "secondary"}>{evalData.status}</Badge>
+                  <Badge variant={evalData.status === "ready" ? "default" : "secondary"}>
+                    {evalData.status}
+                  </Badge>
                 </div>
                 <div>
                   <span className="font-medium">Metrics:</span>
@@ -157,7 +167,8 @@ export default function EvaluationDetailPage({ params }: { params: Promise<{ id:
                   <span className="font-medium">Version:</span> {evalData.version}
                 </div>
                 <div>
-                  <span className="font-medium">Created:</span> {new Date(evalData.created_at).toLocaleString()}
+                  <span className="font-medium">Created:</span>{" "}
+                  {new Date(evalData.created_at).toLocaleString()}
                 </div>
               </>
             )}

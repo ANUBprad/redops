@@ -6,17 +6,27 @@ import type { ApiKeyInfo } from "@/types/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function ApiKeysPage() {
   const [keys, setKeys] = useState<ApiKeyInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.listApiKeys().then((data) => {
-      setKeys(data as ApiKeyInfo[]);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    api
+      .listApiKeys()
+      .then((data) => {
+        setKeys(data as ApiKeyInfo[]);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   return (
@@ -58,8 +68,12 @@ export default function ApiKeysPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>{k.usage_count}</TableCell>
-                    <TableCell>{k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : "Never"}</TableCell>
-                    <TableCell>{k.expires_at ? new Date(k.expires_at).toLocaleDateString() : "Never"}</TableCell>
+                    <TableCell>
+                      {k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : "Never"}
+                    </TableCell>
+                    <TableCell>
+                      {k.expires_at ? new Date(k.expires_at).toLocaleDateString() : "Never"}
+                    </TableCell>
                     <TableCell>
                       <Button variant="ghost" size="sm" onClick={() => api.revokeApiKey(k.id)}>
                         Revoke

@@ -11,15 +11,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import timedelta
+from typing import Any
 
 from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
+    from temporalio.common import RetryPolicy
+
     from app.evaluation.temporal.activities import (
         CancelRunInput,
         ExecuteItemInput,
         ExecuteItemResult,
         FailRunInput,
+        FinalizeRunIntegrityInput,
+        PersistMetricResultsInput,
         ProgressInput,
         RunIdInput,
         StartRunInput,
@@ -27,6 +32,8 @@ with workflow.unsafe.imports_passed_through():
         complete_run_activity,
         execute_item_activity,
         fail_run_activity,
+        finalize_run_integrity_activity,
+        persist_metric_results_activity,
         queue_run_activity,
         start_run_activity,
         update_progress_activity,
@@ -73,12 +80,81 @@ class EvaluationRunWorkflowResult:
     total_tokens_output: int = 0
 
 
+def _compute_workflow_fingerprint(
+    *,
+    prompt_template: str,
+    system_prompt: str,
+    provider: str,
+    model: str,
+    metrics: tuple[str, ...],
+) -> str:
+    """Compute a deterministic fingerprint for the evaluation configuration.
+
+    Runs inside the workflow (no I/O). Uses SHA-256 for stability.
+    """
+    import hashlib
+    import json
+
+    components: dict[str, str] = {}
+    if prompt_template:
+        components["prompt_template"] = hashlib.sha256(
+            prompt_template.encode(),
+        ).hexdigest()[:32]
+    if system_prompt:
+        components["system_prompt"] = hashlib.sha256(
+            system_prompt.encode(),
+        ).hexdigest()[:32]
+    components["provider"] = provider
+    components["model"] = model
+    components["metrics"] = json.dumps(sorted(metrics), sort_keys=True)
+
+    canonical = json.dumps(components, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()[:32]
+
+
+def _build_item_trace(item_result: ExecuteItemResult) -> dict[str, Any]:
+    """Build a trace dict for a single item from the activity result."""
+    metric_traces = []
+    for m in item_result.metrics:
+        metric_traces.append(
+            {
+                "metric_name": m.metric_name,
+                "score": m.score,
+                "normalized_score": m.normalized_score,
+                "confidence": m.confidence,
+                "reasoning": m.reasoning,
+                "version": m.version,
+                "cost_usd": m.cost_usd,
+                "execution_time_ms": m.execution_time_ms,
+                "error": m.error,
+            }
+        )
+
+    return {
+        "item_index": item_result.item_index,
+        "prompt_trace": {"prompt": ""},
+        "provider_trace": {
+            "response_content": item_result.response,
+            "tokens_input": item_result.tokens_input,
+            "tokens_output": item_result.tokens_output,
+            "cost_usd": item_result.cost_usd,
+            "latency_ms": item_result.latency_ms,
+            "error": item_result.error,
+        },
+        "metric_traces": metric_traces,
+        "total_latency_ms": item_result.latency_ms,
+        "total_cost_usd": item_result.cost_usd,
+        "error": item_result.error,
+    }
+
+
 @workflow.defn
 class EvaluationRunWorkflow:
     """Workflow that orchestrates an evaluation run's lifecycle.
 
     Handles queuing, starting, item execution, progress tracking,
     and completion of an evaluation run. Supports cancellation via signal.
+    Records execution traces and evaluates thresholds at completion.
     """
 
     def __init__(self) -> None:
@@ -99,11 +175,59 @@ class EvaluationRunWorkflow:
         activity_start_to_close = timedelta(seconds=30)
         activity_schedule_to_close = timedelta(minutes=5)
 
+        # Retry policies for different activity categories.
+        # Lifecycle activities (queue/start/complete/fail/cancel) are
+        # idempotent state transitions — safe to retry for transient DB errors.
+        lifecycle_retry = RetryPolicy(
+            maximum_attempts=3,
+            initial_interval=timedelta(seconds=1),
+            backoff_coefficient=2.0,
+            maximum_interval=timedelta(seconds=10),
+            non_retryable_error_types=["ValueError", "KeyError"],
+        )
+        # Item execution retries handle transient provider failures (rate
+        # limits, network errors) while the activity itself has internal
+        # idempotency checks.
+        item_retry = RetryPolicy(
+            maximum_attempts=3,
+            initial_interval=timedelta(seconds=2),
+            backoff_coefficient=2.0,
+            maximum_interval=timedelta(seconds=30),
+            non_retryable_error_types=["ValueError", "KeyError"],
+        )
+        # Persistence and integrity activities handle transient DB and I/O
+        # errors; non-retryable for invalid input.
+        persist_retry = RetryPolicy(
+            maximum_attempts=3,
+            initial_interval=timedelta(seconds=1),
+            backoff_coefficient=2.0,
+            maximum_interval=timedelta(seconds=15),
+            non_retryable_error_types=["ValueError", "KeyError"],
+        )
+
+        # Trace: record run start
+        started_at = workflow.now().isoformat()
+        item_traces: list[dict[str, Any]] = []
+        total_cost_usd = 0.0
+        total_tokens_input = 0
+        total_tokens_output = 0
+        total_latency_ms = 0
+
+        # Compute fingerprint from configuration (no I/O)
+        fingerprint = _compute_workflow_fingerprint(
+            prompt_template=input.prompt_template or "",
+            system_prompt=input.system_prompt or "",
+            provider=input.provider_name,
+            model=input.model_id,
+            metrics=input.metric_names,
+        )
+
         await workflow.execute_activity(
             queue_run_activity,
             RunIdInput(run_id=input.run_id),
             start_to_close_timeout=activity_start_to_close,
             schedule_to_close_timeout=activity_schedule_to_close,
+            retry_policy=lifecycle_retry,
         )
 
         await workflow.execute_activity(
@@ -111,13 +235,11 @@ class EvaluationRunWorkflow:
             StartRunInput(run_id=input.run_id, total_items=input.total_items),
             start_to_close_timeout=activity_start_to_close,
             schedule_to_close_timeout=activity_schedule_to_close,
+            retry_policy=lifecycle_retry,
         )
 
         items_completed = 0
         items_failed = 0
-        total_cost_usd = 0.0
-        total_tokens_input = 0
-        total_tokens_output = 0
 
         for item_index in range(input.total_items):
             if self._cancel_requested:
@@ -130,6 +252,7 @@ class EvaluationRunWorkflow:
                     ),
                     start_to_close_timeout=activity_start_to_close,
                     schedule_to_close_timeout=activity_schedule_to_close,
+                    retry_policy=lifecycle_retry,
                 )
                 return EvaluationRunWorkflowResult(
                     run_id=input.run_id,
@@ -163,15 +286,32 @@ class EvaluationRunWorkflow:
                     ),
                     start_to_close_timeout=timedelta(seconds=120),
                     schedule_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=item_retry,
                 )
 
                 items_completed += 1
                 total_cost_usd += item_result.cost_usd
                 total_tokens_input += item_result.tokens_input
                 total_tokens_output += item_result.tokens_output
+                total_latency_ms += item_result.latency_ms
+
+                # Record item trace
+                item_traces.append(_build_item_trace(item_result))
 
                 if item_result.failed:
                     items_failed += 1
+                elif item_result.metrics:
+                    await workflow.execute_activity(
+                        persist_metric_results_activity,
+                        PersistMetricResultsInput(
+                            run_id=input.run_id,
+                            item_id=item_result.item_id,
+                            results=item_result.metrics,
+                        ),
+                        start_to_close_timeout=activity_start_to_close,
+                        schedule_to_close_timeout=activity_schedule_to_close,
+                        retry_policy=persist_retry,
+                    )
 
                 await workflow.execute_activity(
                     update_progress_activity,
@@ -186,6 +326,7 @@ class EvaluationRunWorkflow:
                     ),
                     start_to_close_timeout=activity_start_to_close,
                     schedule_to_close_timeout=activity_schedule_to_close,
+                    retry_policy=lifecycle_retry,
                 )
 
             except Exception:
@@ -203,7 +344,32 @@ class EvaluationRunWorkflow:
                     ),
                     start_to_close_timeout=activity_start_to_close,
                     schedule_to_close_timeout=activity_schedule_to_close,
+                    retry_policy=lifecycle_retry,
                 )
+
+        # Build trace data from accumulated item traces
+        completed_at = workflow.now().isoformat()
+        trace_data: dict[str, Any] = {
+            "run_id": input.run_id,
+            "evaluation_name": "",
+            "provider_name": input.provider_name,
+            "model_id": input.model_id,
+            "started_at": started_at,
+            "completed_at": completed_at,
+            "status": "completed" if items_failed < input.total_items else "failed",
+            "item_traces": item_traces,
+            "total_cost_usd": total_cost_usd,
+            "total_tokens_input": total_tokens_input,
+            "total_tokens_output": total_tokens_output,
+            "total_latency_ms": total_latency_ms,
+            "configuration": {
+                "provider": input.provider_name,
+                "model": input.model_id,
+                "metrics": list(input.metric_names),
+                "prompt_template": input.prompt_template,
+                "system_prompt": input.system_prompt,
+            },
+        }
 
         if items_failed == input.total_items:
             await workflow.execute_activity(
@@ -215,7 +381,23 @@ class EvaluationRunWorkflow:
                 ),
                 start_to_close_timeout=activity_start_to_close,
                 schedule_to_close_timeout=activity_schedule_to_close,
+                retry_policy=lifecycle_retry,
             )
+
+            # Finalize integrity with error verdict
+            await workflow.execute_activity(
+                finalize_run_integrity_activity,
+                FinalizeRunIntegrityInput(
+                    run_id=input.run_id,
+                    metric_names=input.metric_names,
+                    trace_data=trace_data,
+                    fingerprint=fingerprint,
+                ),
+                start_to_close_timeout=activity_start_to_close,
+                schedule_to_close_timeout=activity_schedule_to_close,
+                retry_policy=persist_retry,
+            )
+
             return EvaluationRunWorkflowResult(
                 run_id=input.run_id,
                 status="failed",
@@ -232,6 +414,21 @@ class EvaluationRunWorkflow:
             RunIdInput(run_id=input.run_id),
             start_to_close_timeout=activity_start_to_close,
             schedule_to_close_timeout=activity_schedule_to_close,
+            retry_policy=lifecycle_retry,
+        )
+
+        # Finalize integrity: evaluate thresholds, capture provenance, persist
+        await workflow.execute_activity(
+            finalize_run_integrity_activity,
+            FinalizeRunIntegrityInput(
+                run_id=input.run_id,
+                metric_names=input.metric_names,
+                trace_data=trace_data,
+                fingerprint=fingerprint,
+            ),
+            start_to_close_timeout=activity_start_to_close,
+            schedule_to_close_timeout=activity_schedule_to_close,
+            retry_policy=persist_retry,
         )
 
         return EvaluationRunWorkflowResult(

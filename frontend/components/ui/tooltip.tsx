@@ -22,12 +22,17 @@ const Tooltip = React.forwardRef<HTMLSpanElement, TooltipProps>(
     }[side];
 
     return (
-      <span ref={containerRef} className="relative inline-block" onMouseEnter={() => setVisible(true)} onMouseLeave={() => setVisible(false)}>
+      <span
+        ref={containerRef}
+        className="relative inline-block"
+        onMouseEnter={() => setVisible(true)}
+        onMouseLeave={() => setVisible(false)}
+      >
         {children}
         {visible && (
           <span
             className={cn(
-              "pointer-events-none absolute z-10 rounded-md bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md",
+              "bg-popover text-popover-foreground pointer-events-none absolute z-10 rounded-md px-2 py-1 text-xs shadow-md",
               positionClass,
             )}
           >
