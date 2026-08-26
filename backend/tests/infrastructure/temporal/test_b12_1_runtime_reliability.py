@@ -36,6 +36,8 @@ from app.evaluation.temporal.activities import (
 )
 from app.evaluation.temporal.workflow import EvaluationRunWorkflow
 from app.infrastructure.temporal.worker import ActivityRegistry
+from app.redteam.temporal.activities import red_team_campaign_activity
+from app.redteam.temporal.workflow import RedTeamWorkflow
 
 # ---------------------------------------------------------------------------
 # P0-1: finalize_run_integrity_activity registered
@@ -274,5 +276,5 @@ class TestContainerActivityRegistration:
         container._register_configurations()
         container._register_temporal()
         registry = container.container.resolve(ActivityRegistry)
-        # 10 eval activities + 8 agent activities = 18
-        assert registry.count == 18
+        # 10 eval activities + 8 agent activities + 1 redteam activity = 19
+        assert registry.count == 19
