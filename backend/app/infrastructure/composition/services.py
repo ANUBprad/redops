@@ -243,6 +243,7 @@ class InfrastructureServices:
         """Register all infrastructure services and health contributors."""
         self._register_database_services()
         self._register_evaluation_services()
+        self._populate_metric_definitions()
         self._register_event_bus_services()
         self._register_temporal_services()
         self._register_health_contributors()
@@ -276,6 +277,74 @@ class InfrastructureServices:
 
         agent_provider_registry = self._container.resolve(ProviderRegistry)
         configure_agent_provider_registry(agent_provider_registry)
+
+    def _populate_metric_definitions(self) -> None:
+        """Populate the metric_definitions DB table at startup.
+
+        Reads all definitions from the MetricRegistry and upserts
+        them into the database for version traceability.
+        """
+        import asyncio
+
+        from sqlalchemy import text
+
+        from app.evaluation.metrics.registry import MetricRegistry
+        from app.infrastructure.database.engine import DatabaseEngine
+
+        metric_registry = self._container.resolve(MetricRegistry)
+        engine = self._container.resolve(DatabaseEngine)
+
+        records = metric_registry.to_db_records()
+        if not records:
+            return
+
+        async def _upsert() -> None:
+            async with engine.session_factory() as session:
+                for record in records:
+                    await session.execute(
+                        text("""
+                            INSERT INTO metric_definitions
+                                (name, display_name, description, category, scale,
+                                 version, evaluator_type, required_inputs, default_weight,
+                                 direction, default_threshold, requires_context,
+                                 plugin_module, tags, is_active, created_at, updated_at)
+                            VALUES
+                                (:name, :display_name, :description, :category, :scale,
+                                 :version, :evaluator_type, :required_inputs, :default_weight,
+                                 :direction, :default_threshold, :requires_context,
+                                 :plugin_module, :tags, :is_active, NOW(), NOW())
+                            ON CONFLICT (name) DO UPDATE SET
+                                display_name = EXCLUDED.display_name,
+                                description = EXCLUDED.description,
+                                category = EXCLUDED.category,
+                                scale = EXCLUDED.scale,
+                                version = EXCLUDED.version,
+                                evaluator_type = EXCLUDED.evaluator_type,
+                                required_inputs = EXCLUDED.required_inputs,
+                                default_weight = EXCLUDED.default_weight,
+                                direction = EXCLUDED.direction,
+                                default_threshold = EXCLUDED.default_threshold,
+                                requires_context = EXCLUDED.requires_context,
+                                plugin_module = EXCLUDED.plugin_module,
+                                tags = EXCLUDED.tags,
+                                is_active = EXCLUDED.is_active,
+                                updated_at = NOW()
+                        """),
+                        record,
+                    )
+                await session.commit()
+
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Fire-and-forget during async startup; table population
+                # happens in the background and errors are logged inside _upsert.
+                _populate_task = loop.create_task(_upsert())  # noqa: RUF006
+            else:
+                loop.run_until_complete(_upsert())
+        except RuntimeError:
+            # No event loop running — safe to use run_until_complete
+            asyncio.run(_upsert())
 
     def _register_event_bus_services(self) -> None:
         """Register event bus lifecycle services, event types, and subscribers.

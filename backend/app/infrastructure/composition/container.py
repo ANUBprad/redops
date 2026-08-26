@@ -284,10 +284,30 @@ class InfrastructureContainer:
         )
 
         metric_engine = MetricEngine()
-        metric_engine.register_many([metric_cls() for metric_cls in ALL_METRICS])
+
+        # Use MetricRegistry for discovery + registration
+        from app.evaluation.metrics.registry import MetricRegistry
+        metric_registry = MetricRegistry()
+        metric_registry.register_builtin([metric_cls() for metric_cls in ALL_METRICS])
+        discovered = metric_registry.discover_external()
+        if discovered:
+            from structlog import get_logger
+            get_logger("redops_eval.metrics").info(
+                "external_metrics_discovered",
+                count=len(discovered),
+                metrics=discovered,
+            )  # type: ignore[call-arg]
+
+        # Register all metrics (built-in + discovered) into the engine
+        metric_engine.register_many(metric_registry.get_all())
+
         self._container.register_singleton(
             MetricEngine,
             lambda _c: metric_engine,
+        )
+        self._container.register_singleton(
+            MetricRegistry,
+            lambda _c: metric_registry,
         )
         self._container.register_singleton(
             CostCalculator,
