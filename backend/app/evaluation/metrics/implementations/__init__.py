@@ -19,8 +19,12 @@ from app.evaluation.metrics.implementations.hallucination_metric import Hallucin
 from app.evaluation.metrics.implementations.instruction_following_metric import (
     InstructionFollowingMetric,
 )
+from app.evaluation.metrics.implementations.jailbreak_metric import JailbreakMetric
 from app.evaluation.metrics.implementations.json_validity_metric import JsonValidityMetric
 from app.evaluation.metrics.implementations.latency_metric import LatencyMetric
+from app.evaluation.metrics.implementations.prompt_injection_metric import (
+    PromptInjectionMetric,
+)
 from app.evaluation.metrics.implementations.reasoning_quality_metric import (
     ReasoningQualityMetric,
 )
@@ -68,6 +72,8 @@ ALL_METRICS: list[type] = [
     SafetyMetric,
     BiasMetric,
     ToxicityMetric,
+    PromptInjectionMetric,
+    JailbreakMetric,
 ]
 
 __all__ = [
@@ -93,4 +99,6 @@ __all__ = [
     "TokenUsageMetric",
     "ToolCallCorrectnessMetric",
     "ToxicityMetric",
+    "PromptInjectionMetric",
+    "JailbreakMetric",
 ]
