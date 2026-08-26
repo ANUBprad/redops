@@ -150,3 +150,8 @@ ignore_missing_imports = true
 asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+
+[project.entry-points."redops.metrics"]
+# Built-in metrics are registered here for discoverability.
+# Third-party plugins add their own entry points in their own pyproject.toml.
+# Example: my_metric = "my_package.metrics:MyMetric"
