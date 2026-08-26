@@ -141,3 +141,35 @@ class AttackRunCancelled(DomainEvent):
     @property
     def event_type(self) -> str:
         return "safety.attack_run.cancelled"
+
+
+@dataclass(frozen=True, slots=True)
+class FindingDetected(DomainEvent):
+    event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
+    occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    correlation_id: str | None = None
+    finding_id: UUIDv7 = field(default_factory=UUIDv7)
+    campaign_id: str = ""
+    attack_category: str = ""
+    severity: str = ""
+    verdict: str = ""
+
+    @property
+    def event_type(self) -> str:
+        return "safety.finding.detected"
+
+
+@dataclass(frozen=True, slots=True)
+class CampaignCompleted(DomainEvent):
+    event_id: UUIDv7 = field(default_factory=UUIDv7.generate)
+    occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    correlation_id: str | None = None
+    campaign_id: str = ""
+    state: str = ""
+    total_rounds: int = 0
+    violation_count: int = 0
+    cost_summary: dict = field(default_factory=dict)
+
+    @property
+    def event_type(self) -> str:
+        return "safety.campaign.completed"
