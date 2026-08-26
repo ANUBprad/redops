@@ -47,9 +47,32 @@ class ScoreDirection(Enum):
     LOWER_IS_BETTER = "lower_is_better"
 
 
+@unique
+class EvaluatorType(Enum):
+    """Type of evaluator backing a metric implementation.
+
+    Determines how the metric is dispatched during evaluation:
+    - ``heuristic``: deterministic, code-only evaluation.
+    - ``embedding``: uses provider embedding models.
+    - ``llm_judge``: uses an LLM-as-judge pipeline.
+    - ``ragas``: delegates to the RAGAS evaluation framework.
+    - ``custom``: user-defined or plugin-provided evaluation.
+    """
+
+    HEURISTIC = "heuristic"
+    EMBEDDING = "embedding"
+    LLM_JUDGE = "llm_judge"
+    RAGAS = "ragas"
+    CUSTOM = "custom"
+
+
 @dataclass(frozen=True, slots=True)
 class MetricDefinition:
-    """Declarative definition of a metric's capabilities."""
+    """Declarative definition of a metric's capabilities.
+
+    This is the source of truth for metric metadata, persisted to the
+    ``metric_definitions`` database table and exposed via the API.
+    """
 
     name: str
     display_name: str
@@ -62,6 +85,9 @@ class MetricDefinition:
     tags: tuple[str, ...] = ()
     direction: ScoreDirection = ScoreDirection.HIGHER_IS_BETTER
     default_threshold: float | None = None
+    required_inputs: tuple[str, ...] = ("prompt", "response")
+    evaluator_type: EvaluatorType = EvaluatorType.HEURISTIC
+    plugin_module: str | None = None
 
     @property
     def is_quality_metric(self) -> bool:
@@ -72,6 +98,11 @@ class MetricDefinition:
     def is_performance_metric(self) -> bool:
         """Return True if this is a performance metric."""
         return self.category == MetricCategory.PERFORMANCE
+
+    @property
+    def is_plugin_metric(self) -> bool:
+        """Return True if this metric is provided by an external plugin."""
+        return self.plugin_module is not None
 
 
 @dataclass(frozen=True, slots=True)
