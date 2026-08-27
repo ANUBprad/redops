@@ -1,3 +1,11 @@
+## [0.6.5](https://github.com/ANUBprad/redops/compare/v0.6.4...v0.6.5) (2026-08-27)
+
+
+### Bug Fixes
+
+* **frontend:** force dynamic rendering so nonce-based CSP applies in prod ([4666b5d](https://github.com/ANUBprad/redops/commit/4666b5d77592355ef07f2b4181a5b1494aa272f6))
+* **frontend:** remove duplicate root page that 500s under dynamic rendering ([29058bc](https://github.com/ANUBprad/redops/commit/29058bcb2c8eb051b733f3acc1ac2717722697b2))
+
 ## [0.6.4](https://github.com/ANUBprad/redops/compare/v0.6.3...v0.6.4) (2026-08-27)
 
 
