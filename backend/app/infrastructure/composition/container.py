@@ -67,6 +67,7 @@ from app.kernel.registry.plugin import Plugin, PluginRegistry
 from app.providers.anthropic.provider import AnthropicProvider
 from app.providers.cost.calculator import CostCalculator
 from app.providers.cost.defaults import build_default_cost_calculator
+from app.providers.groq.provider import GroqProvider
 from app.providers.openai.provider import OpenAIProvider
 from app.providers.registry.registry import ProviderRegistry
 from app.redteam.temporal.activities import red_team_campaign_activity
@@ -319,17 +320,19 @@ class InfrastructureContainer:
     def _register_providers(self, registry: ProviderRegistry) -> None:
         """Register configured providers into the shared registry.
 
-        Only providers whose API key is present are registered. OpenAI and
-        Anthropic read their keys from configuration (which loads the
-        OPENAI_API_KEY / ANTHROPIC_API_KEY environment variables), so an
-        absent optional key simply omits that provider rather than failing
-        startup.
+        Only providers whose API key is present are registered. OpenAI,
+        Anthropic, and Groq read their keys from configuration (which loads the
+        OPENAI_API_KEY / ANTHROPIC_API_KEY / GROQ_API_KEY environment
+        variables), so an absent optional key simply omits that provider rather
+        than failing startup.
         """
         cfg = self._app_config
         if cfg.openai_api_key:
             registry.register(OpenAIProvider(api_key=cfg.openai_api_key))
         if cfg.anthropic_api_key:
             registry.register(AnthropicProvider(api_key=cfg.anthropic_api_key))
+        if cfg.groq_api_key:
+            registry.register(GroqProvider(api_key=cfg.groq_api_key))
 
     def _register_plugins(self) -> None:
         """Register plugin infrastructure components."""

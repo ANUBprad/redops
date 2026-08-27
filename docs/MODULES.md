@@ -91,7 +91,8 @@ redops_eval/
 │   ├── providers/             # Provider adapter implementations
 │   │   ├── openai/
 │   │   ├── anthropic/
-│   │   └── (gemini, ollama, groq, openrouter — planned, Phase 11)
+│   │   ├── groq/              # OpenAI-compatible; reuses OpenAI wire-format client/adapters
+│   │   └── (gemini, ollama, openrouter — planned, Phase 11)
 │   ├── evaluators/            # Evaluator adapter implementations
 │   │   ├── base.py            # BaseEvaluatorAdapter
 │   │   └── adapters.py        # Heuristic/Embedding/LLMJudge/RAGAS/Custom adapters

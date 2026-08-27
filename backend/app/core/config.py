@@ -94,6 +94,7 @@ class AppConfig(BaseSettings):
     # PROVIDER CREDENTIALS (optional; a provider is only registered when its key is set)
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
+    groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
 
     # SECURITY
     app_secret_key: str = Field(default="", alias="APP_SECRET_KEY")
