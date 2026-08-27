@@ -297,7 +297,7 @@ User Triggers Run via API (or CI/CD, or Schedule)
 6. **Workflow Definitions** — Write new Temporal Workflows for custom evaluation scenarios. Existing Activities (provider calls, metric computation) are reusable.
 7. **Evaluation Profiles** — Define new profiles in configuration (Quick, Safety, RAG, Regression, Production Gate). Each profile is a data-driven template.
 8. **Dataset Importers** — Implement `DatasetImporter` for custom formats.
-9. **Authentication Backends** — Replace JWT/auth with OAuth2, SAML, or LDAP via the auth provider interface.
+9. **Authentication Backends** — Extend the auth provider interface with additional providers. OAuth2/SSO (GitHub, Google) is already implemented via `identity/api/router.py` (`/auth/oauth/*`) backed by `oauth_service.py`; SAML or LDAP can be added the same way.
 10. **Interaction Model Extensions** — Add new interaction types (agent, multi-turn, tool-calling) by extending the Interaction model without changing the evaluation pipeline.
 
 ## Design Principles

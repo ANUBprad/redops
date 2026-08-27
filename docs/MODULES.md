@@ -129,7 +129,8 @@ redops_eval/
 
 **Dependencies:** `core/security.py`, `core/database.py`.
 
-**Future extensions:** OAuth2 / SSO provider integrations, SCIM provisioning, 2FA/TOTP.
+**Future extensions:** SAML / LDAP provider integrations, SCIM provisioning, 2FA/TOTP.
+(OAuth2/SSO with GitHub and Google is implemented in `identity/services/oauth_service.py`.)
 
 ---
 
