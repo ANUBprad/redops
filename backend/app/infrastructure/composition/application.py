@@ -106,7 +106,16 @@ def create_application() -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(RateLimitMiddleware, max_requests=200, window_seconds=60)
+    app.add_middleware(
+        RateLimitMiddleware,
+        max_requests=200,
+        window_seconds=60,
+        route_limits={
+            "/api/v1/auth/": (30, 60),
+            "/api/v1/identity/": (60, 60),
+            "/api/v1/projects/": (120, 60),
+        },
+    )
 
     app.include_router(api_router)
 

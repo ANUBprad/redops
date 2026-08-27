@@ -13,18 +13,55 @@ from starlette.responses import JSONResponse
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Simple in-memory rate limiter using sliding window."""
+    """Simple in-memory rate limiter using sliding window.
+
+    Supports per-route limits via ``route_limits``, a mapping of path
+    prefixes (or the special key ``"*"`` for the default) to
+    ``(max_requests, window_seconds)`` tuples. The most specific matching
+    prefix wins; otherwise the default limit applies.
+    """
 
     def __init__(
         self,
         app: Any,
         max_requests: int = 100,
         window_seconds: int = 60,
+        route_limits: dict[str, tuple[int, int]] | None = None,
     ) -> None:
         super().__init__(app)
-        self._max_requests = max_requests
-        self._window_seconds = window_seconds
+        self._default_max = max_requests
+        self._default_window = window_seconds
+        self._route_limits = route_limits or {}
         self._requests: dict[str, list[float]] = defaultdict(list)
+
+    def _resolved_limit(self, path: str) -> tuple[str, int, int]:
+        """Resolve the (route_key, max_requests, window_seconds) for a path.
+
+        The route_key namespaces the per-client counter so limits are
+        enforced independently per matched route.
+
+        Args:
+            path: The request path.
+
+        Returns:
+            A tuple of (route_key, max_requests, window_seconds).
+
+        """
+        if self._route_limits:
+            best: tuple[int, int] | None = None
+            best_prefix = ""
+            best_len = -1
+            for prefix, limit in self._route_limits.items():
+                if prefix != "*" and path.startswith(prefix) and len(prefix) > best_len:
+                    best = limit
+                    best_prefix = prefix
+                    best_len = len(prefix)
+            if best is not None:
+                return (best_prefix, best[0], best[1])
+            if "*" in self._route_limits:
+                limit = self._route_limits["*"]
+                return ("*", limit[0], limit[1])
+        return ("_default", self._default_max, self._default_window)
 
     async def dispatch(
         self,
@@ -32,27 +69,29 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         call_next: RequestResponseEndpoint,
     ) -> Response:
         client_ip = request.client.host if request.client else "unknown"
+        route_key, max_requests, window_seconds = self._resolved_limit(request.url.path)
+        key = f"{client_ip}:{route_key}"
         now = time.time()
-        cutoff = now - self._window_seconds
+        cutoff = now - window_seconds
 
-        self._requests[client_ip] = [t for t in self._requests[client_ip] if t > cutoff]
+        self._requests[key] = [t for t in self._requests[key] if t > cutoff]
 
-        if len(self._requests[client_ip]) >= self._max_requests:
+        if len(self._requests[key]) >= max_requests:
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Too many requests. Please try again later."},
                 headers={
-                    "Retry-After": str(self._window_seconds),
-                    "X-RateLimit-Limit": str(self._max_requests),
+                    "Retry-After": str(window_seconds),
+                    "X-RateLimit-Limit": str(max_requests),
                     "X-RateLimit-Remaining": "0",
                 },
             )
 
-        self._requests[client_ip].append(now)
-        remaining = self._max_requests - len(self._requests[client_ip])
+        self._requests[key].append(now)
+        remaining = max_requests - len(self._requests[key])
 
         response = await call_next(request)
-        response.headers["X-RateLimit-Limit"] = str(self._max_requests)
+        response.headers["X-RateLimit-Limit"] = str(max_requests)
         response.headers["X-RateLimit-Remaining"] = str(max(0, remaining))
         return response
 
