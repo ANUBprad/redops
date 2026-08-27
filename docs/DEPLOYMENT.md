@@ -124,10 +124,16 @@ Dependencies (PostgreSQL, Redis, Temporal) are expected to be provisioned in the
 
 ---
 
-## Option C: Helm Chart (recommended for production)
+## Option C: Helm Chart (production Kubernetes)
 
-The Helm chart lives in `helm/redops/`. It models a scalable, HA-friendly API with
-autoscaling, probes, ingress, and a service account.
+The Helm chart lives in `helm/redops/`. It deploys the **API** as a Deployment with
+autoscaling, probes, ingress, a service account, and a ConfigMap that wires the API's
+non-secret environment (PostgreSQL, Redis, and Temporal connection settings).
+
+> **Prerequisite:** The chart expects **external** PostgreSQL, Redis, and Temporal servers
+> reachable from the cluster (configured via `config` / `secrets` values). It does not bundle
+> those dependencies, and the worker runs in-process with the API (there is no separate
+> worker Deployment). For an all-in-one stack, use Option A or the Kustomize base.
 
 ### Install
 
@@ -150,6 +156,7 @@ helm upgrade --install redops helm/redops \
 | `autoscaling` | `enabled: true`    | HPA, min 2 / max 10                  |
 | `ingress`     | `enabled: true`    | NGINX + cert-manager TLS            |
 | `service.port`| `80` -> `8000`     | ClusterIP to container               |
+| `config.*`    | see values.yaml    | Non-secret env (DB/REDIS/TEMPORAL) via ConfigMap |
 | `secrets.*`   | `CHANGE_ME`        | **Must set before production**       |
 | `resources`   | 250m / 1Gi         | Container requests/limits            |
 
