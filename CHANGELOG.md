@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/ANUBprad/redops/compare/v0.3.0...v0.4.0) (2026-08-27)
+
+
+### Features
+
+* **security:** add per-route configurable rate limiting with tests ([7cc205a](https://github.com/ANUBprad/redops/commit/7cc205a20db45a0603b82f0bff79d56c74154e6b))
+
 # [0.3.0](https://github.com/ANUBprad/redops/compare/v0.2.1...v0.3.0) (2026-08-27)
 
 
