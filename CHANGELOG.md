@@ -1,3 +1,10 @@
+## [0.2.1](https://github.com/ANUBprad/redops/compare/v0.2.0...v0.2.1) (2026-08-27)
+
+
+### Bug Fixes
+
+* **backend:** register CORSMiddleware with configured origins ([e1e57c1](https://github.com/ANUBprad/redops/commit/e1e57c1323657a13fe04a59fef36639f1b9420dd))
+
 # [0.2.0](https://github.com/ANUBprad/redops/compare/v0.1.0...v0.2.0) (2026-08-27)
 
 
