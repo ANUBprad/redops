@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
@@ -12,8 +12,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { LoadingState } from "@/components/ui/loading-state";
 
 export default function NewProjectPage() {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <NewProjectContent />
+    </Suspense>
+  );
+}
+
+function NewProjectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orgId = searchParams.get("org");
