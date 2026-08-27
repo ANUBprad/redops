@@ -445,6 +445,102 @@ export const api = {
       body: JSON.stringify(data),
     }),
   getMe: () => request<unknown>("/auth/me"),
+  refreshToken: (data: { refresh_token: string }) =>
+    request<{ access_token: string; refresh_token: string; expires_in: number }>(
+      "/auth/refresh",
+      { method: "POST", body: JSON.stringify(data) },
+    ),
+  logout: () => request<void>("/auth/logout", { method: "POST" }),
+
+  // ─── Experiments ─────────────────────────────────────────────
+  listExperiments: (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<PaginatedResponse<unknown>>(`/experiments${query}`);
+  },
+  getExperiment: (id: UUID) => request<unknown>(`/experiments/${id}`),
+  createExperiment: (data: Record<string, unknown>) =>
+    request<unknown>("/experiments", { method: "POST", body: JSON.stringify(data) }),
+  updateExperiment: (id: UUID, data: Record<string, unknown>) =>
+    request<unknown>(`/experiments/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteExperiment: (id: UUID) => request<void>(`/experiments/${id}`, { method: "DELETE" }),
+  archiveExperiment: (id: UUID) =>
+    request<unknown>(`/experiments/${id}/archive`, { method: "POST" }),
+
+  // ─── Profiles ────────────────────────────────────────────────
+  listProfiles: (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<PaginatedResponse<unknown>>(`/profiles${query}`);
+  },
+  getProfile: (id: UUID) => request<unknown>(`/profiles/${id}`),
+  createProfile: (data: Record<string, unknown>) =>
+    request<unknown>("/profiles", { method: "POST", body: JSON.stringify(data) }),
+  updateProfile: (id: UUID, data: Record<string, unknown>) =>
+    request<unknown>(`/profiles/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteProfile: (id: UUID) => request<void>(`/profiles/${id}`, { method: "DELETE" }),
+  getDefaultProfile: (category: string) =>
+    request<unknown>(`/profiles/default?category=${encodeURIComponent(category)}`),
+
+  // ─── Datasets ────────────────────────────────────────────────
+  listDatasets: (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<PaginatedResponse<unknown>>(`/datasets${query}`);
+  },
+  getDataset: (id: UUID) => request<unknown>(`/datasets/${id}`),
+  createDataset: (data: { name: string; description?: string; items: unknown[] }) =>
+    request<unknown>("/datasets", { method: "POST", body: JSON.stringify(data) }),
+  uploadDatasetItems: (id: UUID, items: unknown[]) =>
+    request<unknown>(`/datasets/${id}/items`, { method: "POST", body: JSON.stringify({ items }) }),
+  deleteDataset: (id: UUID) => request<void>(`/datasets/${id}`, { method: "DELETE" }),
+
+  // ─── Run Results ─────────────────────────────────────────────
+  getRunResults: (runId: UUID, params?: { page?: number; page_size?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.page_size) qs.set("page_size", String(params.page_size));
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<PaginatedResponse<unknown>>(`/runs/${runId}/results${query}`);
+  },
+  getMetricResultsForItem: (runId: UUID, itemIndex: number) =>
+    request<unknown[]>(`/runs/${runId}/items/${itemIndex}/metrics`),
+
+  // ─── Analytics (extra endpoints) ─────────────────────────────
+  getExperimentComparison: (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<unknown>(`/analytics/experiment-comparison${query}`);
+  },
+  getMetricDistribution: (runId: UUID) =>
+    request<unknown>(`/analytics/metric-distribution/${runId}`),
+  getPassFailSummary: (params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) qs.set(k, String(v));
+    }
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<unknown>(`/analytics/pass-fail-summary${query}`);
+  },
+  exportReport: (format: string, params: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams({ format, ...Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])
+    ) });
+    const query = qs.toString() ? `?${qs.toString()}` : "";
+    return request<Blob>(`/analytics/reports/export${query}`, { method: "GET" });
+  },
 
   // ─── Organizations ───────────────────────────────────────────
   listOrganizations: () => request<unknown[]>("/organizations"),
@@ -453,6 +549,7 @@ export const api = {
   getOrganization: (id: UUID) => request<unknown>(`/organizations/${id}`),
   updateOrganization: (id: UUID, data: Record<string, unknown>) =>
     request<unknown>(`/organizations/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteOrganization: (id: UUID) => request<void>(`/organizations/${id}`, { method: "DELETE" }),
   listMembers: (orgId: UUID) => request<unknown[]>(`/organizations/${orgId}/members`),
   inviteMember: (orgId: UUID, data: { email: string; role: string }) =>
     request<unknown>(`/organizations/${orgId}/members`, {
@@ -474,6 +571,13 @@ export const api = {
     request<unknown>(`/orgs/${orgId}/projects`, { method: "POST", body: JSON.stringify(data) }),
   getProject: (orgId: UUID, projectId: UUID) =>
     request<unknown>(`/orgs/${orgId}/projects/${projectId}`),
+  updateProject: (orgId: UUID, projectId: UUID, data: Record<string, unknown>) =>
+    request<unknown>(`/orgs/${orgId}/projects/${projectId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  deleteProject: (orgId: UUID, projectId: UUID) =>
+    request<void>(`/orgs/${orgId}/projects/${projectId}`, { method: "DELETE" }),
 
   // ─── API Keys ────────────────────────────────────────────────
   listApiKeys: () => request<unknown[]>("/api-keys"),

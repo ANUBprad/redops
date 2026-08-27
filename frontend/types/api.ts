@@ -512,6 +512,93 @@ export interface NotificationEntry {
   timestamp: string;
 }
 
+// ─── Experiment Types ─────────────────────────────────────────
+
+export type ExperimentStatus = "draft" | "active" | "archived" | "completed";
+
+export interface Experiment {
+  id: UUID;
+  name: string;
+  description: string | null;
+  organization_id: string;
+  project_id: string | null;
+  hypothesis: string | null;
+  methodology: string | null;
+  control_config: Record<string, unknown> | null;
+  treatment_config: Record<string, unknown> | null;
+  status: ExperimentStatus;
+  tags: string[];
+  created_by: string | null;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Profile Types ────────────────────────────────────────────
+
+export type ProfileCategory = "safety" | "quality" | "performance" | "cost";
+
+export interface MetricOverride {
+  weight: number;
+  enabled: boolean;
+  parameters: Record<string, unknown>;
+}
+
+export interface Profile {
+  id: UUID;
+  name: string;
+  description: string | null;
+  organization_id: string;
+  project_id: string | null;
+  category: ProfileCategory;
+  is_default: boolean;
+  metric_overrides: Record<string, MetricOverride>;
+  version: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Dataset Types ────────────────────────────────────────────
+
+export interface DatasetSummary {
+  id: UUID;
+  name: string;
+  description: string | null;
+  organization_id: string;
+  project_id: string | null;
+  item_count: number;
+  tags: string[];
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DatasetDetail extends DatasetSummary {
+  items: unknown[];
+  metadata: Record<string, unknown>;
+}
+
+// ─── Run Result Types ─────────────────────────────────────────
+
+export interface RunResult {
+  id: UUID;
+  run_id: UUID;
+  item_index: number;
+  prompt: string;
+  response: string;
+  model: string;
+  provider: string;
+  latency_ms: number;
+  tokens_input: number;
+  tokens_output: number;
+  cost_usd: number;
+  metric_results: Record<string, number>;
+  metadata: Record<string, unknown>;
+  error: string | null;
+  created_at: string;
+}
+
 // ─── Agent Run Types ─────────────────────────────────────────
 
 export type AgentRunStatus =
