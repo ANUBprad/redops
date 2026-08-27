@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/ANUBprad/redops/compare/v0.2.1...v0.3.0) (2026-08-27)
+
+
+### Features
+
+* **evaluation:** add Idempotency-Key support to run creation for safe CI/CD retries ([038eee5](https://github.com/ANUBprad/redops/commit/038eee510bbb81e5a7b8b5e04675d6ee36aba22d))
+
 ## [0.2.1](https://github.com/ANUBprad/redops/compare/v0.2.0...v0.2.1) (2026-08-27)
 
 
