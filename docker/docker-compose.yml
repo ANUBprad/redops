@@ -49,7 +49,7 @@ services:
     volumes:
       - ./temporal/dynamicconfig.yaml:/etc/temporal/dynamicconfig.yaml
     healthcheck:
-      test: ["CMD", "temporal", "operator", "health-check"]
+      test: ["CMD-SHELL", "temporal operator cluster describe --address $(hostname -i):7233 >/dev/null 2>&1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -69,7 +69,7 @@ services:
       - redops-network
 
   temporal-ui:
-    image: temporalio/ui:1.25.0
+    image: temporalio/ui:2.26.2
     container_name: redops-temporal-ui
     depends_on:
       temporal:
