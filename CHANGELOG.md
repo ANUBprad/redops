@@ -1,3 +1,10 @@
+## [0.6.2](https://github.com/ANUBprad/redops/compare/v0.6.1...v0.6.2) (2026-08-27)
+
+
+### Bug Fixes
+
+* **docker:** map frontend dev host port to Next.js container port ([8e5ffc8](https://github.com/ANUBprad/redops/commit/8e5ffc8ffc969a3a4ff76ac4d862f224dce0ec8a))
+
 ## [0.6.1](https://github.com/ANUBprad/redops/compare/v0.6.0...v0.6.1) (2026-08-27)
 
 
