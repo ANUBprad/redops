@@ -15,13 +15,13 @@ import {
   ClipboardList,
   Calendar,
   Building2,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { Button } from "@/components/ui/button";
-import { Tooltip } from "@/components/ui/tooltip";
 
 interface NavItem {
   label: string;
@@ -69,17 +69,27 @@ const navGroups: NavGroup[] = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { logout } = useAuth();
 
-  return (
-    <aside className="flex h-screen w-64 flex-col overflow-y-auto border-r bg-card">
-      <div className="p-6">
-        <h1 className="text-xl font-bold">RedOps</h1>
-        <p className="text-xs text-muted-foreground">AI Evaluation Platform</p>
+  const navContent = (
+    <>
+      <div className="flex items-center justify-between p-6">
+        <div>
+          <h1 className="text-xl font-bold">RedOps</h1>
+          <p className="text-xs text-muted-foreground">AI Evaluation Platform</p>
+        </div>
+        <Button variant="ghost" size="sm" className="lg:hidden" onClick={onClose}>
+          <X className="h-5 w-5" />
+        </Button>
       </div>
-      <nav className="flex-1 space-y-4 px-3">
+      <nav className="flex-1 space-y-4 px-3 overflow-y-auto">
         {navGroups.map((group) => (
           <div key={group.heading}>
             <h2 className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -91,20 +101,20 @@ export function Sidebar() {
                   ? pathname === item.href
                   : pathname.startsWith(item.href);
                 return (
-                  <Tooltip key={item.href} content={item.label} side="right">
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                        isActive
-                          ? "bg-accent text-accent-foreground"
-                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                      )}
-                    >
-                      {item.icon}
-                      <span>{item.label}</span>
-                    </Link>
-                  </Tooltip>
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onClose}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-accent text-accent-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    )}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
                 );
               })}
             </div>
@@ -116,6 +126,25 @@ export function Sidebar() {
           Sign Out
         </Button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex h-screen w-64 flex-col overflow-y-auto border-r bg-card">
+        {navContent}
+      </aside>
+
+      {/* Mobile overlay */}
+      {open && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+          <aside className="fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-card shadow-xl">
+            {navContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
