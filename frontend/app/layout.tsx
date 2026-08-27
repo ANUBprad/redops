@@ -11,6 +11,10 @@ export const metadata = {
   description: "Production-grade LLM Evaluation & Red Teaming Platform",
 };
 
+// Nonce-based CSP (applied in middleware.ts) requires request-time rendering:
+// statically prerendered HTML cannot receive the per-request nonce.
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={inter.className}>
