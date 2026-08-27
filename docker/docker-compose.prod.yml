@@ -1,0 +1,118 @@
+name: redops-prod
+
+# RedOps Eval — Production reference Docker Compose.
+# Uses the hardened `redops/api` and `redops/frontend` images (non-root, prod-only deps).
+# For HA/multi-node installations prefer the Helm chart (see docs/DEPLOYMENT.md).
+#
+# Generate secrets before first run:
+#   openssl rand -hex 32   # DB_PASSWORD, APP_SECRET_KEY
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: redops
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      POSTGRES_DB: redops
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U redops"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - redops-network
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - redops-network
+
+  temporal:
+    image: temporalio/server:1.25.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: redops
+      POSTGRES_PWD: ${DB_PASSWORD}
+      POSTGRES_SEEDS: postgres
+      DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/dynamicconfig.yaml
+    volumes:
+      - ./temporal/dynamicconfig.yaml:/etc/temporal/dynamicconfig.yaml
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "health-check"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - redops-network
+
+  api:
+    image: redops/api:${IMAGE_TAG:-latest}
+    pull_policy: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_LOG_LEVEL: INFO
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: redops
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: redops
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      TEMPORAL_HOST: temporal
+      TEMPORAL_PORT: 7233
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?set APP_SECRET_KEY}
+      SERVER_CORS_ORIGINS: ${SERVER_CORS_ORIGINS:-http://localhost:5173}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - redops-network
+
+  frontend:
+    image: redops/frontend:${IMAGE_TAG:-latest}
+    pull_policy: always
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - redops-network
+
+volumes:
+  postgres-data:
+
+networks:
+  redops-network:
+    driver: bridge
