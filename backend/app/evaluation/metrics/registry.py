@@ -127,7 +127,7 @@ class MetricRegistry:
 
     def list_plugin_metrics(self) -> list[MetricDefinition]:
         """Return definitions for plugin-provided metrics only."""
-        return [d for d in self._definitions.values() if d.is_plugin_metric]
+        return [d for d in self._definitions.values() if d.name in self._plugin_modules]
 
     def has_metric(self, name: str) -> bool:
         """Return True if a metric with the given name is registered."""
