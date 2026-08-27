@@ -1,3 +1,10 @@
+## [0.6.4](https://github.com/ANUBprad/redops/compare/v0.6.3...v0.6.4) (2026-08-27)
+
+
+### Bug Fixes
+
+* **frontend:** wrap projects/new searchParams in Suspense boundary ([e04ac2b](https://github.com/ANUBprad/redops/commit/e04ac2bec2a98c50d97e07c7e885e15d9f87dc1d))
+
 ## [0.6.3](https://github.com/ANUBprad/redops/compare/v0.6.2...v0.6.3) (2026-08-27)
 
 
