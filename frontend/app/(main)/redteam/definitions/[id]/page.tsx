@@ -1,13 +1,14 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 
 interface AttackDefinitionDetail {
   id: string;
@@ -30,6 +31,8 @@ interface AttackDefinitionDetail {
 export default function AttackDefinitionDetailPage() {
   const params = useParams<{ id: string }>();
   const defId = params?.id ?? "";
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
   const {
     data: definition,
@@ -39,6 +42,14 @@ export default function AttackDefinitionDetailPage() {
     queryKey: ["attack-definition", defId],
     queryFn: () => api.getAttackDefinition(defId),
     enabled: !!defId,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deleteAttackDefinition(defId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attack-definitions"] });
+      router.push("/redteam/definitions");
+    },
   });
 
   if (isLoading) return <LoadingState />;
@@ -67,6 +78,18 @@ export default function AttackDefinitionDetailPage() {
           </Button>
           <Button asChild>
             <Link href="/redteam/runs/new">Run Attack</Link>
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              if (window.confirm("Delete this attack definition? This cannot be undone.")) {
+                deleteMutation.mutate();
+              }
+            }}
+          >
+            <Trash2 className="mr-1 h-4 w-4" />
+            Delete
           </Button>
         </div>
       </div>

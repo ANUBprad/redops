@@ -11,6 +11,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Trash2 } from "lucide-react";
 
 interface EvaluationDetail {
   id: string;
@@ -53,6 +54,14 @@ export default function EvaluationDetailPage({ params }: { params: Promise<{ id:
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deleteEvaluation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["evaluations"] });
+      router.push("/evaluations");
+    },
+  });
+
   if (isLoading) return <LoadingState />;
   if (!evaluation) return <div className="text-destructive">Evaluation not found</div>;
 
@@ -83,17 +92,31 @@ export default function EvaluationDetailPage({ params }: { params: Promise<{ id:
               </Button>
             </>
           ) : (
-            <Button
-              onClick={() => {
-                setIsEditing(true);
-                setName(evalData.name);
-                setDescription(evalData.description ?? "");
-                setProvider(evalData.provider);
-                setModel(evalData.model);
-              }}
-            >
-              Edit
-            </Button>
+            <>
+              <Button
+                onClick={() => {
+                  setIsEditing(true);
+                  setName(evalData.name);
+                  setDescription(evalData.description ?? "");
+                  setProvider(evalData.provider);
+                  setModel(evalData.model);
+                }}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  if (window.confirm("Delete this evaluation? This cannot be undone.")) {
+                    deleteMutation.mutate();
+                  }
+                }}
+              >
+                <Trash2 className="mr-1 h-4 w-4" />
+                Delete
+              </Button>
+            </>
           )}
         </div>
       </div>
