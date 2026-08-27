@@ -9,12 +9,12 @@ WORKDIR /app
 
 # Install system dependencies for asyncpg
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libpq-dev && \
+    apt-get install -y --no-install-recommends gcc libpq-dev curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir -e ".[dev]"
+RUN pip install --no-cache-dir "."
 
 COPY . .
 
@@ -24,4 +24,9 @@ FROM base AS development
 CMD ["uvicorn", "app.main:create_app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--factory"]
 
 FROM base AS production
+RUN groupadd --system --gid 10001 appuser && \
+    useradd --system --uid 10001 --gid appuser appuser && \
+    mkdir -p /app/data && \
+    chown -R appuser:appuser /app
+USER appuser
 CMD ["uvicorn", "app.main:create_app", "--host", "0.0.0.0", "--port", "8000", "--factory"]
