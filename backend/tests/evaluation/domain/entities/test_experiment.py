@@ -7,7 +7,6 @@ import pytest
 from app.evaluation.domain.entities.experiment import Experiment
 from app.evaluation.domain.enums.experiment_enums import ExperimentStatus
 from app.evaluation.domain.events.experiment_events import (
-    ExperimentArchived,
     ExperimentBaselineSet,
     ExperimentCompleted,
     ExperimentCreated,

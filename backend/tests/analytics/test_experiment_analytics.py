@@ -4,18 +4,16 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 from app.analytics.services.experiment_analytics import (
     ExperimentComparisonService,
     MetricDistributionService,
     PassFailSummaryService,
 )
-from app.evaluation.domain.contracts.experiment_contracts import ExperimentRepository
 from app.evaluation.domain.contracts.evaluation_contracts import (
     MetricResultRepository,
     RunRepository,
 )
+from app.evaluation.domain.contracts.experiment_contracts import ExperimentRepository
 from app.evaluation.domain.entities.experiment import Experiment
 from app.evaluation.domain.enums.experiment_enums import ExperimentStatus
 from app.evaluation.domain.value_objects.experiment_value_objects import ExperimentName
@@ -63,9 +61,8 @@ class TestExperimentComparisonService:
         )
 
         import asyncio
-        result = asyncio.run(
-            service.compare_experiment_runs(str(UUIDv7.generate()))
-        )
+
+        result = asyncio.run(service.compare_experiment_runs(str(UUIDv7.generate())))
 
         assert result.summary == "Experiment not found"
 
@@ -84,9 +81,8 @@ class TestExperimentComparisonService:
         )
 
         import asyncio
-        result = asyncio.run(
-            service.compare_experiment_runs(str(experiment.id))
-        )
+
+        result = asyncio.run(service.compare_experiment_runs(str(experiment.id)))
 
         assert "No runs found" in result.summary
 
@@ -101,9 +97,8 @@ class TestMetricDistributionService:
         service = MetricDistributionService(metric_repo=mock_metric_repo)
 
         import asyncio
-        result = asyncio.run(
-            service.get_distribution(run_id=str(UUIDv7.generate()))
-        )
+
+        result = asyncio.run(service.get_distribution(run_id=str(UUIDv7.generate())))
 
         assert result["bins"] == []
         assert result["total"] == 0
@@ -122,6 +117,7 @@ class TestMetricDistributionService:
         service = MetricDistributionService(metric_repo=mock_metric_repo)
 
         import asyncio
+
         result = asyncio.run(
             service.get_distribution(
                 run_id=str(UUIDv7.generate()),
@@ -146,9 +142,8 @@ class TestPassFailSummaryService:
         service = PassFailSummaryService(metric_repo=mock_metric_repo)
 
         import asyncio
-        result = asyncio.run(
-            service.get_summary(run_id=str(UUIDv7.generate()))
-        )
+
+        result = asyncio.run(service.get_summary(run_id=str(UUIDv7.generate())))
 
         assert result["overall_pass"] is True
         assert result["total_metrics"] == 0
@@ -164,6 +159,7 @@ class TestPassFailSummaryService:
         service = PassFailSummaryService(metric_repo=mock_metric_repo)
 
         import asyncio
+
         result = asyncio.run(
             service.get_summary(
                 run_id=str(UUIDv7.generate()),
@@ -186,6 +182,7 @@ class TestPassFailSummaryService:
         service = PassFailSummaryService(metric_repo=mock_metric_repo)
 
         import asyncio
+
         result = asyncio.run(
             service.get_summary(
                 run_id=str(UUIDv7.generate()),

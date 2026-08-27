@@ -120,10 +120,7 @@ class MetricRegistry:
         evaluator_type: EvaluatorType,
     ) -> list[MetricDefinition]:
         """Return definitions filtered by evaluator type."""
-        return [
-            d for d in self._definitions.values()
-            if d.evaluator_type == evaluator_type
-        ]
+        return [d for d in self._definitions.values() if d.evaluator_type == evaluator_type]
 
     def list_plugin_metrics(self) -> list[MetricDefinition]:
         """Return definitions for plugin-provided metrics only."""
@@ -191,23 +188,25 @@ class MetricRegistry:
         """
         records: list[dict[str, Any]] = []
         for name, defn in self._definitions.items():
-            records.append({
-                "name": defn.name,
-                "display_name": defn.display_name,
-                "description": defn.description,
-                "category": defn.category.value,
-                "scale": defn.scale.value,
-                "version": defn.version,
-                "evaluator_type": defn.evaluator_type.value,
-                "required_inputs": list(defn.required_inputs),
-                "default_weight": defn.default_weight,
-                "direction": defn.direction.value,
-                "default_threshold": defn.default_threshold,
-                "requires_context": defn.requires_context,
-                "plugin_module": self._plugin_modules.get(name),
-                "tags": list(defn.tags),
-                "is_active": True,
-            })
+            records.append(
+                {
+                    "name": defn.name,
+                    "display_name": defn.display_name,
+                    "description": defn.description,
+                    "category": defn.category.value,
+                    "scale": defn.scale.value,
+                    "version": defn.version,
+                    "evaluator_type": defn.evaluator_type.value,
+                    "required_inputs": list(defn.required_inputs),
+                    "default_weight": defn.default_weight,
+                    "direction": defn.direction.value,
+                    "default_threshold": defn.default_threshold,
+                    "requires_context": defn.requires_context,
+                    "plugin_module": self._plugin_modules.get(name),
+                    "tags": list(defn.tags),
+                    "is_active": True,
+                }
+            )
         return records
 
     def _validate_metric(self, metric: Metric, defn: MetricDefinition) -> None:
@@ -238,8 +237,6 @@ class MetricRegistry:
         if not defn.required_inputs:
             msg = f"Metric '{defn.name}' must declare at least one required_input"
             raise ValueError(msg)
-        if defn.version and not all(
-            c.isdigit() or c == "." for c in defn.version
-        ):
+        if defn.version and not all(c.isdigit() or c == "." for c in defn.version):
             msg = f"Metric '{defn.name}' has invalid version format: {defn.version}"
             raise ValueError(msg)

@@ -120,11 +120,13 @@ class ExperimentComparisonService:
             ComparisonMetric(
                 metric_name="Latency",
                 values=tuple(latency_values),
-                best_entity_id=str(min(
-                    (r for r in experiment_runs if r.average_latency_ms > 0),
-                    key=lambda r: r.average_latency_ms,
-                    default=experiment_runs[0],
-                ).id)
+                best_entity_id=str(
+                    min(
+                        (r for r in experiment_runs if r.average_latency_ms > 0),
+                        key=lambda r: r.average_latency_ms,
+                        default=experiment_runs[0],
+                    ).id
+                )
                 if experiment_runs
                 else "",
             )

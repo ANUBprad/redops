@@ -182,10 +182,12 @@ class CompositeMetric(Metric):
             reasoning="; ".join(reasoning_parts),
             version=self.definition().version,
             execution_time_ms=int((time.monotonic() - start) * 1000),
-            metadata={"component_results": {
-                name: {"score": r.score, "normalized_score": r.normalized_score}
-                for name, r in component_results.items()
-            }},
+            metadata={
+                "component_results": {
+                    name: {"score": r.score, "normalized_score": r.normalized_score}
+                    for name, r in component_results.items()
+                }
+            },
         )
 
 
@@ -196,10 +198,7 @@ class AverageCompositeMetric(CompositeMetric):
         self,
         component_results: dict[str, MetricResult],
     ) -> float:
-        successful = [
-            r.normalized_score for r in component_results.values()
-            if r.is_success
-        ]
+        successful = [r.normalized_score for r in component_results.values() if r.is_success]
         if not successful:
             return 0.0
         return sum(successful) / len(successful)

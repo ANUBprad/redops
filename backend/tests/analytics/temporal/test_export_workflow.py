@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
+from app.analytics.domain.entities import (
+    GeneratedReport,
+    ReportDefinition,
+    ReportType,
+)
+from app.analytics.services.export_service import ExportService
 from app.analytics.temporal.activities import (
     ExportResult,
     GenerateExportInput,
@@ -14,8 +19,6 @@ from app.analytics.temporal.activities import (
     generate_export_activity,
 )
 from app.analytics.temporal.workflow import ExportReportWorkflow
-from app.analytics.services.export_service import ExportService
-from app.analytics.domain.entities import ExportFormat, GeneratedReport, ReportDefinition, ReportType
 
 
 def _make_report(title: str = "Test Report") -> GeneratedReport:
@@ -90,6 +93,7 @@ class TestExportActivity:
 
     def test_session_factory_not_configured_raises(self) -> None:
         import asyncio
+
         input_data = GenerateExportInput()
 
         with pytest.raises(RuntimeError, match="Session factory not configured"):
@@ -99,6 +103,7 @@ class TestExportActivity:
         mock_factory = MagicMock()
         configure_export_session_factory(mock_factory)
         from app.analytics.temporal.activities import _session_factory
+
         assert _session_factory is mock_factory
 
 
@@ -109,6 +114,7 @@ class TestExportService:
         svc = ExportService()
         report = _make_report()
         import asyncio
+
         result = asyncio.run(svc.export(report, format="json"))
         assert "Test Report" in result
         assert "Test summary" in result
@@ -117,6 +123,7 @@ class TestExportService:
         svc = ExportService()
         report = _make_report()
         import asyncio
+
         result = asyncio.run(svc.export(report, format="csv"))
         assert "Section" in result
 
@@ -124,6 +131,7 @@ class TestExportService:
         svc = ExportService()
         report = _make_report()
         import asyncio
+
         result = asyncio.run(svc.export(report, format="pdf"))
         assert "Test Report" in result
         assert "<html>" in result

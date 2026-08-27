@@ -137,6 +137,7 @@ explicit_package_bases = true
 module = [
     "temporalio.*",
     "sqlalchemy.*",
+    "ragas.*",
     "alembic.*",
     "asyncpg.*",
     "passlib.*",

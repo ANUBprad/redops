@@ -141,9 +141,7 @@ class SqlAlchemyExperimentRepository(ExperimentRepository):
             project_id=model.project_id,
             name=ExperimentName(value=model.name),
             description=(
-                ExperimentDescription(value=model.description)
-                if model.description
-                else None
+                ExperimentDescription(value=model.description) if model.description else None
             ),
             hypothesis=model.hypothesis,
             status=ExperimentStatus(model.status),

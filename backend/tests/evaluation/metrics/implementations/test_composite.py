@@ -94,7 +94,10 @@ class TestAverageCompositeMetric:
             CompositeComponent(metric_name="b", weight=2.0),
         ]
         metric = AverageCompositeMetric(
-            name="avg", display_name="Avg", description="", components=comps,
+            name="avg",
+            display_name="Avg",
+            description="",
+            components=comps,
         )
         assert len(metric.components) == 2
         assert metric.components[0].metric_name == "a"
@@ -103,7 +106,9 @@ class TestAverageCompositeMetric:
     @pytest.mark.asyncio
     async def test_aggregate_scores_equal(self) -> None:
         metric = AverageCompositeMetric(
-            name="avg", display_name="Avg", description="",
+            name="avg",
+            display_name="Avg",
+            description="",
             components=[
                 CompositeComponent(metric_name="a"),
                 CompositeComponent(metric_name="b"),
@@ -118,12 +123,17 @@ class TestAverageCompositeMetric:
     @pytest.mark.asyncio
     async def test_aggregate_scores_all_failed(self) -> None:
         metric = AverageCompositeMetric(
-            name="avg", display_name="Avg", description="",
+            name="avg",
+            display_name="Avg",
+            description="",
             components=[CompositeComponent(metric_name="a")],
         )
         results = {
             "a": MetricResult(
-                metric_name="a", score=0.0, normalized_score=0.0, error="fail",
+                metric_name="a",
+                score=0.0,
+                normalized_score=0.0,
+                error="fail",
             ),
         }
         assert metric.aggregate_scores(results) == 0.0
@@ -131,7 +141,9 @@ class TestAverageCompositeMetric:
     @pytest.mark.asyncio
     async def test_evaluate_raises_not_implemented(self) -> None:
         metric = AverageCompositeMetric(
-            name="avg", display_name="Avg", description="",
+            name="avg",
+            display_name="Avg",
+            description="",
             components=[CompositeComponent(metric_name="a")],
         )
         with pytest.raises(NotImplementedError, match="requires the MetricEngine"):
@@ -178,7 +190,8 @@ class TestAverageCompositeMetric:
         )
 
         result = await composite.evaluate_with_engine(
-            MetricInput(prompt="test"), engine,
+            MetricInput(prompt="test"),
+            engine,
         )
         # Should succeed with only the good metric's score
         assert result.is_success
@@ -194,7 +207,8 @@ class TestAverageCompositeMetric:
             components=[CompositeComponent(metric_name="missing")],
         )
         result = await composite.evaluate_with_engine(
-            MetricInput(prompt="test"), engine,
+            MetricInput(prompt="test"),
+            engine,
         )
         assert not result.is_success
         assert "All component metrics failed" in result.error  # type: ignore[union-attr]
@@ -219,7 +233,9 @@ class TestWeightedCompositeMetric:
     @pytest.mark.asyncio
     async def test_aggregate_scores_weighted(self) -> None:
         metric = WeightedCompositeMetric(
-            name="wavg", display_name="WAvg", description="",
+            name="wavg",
+            display_name="WAvg",
+            description="",
             components=[
                 CompositeComponent(metric_name="a", weight=3.0),
                 CompositeComponent(metric_name="b", weight=1.0),
@@ -235,7 +251,9 @@ class TestWeightedCompositeMetric:
     @pytest.mark.asyncio
     async def test_aggregate_scores_partial_failure(self) -> None:
         metric = WeightedCompositeMetric(
-            name="wavg", display_name="WAvg", description="",
+            name="wavg",
+            display_name="WAvg",
+            description="",
             components=[
                 CompositeComponent(metric_name="a", weight=2.0),
                 CompositeComponent(metric_name="b", weight=1.0),
@@ -244,7 +262,10 @@ class TestWeightedCompositeMetric:
         results = {
             "a": MetricResult(metric_name="a", score=0.9, normalized_score=0.9),
             "b": MetricResult(
-                metric_name="b", score=0.0, normalized_score=0.0, error="fail",
+                metric_name="b",
+                score=0.0,
+                normalized_score=0.0,
+                error="fail",
             ),
         }
         # Only a succeeds: (0.9 * 2) / 2 = 0.9
@@ -253,7 +274,9 @@ class TestWeightedCompositeMetric:
     @pytest.mark.asyncio
     async def test_aggregate_scores_all_zero_weight(self) -> None:
         metric = WeightedCompositeMetric(
-            name="wavg", display_name="WAvg", description="",
+            name="wavg",
+            display_name="WAvg",
+            description="",
             components=[
                 CompositeComponent(metric_name="a", weight=0.0),
             ],
@@ -280,7 +303,8 @@ class TestWeightedCompositeMetric:
         )
 
         result = await composite.evaluate_with_engine(
-            MetricInput(prompt="test"), engine,
+            MetricInput(prompt="test"),
+            engine,
         )
         assert result.metric_name == "perf_score"
         # (0.9 * 2 + 0.3 * 1) / 3 = 2.1 / 3 = 0.7

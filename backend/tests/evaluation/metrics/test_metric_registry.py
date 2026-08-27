@@ -111,6 +111,7 @@ class TestMetricRegistry:
 
     def test_register_invalid_evaluator_type_raises(self) -> None:
         registry = MetricRegistry()
+
         # Create a metric with an invalid evaluator type
         class _BadMetric(Metric):
             def definition(self) -> MetricDefinition:

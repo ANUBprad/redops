@@ -287,11 +287,13 @@ class InfrastructureContainer:
 
         # Use MetricRegistry for discovery + registration
         from app.evaluation.metrics.registry import MetricRegistry
+
         metric_registry = MetricRegistry()
         metric_registry.register_builtin([metric_cls() for metric_cls in ALL_METRICS])
         discovered = metric_registry.discover_external()
         if discovered:
             from structlog import get_logger
+
             get_logger("redops_eval.metrics").info(
                 "external_metrics_discovered",
                 count=len(discovered),

@@ -69,9 +69,7 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.func.now(),
         ),
-        sa.UniqueConstraint(
-            "project_id", "name", name="uq_experiment_project_name"
-        ),
+        sa.UniqueConstraint("project_id", "name", name="uq_experiment_project_name"),
     )
     op.create_index(
         "ix_experiments_project_id_created_at",
@@ -118,9 +116,7 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.func.now(),
         ),
-        sa.UniqueConstraint(
-            "project_id", "name", name="uq_profile_project_name"
-        ),
+        sa.UniqueConstraint("project_id", "name", name="uq_profile_project_name"),
     )
 
     # Add experiment_id nullable FK to evaluation_runs
