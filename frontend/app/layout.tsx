@@ -1,6 +1,7 @@
 import "@/styles/globals.css";
 import { type ReactNode } from "react";
 import { Providers } from "@/providers/providers";
+import { Toaster } from "sonner";
 import { Inter } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={inter.className}>
       <body className="bg-background text-foreground antialiased">
         <Providers>{children}</Providers>
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );
