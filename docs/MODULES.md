@@ -94,9 +94,8 @@ redops_eval/
 │   │   └── (gemini, ollama, groq, openrouter — planned, Phase 11)
 │   ├── evaluators/            # Evaluator adapter implementations
 │   │   ├── base.py            # BaseEvaluatorAdapter
-│   │   ├── deepeval_adapter.py
-│   │   ├── ragas_adapter.py
-│   │   └── custom_adapter.py
+│   │   └── adapters.py        # Heuristic/Embedding/LLMJudge/RAGAS/Custom adapters
+│   │                          # (RAGAS adapter optional; not wired to any engine)
 │   ├── event_bus/             # Event bus implementations
 │   │   ├── redis_streams.py   # Redis Streams implementation
 │   │   └── in_memory.py       # For testing
@@ -457,9 +456,13 @@ redops_eval/
       def evaluator_type(self) -> EvaluatorType: ...
   ```
 - Maintain `EvaluatorRegistry` — maps metric names to evaluator adapters.
-- Provide built-in adapters:
-  - `DeepEvalAdapter` — wraps DeepEval metrics.
-  - `RAGASAdapter` — wraps RAGAS metrics (for RAG-specific evaluations).
+- Provide built-in adapters (see `adapters.py`):
+  - `HeuristicAdapter` — deterministic checks.
+  - `EmbeddingAdapter` — embedding/similarity checks.
+  - `LLMJudgeAdapter` — LLM-as-judge checks.
+  - `RAGASAdapter` — optional RAGAS wrapper (RAG metrics); `ragas` is NOT a
+    runtime dependency and no adapter is currently registered into a
+    `MetricEngine`, so RAGAS/DeepEval are not used by the built-in metrics.
   - `CustomAdapter` — executes user-provided evaluation code.
 - Handle adapter-specific error translation and timeout wrapping.
 - Support evaluator model configuration (which LLM acts as the judge).

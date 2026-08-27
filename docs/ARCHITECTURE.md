@@ -153,6 +153,15 @@ RedOps Eval follows an **event-driven, workflow-orchestrated** monorepo architec
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
+> **Accuracy note (current implementation):** The adapter classes above
+> (`HeuristicAdapter`, `EmbeddingAdapter`, `LLMJudgeAdapter`, `RAGASAdapter`,
+> `CustomAdapter`) are defined in `app/evaluation/evaluators/adapters.py` but
+> **none is registered into a running `MetricEngine`**. Built-in metrics
+> (`ALL_METRICS`) run directly. There is **no `DeepEvalAdapter`**, and `ragas` /
+> `deepeval` are **not runtime dependencies** — the `RAGASAdapter` is an optional,
+> currently-unwired facade. The diagram above is the intended design, not the
+> wired runtime path.
+
 ## Layered Architecture
 
 ```
@@ -240,7 +249,8 @@ User Triggers Run via API (or CI/CD, or Schedule)
 5. Activity: Compute Metrics
    └─ For each (evaluation_task, metric) configured:
        ├─ Look up metric in MetricRegistry → get MetricDefinition
-       ├─ Resolve evaluator (DeepEvalAdapter / RAGASAdapter / Custom)
+       ├─ Resolve metric from registry → run via MetricEngine
+       ├─ (External evaluator adapters such as RAGAS are defined but not wired)
        ├─ Call evaluator.evaluate(metric, inputs)
        ├─ Persist MetricResult (immutable)
        └─ Publish MetricComputed event

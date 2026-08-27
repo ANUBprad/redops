@@ -312,6 +312,13 @@ Same as Dataset Evaluation, but `OutputValidation` includes safety classifier ch
 
 Same as Dataset Evaluation, but `ContextAssembly` includes retrieval context from dataset. Additional RAG-specific metrics (faithfulness, relevance, context recall) are auto-configured.
 
+> **Accuracy note:** RAG is not yet fully wired. The `RAGASAdapter`
+> (`app/evaluation/evaluators/adapters.py`) maps `faithfulness`,
+> `answer_relevancy`, `context_precision`, and `context_recall`, but it is **not
+> registered into any engine** and `ragas` is **not a runtime dependency**. No
+> RAGAS-backed metric is auto-configured today; the built-in `FaithfulnessMetric`
+> and `ContextRelevanceMetric` use the standard (non-RAGAS) pipeline.
+
 ### 4.6 Multi-Model Comparison
 
 ```
