@@ -89,12 +89,9 @@ redops_eval/
 │   │   ├── worker.py
 │   │   └── converters/       # Custom data converters
 │   ├── providers/             # Provider adapter implementations
-│   │   ├── openai.py
-│   │   ├── anthropic.py
-│   │   ├── gemini.py
-│   │   ├── ollama.py
-│   │   ├── groq.py
-│   │   └── openrouter.py
+│   │   ├── openai/
+│   │   ├── anthropic/
+│   │   └── (gemini, ollama, groq, openrouter — planned, Phase 11)
 │   ├── evaluators/            # Evaluator adapter implementations
 │   │   ├── base.py            # BaseEvaluatorAdapter
 │   │   ├── deepeval_adapter.py
@@ -652,17 +649,20 @@ Every Activity is **idempotent**. Temporal may retry an Activity on worker failu
 
 Temporal Server runs as a separate process (or Docker container) with its own PostgreSQL database for workflow state persistence. In development, Temporal's dev server is used (single binary, no dependencies).
 
-### Provider Adapters (`infrastructure/providers/`)
+### Provider Adapters (`app/providers/`)
 
-Concrete implementations of `BaseProviderAdapter`:
-- `openai.py` — Uses `openai` Python SDK.
-- `anthropic.py` — Uses `anthropic` Python SDK.
-- `gemini.py` — Uses `google-generativeai` Python SDK.
-- `ollama.py` — Direct HTTP or LangChain's `ChatOllama`.
-- `groq.py` — OpenAI-compatible API endpoint.
-- `openrouter.py` — OpenAI-compatible API endpoint.
+Concrete implementations of the provider adapter contract currently shipped:
+- `openai/` — OpenAI-compatible SDK adapter (client, mappers, streaming, token usage, health).
+- `anthropic/` — Anthropic SDK adapter (client, mappers, streaming, token usage, health).
 
-Each provider adapter declares its available models via the Model Catalog (data, not code). Models can be added/updated without changing the adapter.
+Each provider adapter declares its available models via the Model Catalog (data, not code);
+models can be added/updated without changing the adapter.
+
+> **Planned (not yet implemented):** Additional providers (Gemini, Ollama, Groq, OpenRouter,
+> Cohere, Mistral, Together AI) are roadmap Phase 11 work. Adding a provider requires a new
+> adapter module registered with the provider registry, not just catalog entries — see
+> `docs/ROADMAP.md` (Phase 11) and the provider extension point in
+> `docs/evaluation/EVALUATION_ENGINE.md`.
 
 ### Evaluator Adapters (`infrastructure/evaluators/`)
 
