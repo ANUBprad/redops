@@ -1,3 +1,10 @@
+## [0.6.3](https://github.com/ANUBprad/redops/compare/v0.6.2...v0.6.3) (2026-08-27)
+
+
+### Bug Fixes
+
+* **frontend:** apply CSP with per-request nonce via middleware ([41c6c7a](https://github.com/ANUBprad/redops/commit/41c6c7ae92844acbbce027eef3dc1e5350b162ec))
+
 ## [0.6.2](https://github.com/ANUBprad/redops/compare/v0.6.1...v0.6.2) (2026-08-27)
 
 
