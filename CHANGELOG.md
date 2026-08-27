@@ -1,3 +1,10 @@
+## [0.6.1](https://github.com/ANUBprad/redops/compare/v0.6.0...v0.6.1) (2026-08-27)
+
+
+### Bug Fixes
+
+* **docker:** pin Temporal UI to valid tag and fix server healthcheck ([290a9ce](https://github.com/ANUBprad/redops/commit/290a9ced2ad223eb21b47d9746c8601a68e17ce1))
+
 # [0.6.0](https://github.com/ANUBprad/redops/compare/v0.5.0...v0.6.0) (2026-08-27)
 
 
