@@ -180,6 +180,11 @@ class RunRepository(ABC):
         ...
 
     @abstractmethod
+    async def find_by_workflow_id(self, workflow_id: str) -> EvaluationRun | None:
+        """Find a run by its Temporal workflow ID (used for idempotency)."""
+        ...
+
+    @abstractmethod
     async def find_by_date_range(
         self,
         since: datetime,

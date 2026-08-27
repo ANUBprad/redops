@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from hashlib import sha256
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -52,6 +53,23 @@ if TYPE_CHECKING:
     from app.evaluation.domain.entities.evaluation_entities import EvaluationRun
 
 run_router = APIRouter(prefix="/runs", tags=["runs"])
+
+
+def _idempotent_workflow_id(idempotency_key: str) -> str:
+    """Derive a deterministic Temporal workflow ID from an idempotency key.
+
+    The key is hashed so that arbitrary caller-supplied values map to a
+    stable, namespaced workflow ID without risking duplicate runs on retry.
+
+    Args:
+        idempotency_key: The caller-supplied idempotency key.
+
+    Returns:
+        A deterministic workflow ID derived from the key.
+
+    """
+    digest = sha256(idempotency_key.encode("utf-8")).hexdigest()[:16]
+    return f"evaluation-run-idem-{digest}"
 
 
 def _get_repository(session: AsyncSession) -> SqlAlchemyEvaluationRunRepository:
@@ -152,8 +170,20 @@ async def create_run(
     temporal_client: TemporalClient = Depends(get_temporal_client),
     config: AppConfig = Depends(get_config_dependency),
 ) -> RunResponse:
-    """Create a new evaluation run and schedule its execution."""
+    """Create a new evaluation run and schedule its execution.
+
+    The endpoint is idempotent when an ``Idempotency-Key`` header is
+    supplied: a repeated key returns the previously created run instead of
+    scheduling a duplicate, enabling safe CI/CD retries.
+    """
     repo = _get_repository(session)
+
+    idempotency_key = request.headers.get("Idempotency-Key")
+    if idempotency_key:
+        existing = await repo.find_by_workflow_id(_idempotent_workflow_id(idempotency_key))
+        if existing is not None:
+            return _run_to_response(existing)
+
     handler = CreateEvaluationRunHandler(repo)
     command = CreateEvaluationRunCommand(
         evaluation_id=body.evaluation_id,
@@ -176,7 +206,11 @@ async def create_run(
         dataset_items = tuple(_item_to_payload(item) for item in body.dataset_items)
         total_items = body.total_items or len(dataset_items)
 
-        workflow_id = f"evaluation-run-{run.id}"
+        workflow_id = (
+            _idempotent_workflow_id(idempotency_key)
+            if idempotency_key
+            else f"evaluation-run-{run.id}"
+        )
         await temporal_client.start_workflow(
             EvaluationRunWorkflow.run,
             EvaluationRunWorkflowInput(

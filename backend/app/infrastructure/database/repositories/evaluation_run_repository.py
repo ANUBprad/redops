@@ -224,6 +224,25 @@ class SqlAlchemyEvaluationRunRepository(RunRepository):
         model = self._to_model(run)
         await self._session.merge(model)
 
+    async def find_by_workflow_id(self, workflow_id: str) -> EvaluationRun | None:
+        """Find a run by its Temporal workflow ID (used for idempotency).
+
+        Args:
+            workflow_id: The Temporal workflow ID assigned to the run.
+
+        Returns:
+            The EvaluationRun aggregate if found, None otherwise.
+
+        """
+        stmt = select(EvaluationRunModel).where(
+            EvaluationRunModel.workflow_id == workflow_id,
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model is None:
+            return None
+        return self._to_domain(model)
+
     async def find_by_date_range(
         self,
         since: datetime,

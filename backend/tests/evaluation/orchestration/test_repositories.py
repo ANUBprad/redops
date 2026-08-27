@@ -138,6 +138,23 @@ class TestInMemoryRunRepository:
         found2 = await repo.find_by_id(run.id)
         assert found2 is run2
 
+    async def test_find_by_workflow_id(self) -> None:
+        """Should locate a run by its Temporal workflow ID."""
+        repo = InMemoryRunRepository()
+        run = _make_run()
+        run.workflow_id = "evaluation-run-idem-abc123"
+        await repo.save(run)
+
+        found = await repo.find_by_workflow_id("evaluation-run-idem-abc123")
+        assert found is not None
+        assert found.id == run.id
+
+    async def test_find_by_workflow_id_missing(self) -> None:
+        """Should return None when no run matches the workflow ID."""
+        repo = InMemoryRunRepository()
+        found = await repo.find_by_workflow_id("evaluation-run-idem-missing")
+        assert found is None
+
 
 # ---------------------------------------------------------------------------
 # InMemoryItemRepository
