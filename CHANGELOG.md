@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/ANUBprad/redops/compare/v0.4.0...v0.5.0) (2026-08-27)
+
+
+### Features
+
+* **frontend:** add CSP and security headers to Next.js config for XSS hardening ([020e685](https://github.com/ANUBprad/redops/commit/020e685a25415fb016359167a3c977030b40cdc3))
+
 # [0.4.0](https://github.com/ANUBprad/redops/compare/v0.3.0...v0.4.0) (2026-08-27)
 
 
