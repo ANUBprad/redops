@@ -16,6 +16,11 @@ docker compose -f docker/docker-compose.yml up
 # Temporal:   http://localhost:8233
 ```
 
+A ready-to-use sample evaluation dataset ships with the repo at
+`scripts/sample_data/redops-sample-eval.jsonl`. See
+[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) to take a project from zero to your first
+evaluation run.
+
 ## Architecture
 
 ```
@@ -47,17 +52,17 @@ redops-eval/
 
 ## Documentation
 
-See the `docs/` directory for comprehensive architecture documentation:
+Browse the **[documentation index](docs/index.md)** — a single entry point to all guides. Key
+documents:
 
-- **[VISION.md](docs/VISION.md)** — Project mission and goals
+- **[GETTING_STARTED.md](docs/GETTING_STARTED.md)** — From zero to your first evaluation run (~10 min)
+- **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** — Deploy to production (Docker, Kubernetes, Helm)
+- **[MONITORING.md](docs/MONITORING.md)** — Prometheus + Grafana dashboards and metrics
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** — System architecture and design
-- **[ROADMAP.md](docs/ROADMAP.md)** — Implementation phases
-- **[TECH_STACK.md](docs/TECH_STACK.md)** — Technology choices and rationale
-- **[DATABASE.md](docs/DATABASE.md)** — Database design
 - **[API_SPEC.md](docs/API_SPEC.md)** — REST API specification
-- **[MODULES.md](docs/MODULES.md)** — Module descriptions
-- **[CONTRIBUTING.md](docs/CONTRIBUTING.md)** — Engineering standards
-- **[DECISIONS.md](docs/DECISIONS.md)** — Architecture Decision Records
+- **[CONTRIBUTING.md](docs/CONTRIBUTING.md)** — Contributor onboarding and engineering standards
+- **[RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)** — Go/No-Go checklist for releases
+- **[ROADMAP.md](docs/ROADMAP.md)** — Implementation phases
 
 ## Development
 
