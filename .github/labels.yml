@@ -1,0 +1,53 @@
+# GitHub label sync configuration.
+# synced with github-label-sync / action-tag or your preferred tool:
+#   npx github-label-sync --labels .github/labels.yml owner/repo
+#
+# `good first issue` and `help wanted` are recognized by GitHub for contributor onboarding.
+
+- name: "good first issue"
+  color: "7057ff"
+  description: "Small, well-scoped task suitable for a first-time contributor."
+
+- name: "help wanted"
+  color: "008672"
+  description: "Extra attention is needed; help is welcome."
+
+- name: "bug"
+  color: "d73a4a"
+  description: "Something isn't working correctly."
+
+- name: "enhancement"
+  color: "a2eeef"
+  description: "New feature or improvement request."
+
+- name: "documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation."
+
+- name: "metrics"
+  color: "1d76db"
+  description: "Related to evaluation metrics / metric plugins."
+
+- name: "providers"
+  color: "f9d0c4"
+  description: "Related to LLM provider adapters."
+
+- name: "red-team"
+  color: "e99695"
+  description: "Related to red team campaigns and attack evaluation."
+
+- name: "infrastructure"
+  color: "5319e7"
+  description: "CI/CD, deployment, Docker, Kubernetes, Helm."
+
+- name: "security"
+  color: "b60205"
+  description: "Security-related issue or change."
+
+- name: "needs-triage"
+  color: "fbca04"
+  description: "Awaiting maintainer triage."
+
+- name: "dependencies"
+  color: "0366d6"
+  description: "Dependency updates (often via Dependabot)."
