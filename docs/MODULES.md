@@ -659,11 +659,12 @@ Temporal Server runs as a separate process (or Docker container) with its own Po
 Concrete implementations of the provider adapter contract currently shipped:
 - `openai/` — OpenAI-compatible SDK adapter (client, mappers, streaming, token usage, health).
 - `anthropic/` — Anthropic SDK adapter (client, mappers, streaming, token usage, health).
+- `groq/` — OpenAI-compatible; reuses the OpenAI wire-format client/adapters at Groq's endpoint (no embedding API).
 
 Each provider adapter declares its available models via the Model Catalog (data, not code);
 models can be added/updated without changing the adapter.
 
-> **Planned (not yet implemented):** Additional providers (Gemini, Ollama, Groq, OpenRouter,
+> **Planned (not yet implemented):** Additional providers (Gemini, Ollama, OpenRouter,
 > Cohere, Mistral, Together AI) are roadmap Phase 11 work. Adding a provider requires a new
 > adapter module registered with the provider registry, not just catalog entries — see
 > `docs/ROADMAP.md` (Phase 11) and the provider extension point in

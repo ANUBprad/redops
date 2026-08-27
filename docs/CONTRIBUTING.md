@@ -111,6 +111,35 @@ cd frontend && npm run test:e2e              # Playwright
 
 ---
 
+## Adding a Provider Adapter
+
+Providers are OpenAI, Anthropic, and Groq adapters in `backend/app/providers/` (see
+`docs/MODULES.md`). Adding one requires more than catalog entries — it must be a real,
+registered adapter. Follow this checklist:
+
+1. **Adapter package** — create `backend/app/providers/<name>/` with a `provider.py`
+   implementing the relevant contracts from `app/providers/contracts/`
+   (`ChatProvider`, `StreamingProvider`, `ToolCallingProvider`, `ReasoningProvider`,
+   `EmbeddingProvider`). Declare an accurate capability set and omit capabilities the
+   provider does not actually offer (e.g. Groq has no embedding API).
+2. **Reuse OpenAI-compatible wiring when applicable** — if the provider exposes an
+   OpenAI-compatible chat API, compose the OpenAI wire-format client/adapters at the
+   provider's base URL instead of duplicating mappers (see `providers/groq/`). Return
+   provider-correct health (do not reuse a hardcoded-name health contributor).
+3. **Config key** — add `\`<NAME>_API_KEY\`` to `app/core/config.py` and to
+   `.env.example`.
+4. **Registry registration** — register in
+   `app/infrastructure/composition/container.py#_register_providers` (keyed on the new
+   config field, so an absent key omits the provider).
+5. **Pricing** — add model pricing to `app/providers/cost/defaults.py` (`_<NAME>_PRICING`).
+6. **Tests** — add `tests/providers/<name>/` with provider identity/capability/lifecycle
+   tests plus a registry-discovery test (including a negative case for capabilities the
+   provider does not support). Do not call the real provider in CI.
+7. **Docs** — update `docs/MODULES.md` (provider tree + adapter list) and any
+   provider-enumeration passages (e.g. `docs/DATABASE.md`, `docs/ARCHITECTURE.md`).
+
+---
+
 ## Code Style
 
 ### Python
