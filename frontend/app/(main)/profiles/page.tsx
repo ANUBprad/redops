@@ -75,13 +75,19 @@ export default function ProfilesPage() {
           <Input
             placeholder="Search profiles..."
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="pl-8"
           />
         </div>
         <Select
           value={category ?? "all"}
-          onValueChange={(v) => { setCategory(v === "all" ? null : v); setPage(1); }}
+          onValueChange={(v) => {
+            setCategory(v === "all" ? null : v);
+            setPage(1);
+          }}
         >
           <option value="all">All Categories</option>
           <option value="safety">Safety</option>
@@ -97,7 +103,7 @@ export default function ProfilesPage() {
       {profiles.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Shield className="h-12 w-12 text-muted-foreground mb-4" />
+            <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
             <p className="text-muted-foreground">No profiles found.</p>
             <Button asChild className="mt-4">
               <Link href="/profiles/new">Create your first profile</Link>
@@ -110,18 +116,20 @@ export default function ProfilesPage() {
             <Link key={profile.id} href={`/profiles/${profile.id}`}>
               <Card className="cursor-pointer transition-shadow hover:shadow-md">
                 <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3">
-                      <h3 className="font-semibold truncate">{profile.name}</h3>
-                      <Badge className={CATEGORY_COLORS[profile.category]}>{profile.category}</Badge>
-                      {profile.is_default && (
-                        <Badge variant="secondary">Default</Badge>
-                      )}
+                      <h3 className="truncate font-semibold">{profile.name}</h3>
+                      <Badge className={CATEGORY_COLORS[profile.category]}>
+                        {profile.category}
+                      </Badge>
+                      {profile.is_default && <Badge variant="secondary">Default</Badge>}
                     </div>
                     {profile.description && (
-                      <p className="text-sm text-muted-foreground mt-1 truncate">{profile.description}</p>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">
+                        {profile.description}
+                      </p>
                     )}
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                       <span>{Object.keys(profile.metric_overrides).length} metrics configured</span>
                       <span>{new Date(profile.created_at).toLocaleDateString()}</span>
                     </div>

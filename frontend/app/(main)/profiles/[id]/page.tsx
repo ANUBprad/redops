@@ -18,11 +18,7 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState } from "@/components/ui/loading-state";
 
-export default function ProfileDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function ProfileDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -36,7 +32,11 @@ export default function ProfileDetailPage({
   const [newMetricName, setNewMetricName] = useState("");
   const [newMetricWeight, setNewMetricWeight] = useState("1.0");
 
-  const { data: profile, isLoading, error } = useQuery({
+  const {
+    data: profile,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["profile", id],
     queryFn: () => api.getProfile(id),
   });
@@ -123,7 +123,7 @@ export default function ProfileDetailPage({
     <div className="space-y-6">
       <div>
         <Link href="/profiles" className="text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="inline h-4 w-4 mr-1" />
+          <ArrowLeft className="mr-1 inline h-4 w-4" />
           Back to Profiles
         </Link>
       </div>
@@ -140,11 +140,15 @@ export default function ProfileDetailPage({
                 <Pencil className="mr-1 h-4 w-4" />
                 Edit
               </Button>
-              <Button variant="destructive" size="sm" onClick={() => {
-                if (window.confirm("Delete this profile? This cannot be undone.")) {
-                  deleteMutation.mutate();
-                }
-              }}>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  if (window.confirm("Delete this profile? This cannot be undone.")) {
+                    deleteMutation.mutate();
+                  }
+                }}
+              >
                 <Trash2 className="mr-1 h-4 w-4" />
                 Delete
               </Button>
@@ -175,7 +179,11 @@ export default function ProfileDetailPage({
               </div>
               <div className="space-y-2">
                 <Label>Description</Label>
-                <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={2} />
+                <Textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={2}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -187,7 +195,7 @@ export default function ProfileDetailPage({
                     <option value="cost">Cost</option>
                   </Select>
                 </div>
-                <div className="space-y-2 flex items-end pb-1">
+                <div className="flex items-end space-y-2 pb-1">
                   <label className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
@@ -210,7 +218,7 @@ export default function ProfileDetailPage({
               {p.description && (
                 <div>
                   <span className="font-medium">Description:</span>
-                  <p className="text-muted-foreground mt-1">{p.description}</p>
+                  <p className="mt-1 text-muted-foreground">{p.description}</p>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
@@ -234,7 +242,7 @@ export default function ProfileDetailPage({
         </CardHeader>
         <CardContent className="space-y-4">
           {isEditing && (
-            <div className="grid grid-cols-[1fr_100px_40px] gap-2 items-end">
+            <div className="grid grid-cols-[1fr_100px_40px] items-end gap-2">
               <div className="space-y-2">
                 <Label>Metric Name</Label>
                 <Input
@@ -260,23 +268,28 @@ export default function ProfileDetailPage({
           )}
 
           {Object.keys(isEditing ? editOverrides : p.metric_overrides).length === 0 ? (
-            <p className="text-muted-foreground text-sm">No metric overrides configured.</p>
+            <p className="text-sm text-muted-foreground">No metric overrides configured.</p>
           ) : (
             <div className="space-y-2">
-              {Object.entries(isEditing ? editOverrides : p.metric_overrides).map(([metric, config]) => (
-                <div key={metric} className="flex items-center justify-between p-2 border rounded">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline">{metric}</Badge>
-                    <span className="text-sm text-muted-foreground">Weight: {config.weight}</span>
-                    {!config.enabled && <Badge variant="secondary">Disabled</Badge>}
+              {Object.entries(isEditing ? editOverrides : p.metric_overrides).map(
+                ([metric, config]) => (
+                  <div
+                    key={metric}
+                    className="flex items-center justify-between rounded border p-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline">{metric}</Badge>
+                      <span className="text-sm text-muted-foreground">Weight: {config.weight}</span>
+                      {!config.enabled && <Badge variant="secondary">Disabled</Badge>}
+                    </div>
+                    {isEditing && (
+                      <Button variant="ghost" size="sm" onClick={() => removeEditMetric(metric)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
-                  {isEditing && (
-                    <Button variant="ghost" size="sm" onClick={() => removeEditMetric(metric)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+                ),
+              )}
             </div>
           )}
         </CardContent>

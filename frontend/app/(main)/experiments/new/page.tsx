@@ -40,7 +40,12 @@ export default function NewExperimentPage() {
       hypothesis: hypothesis || undefined,
       methodology: methodology || undefined,
       status,
-      tags: tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+      tags: tags
+        ? tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [],
     });
   };
 
@@ -48,10 +53,10 @@ export default function NewExperimentPage() {
     <div className="space-y-6">
       <div>
         <Link href="/experiments" className="text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="inline h-4 w-4 mr-1" />
+          <ArrowLeft className="mr-1 inline h-4 w-4" />
           Back to Experiments
         </Link>
-        <h1 className="text-3xl font-bold mt-2">New Experiment</h1>
+        <h1 className="mt-2 text-3xl font-bold">New Experiment</h1>
         <p className="text-muted-foreground">
           Create a new experiment to compare models and configurations.
         </p>
@@ -123,10 +128,7 @@ export default function NewExperimentPage() {
             <Button variant="outline" onClick={() => router.push("/experiments")}>
               Cancel
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={createMutation.isPending || !name.trim()}
-            >
+            <Button onClick={handleSubmit} disabled={createMutation.isPending || !name.trim()}>
               {createMutation.isPending ? "Creating..." : "Create Experiment"}
             </Button>
           </div>

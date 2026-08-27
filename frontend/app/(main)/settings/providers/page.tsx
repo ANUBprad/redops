@@ -72,7 +72,10 @@ export default function ProviderSettingsPage() {
 
           <div className="space-y-3">
             {providers.map((provider) => (
-              <div key={provider.id} className="flex items-center justify-between rounded-md border p-3">
+              <div
+                key={provider.id}
+                className="flex items-center justify-between rounded-md border p-3"
+              >
                 <div className="flex items-center gap-3">
                   <span className="font-medium">{provider.name}</span>
                   {provider.configured ? (
@@ -87,7 +90,7 @@ export default function ProviderSettingsPage() {
                     </Badge>
                   )}
                   {provider.configured && provider.keyPrefix && (
-                    <span className="text-xs text-muted-foreground font-mono">
+                    <span className="font-mono text-xs text-muted-foreground">
                       {provider.keyPrefix}
                     </span>
                   )}
@@ -109,11 +112,9 @@ export default function ProviderSettingsPage() {
 
           {editingId && (
             <Card className="mt-4">
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div className="space-y-2">
-                  <Label>
-                    API Key for {providers.find((p) => p.id === editingId)?.name}
-                  </Label>
+                  <Label>API Key for {providers.find((p) => p.id === editingId)?.name}</Label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <Input
@@ -131,7 +132,10 @@ export default function ProviderSettingsPage() {
                         {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
-                    <Button onClick={handleSave} disabled={saveMutation.isPending || !apiKey.trim()}>
+                    <Button
+                      onClick={handleSave}
+                      disabled={saveMutation.isPending || !apiKey.trim()}
+                    >
                       {saveMutation.isPending ? "Saving..." : "Save"}
                     </Button>
                     <Button

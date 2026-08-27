@@ -1,12 +1,7 @@
 import { cn } from "@/lib/utils";
 
 function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn("animate-pulse rounded-md bg-muted", className)}
-      {...props}
-    />
-  );
+  return <div className={cn("animate-pulse rounded-md bg-muted", className)} {...props} />;
 }
 
 function ListSkeleton({ count = 5 }: { count?: number }) {
@@ -15,7 +10,7 @@ function ListSkeleton({ count = 5 }: { count?: number }) {
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="rounded-lg border p-4">
           <div className="flex items-center justify-between">
-            <div className="space-y-2 flex-1">
+            <div className="flex-1 space-y-2">
               <Skeleton className="h-5 w-48" />
               <Skeleton className="h-4 w-72" />
               <Skeleton className="h-3 w-36" />
@@ -52,7 +47,7 @@ function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number })
 
 function CardSkeleton() {
   return (
-    <div className="rounded-lg border p-6 space-y-4">
+    <div className="space-y-4 rounded-lg border p-6">
       <Skeleton className="h-6 w-40" />
       <Skeleton className="h-4 w-full" />
       <Skeleton className="h-4 w-3/4" />

@@ -139,7 +139,7 @@ export default function DatasetsPage() {
             <div className="space-y-2">
               <Label>Dataset File</Label>
               <div
-                className="rounded-md border-2 border-dashed p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                className="cursor-pointer rounded-md border-2 border-dashed p-8 text-center transition-colors hover:border-primary/50"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleDrop}
                 onClick={() => document.getElementById("file-upload")?.click()}
@@ -148,9 +148,7 @@ export default function DatasetsPage() {
                 <p className="mt-2 text-sm text-muted-foreground">
                   Drag and drop or click to upload
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Supports JSON, CSV, and JSONL
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Supports JSON, CSV, and JSONL</p>
                 <Input
                   id="file-upload"
                   type="file"
@@ -163,9 +161,7 @@ export default function DatasetsPage() {
                 />
               </div>
             </div>
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </CardContent>
         </Card>
       ) : (
@@ -190,14 +186,16 @@ export default function DatasetsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+              <div className="mb-4 flex items-center gap-4 text-sm text-muted-foreground">
                 <span>{formatSize(dataset.size)}</span>
                 <span>{dataset.columns.length} columns</span>
                 <span>{dataset.rowCount} rows</span>
               </div>
               <div className="flex flex-wrap gap-1">
                 {dataset.columns.map((col) => (
-                  <Badge key={col} variant="outline">{col}</Badge>
+                  <Badge key={col} variant="outline">
+                    {col}
+                  </Badge>
                 ))}
               </div>
             </CardContent>
@@ -241,7 +239,7 @@ export default function DatasetsPage() {
                       <tr key={i} className="border-b last:border-0">
                         <td className="p-2 text-muted-foreground">{i + 1}</td>
                         {dataset.columns.map((col) => (
-                          <td key={col} className="p-2 max-w-[300px] truncate">
+                          <td key={col} className="max-w-[300px] truncate p-2">
                             {String(row[col] ?? "")}
                           </td>
                         ))}

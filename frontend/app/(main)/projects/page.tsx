@@ -53,9 +53,7 @@ export default function ProjectsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Projects</h1>
-          <p className="text-muted-foreground">
-            Organize evaluations and runs into projects.
-          </p>
+          <p className="text-muted-foreground">Organize evaluations and runs into projects.</p>
         </div>
         <Button asChild disabled={!effectiveOrgId}>
           <Link href={effectiveOrgId ? `/projects/new?org=${effectiveOrgId}` : "#"}>
@@ -67,10 +65,7 @@ export default function ProjectsPage() {
 
       <div className="flex items-center gap-4">
         {organizations.length > 1 && (
-          <Select
-            value={effectiveOrgId ?? ""}
-            onValueChange={(v) => setSelectedOrgId(v || null)}
-          >
+          <Select value={effectiveOrgId ?? ""} onValueChange={(v) => setSelectedOrgId(v || null)}>
             {organizations.map((org) => (
               <option key={org.id} value={org.id}>
                 {org.name}
@@ -78,7 +73,7 @@ export default function ProjectsPage() {
             ))}
           </Select>
         )}
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative max-w-sm flex-1">
           <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search projects..."
@@ -92,7 +87,7 @@ export default function ProjectsPage() {
       {!effectiveOrgId ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FolderOpen className="h-12 w-12 text-muted-foreground mb-4" />
+            <FolderOpen className="mb-4 h-12 w-12 text-muted-foreground" />
             <p className="text-muted-foreground">
               No organizations found. Create an organization first.
             </p>
@@ -101,7 +96,7 @@ export default function ProjectsPage() {
       ) : filteredProjects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FolderOpen className="h-12 w-12 text-muted-foreground mb-4" />
+            <FolderOpen className="mb-4 h-12 w-12 text-muted-foreground" />
             <p className="text-muted-foreground">
               {search ? "No projects match your search." : "No projects yet."}
             </p>

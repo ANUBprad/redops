@@ -75,13 +75,19 @@ export default function ExperimentsPage() {
           <Input
             placeholder="Search experiments..."
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="pl-8"
           />
         </div>
         <Select
           value={status ?? "all"}
-          onValueChange={(v) => { setStatus(v === "all" ? null : v); setPage(1); }}
+          onValueChange={(v) => {
+            setStatus(v === "all" ? null : v);
+            setPage(1);
+          }}
         >
           <option value="all">All Status</option>
           <option value="draft">Draft</option>
@@ -97,7 +103,7 @@ export default function ExperimentsPage() {
       {experiments.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FlaskConical className="h-12 w-12 text-muted-foreground mb-4" />
+            <FlaskConical className="mb-4 h-12 w-12 text-muted-foreground" />
             <p className="text-muted-foreground">No experiments found.</p>
             <Button asChild className="mt-4">
               <Link href="/experiments/new">Create your first experiment</Link>
@@ -110,25 +116,29 @@ export default function ExperimentsPage() {
             <Link key={exp.id} href={`/experiments/${exp.id}`}>
               <Card className="cursor-pointer transition-shadow hover:shadow-md">
                 <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3">
-                      <h3 className="font-semibold truncate">{exp.name}</h3>
+                      <h3 className="truncate font-semibold">{exp.name}</h3>
                       <Badge className={STATUS_COLORS[exp.status]}>{exp.status}</Badge>
                     </div>
                     {exp.description && (
-                      <p className="text-sm text-muted-foreground mt-1 truncate">{exp.description}</p>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">
+                        {exp.description}
+                      </p>
                     )}
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                       {exp.hypothesis && (
-                        <span className="truncate max-w-xs">Hypothesis: {exp.hypothesis}</span>
+                        <span className="max-w-xs truncate">Hypothesis: {exp.hypothesis}</span>
                       )}
                       <span>{new Date(exp.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
                   {exp.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 ml-4">
+                    <div className="ml-4 flex flex-wrap gap-1">
                       {exp.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+                        <Badge key={tag} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
                       ))}
                     </div>
                   )}

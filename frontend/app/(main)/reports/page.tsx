@@ -48,21 +48,31 @@ export default function ReportsPage() {
 
   const summary = dashboard as DashboardSummary | undefined;
   const safetyData = safety as SafetyTrend | undefined;
-  const trendData = trends as { series?: { name: string; points: { timestamp: string; value: number }[] }[] } | undefined;
+  const trendData = trends as
+    { series?: { name: string; points: { timestamp: string; value: number }[] }[] } | undefined;
   const reportData = report as GeneratedReport | undefined;
 
-  const safetyPieData = safetyData?.safety_by_dimension?.map((d) => ({
-    name: d.dimension,
-    value: d.sample_count,
-    color: SAFETY_COLORS[
-      d.verdict === "safe" ? 0 : d.verdict === "suspicious" ? 1 : d.verdict === "violated" ? 2 : 3
-    ] ?? "#6b7280",
-  })) ?? [];
+  const safetyPieData =
+    safetyData?.safety_by_dimension?.map((d) => ({
+      name: d.dimension,
+      value: d.sample_count,
+      color:
+        SAFETY_COLORS[
+          d.verdict === "safe"
+            ? 0
+            : d.verdict === "suspicious"
+              ? 1
+              : d.verdict === "violated"
+                ? 2
+                : 3
+        ] ?? "#6b7280",
+    })) ?? [];
 
-  const trendBarData = trendData?.series?.[0]?.points?.map((p) => ({
-    name: new Date(p.timestamp).toLocaleDateString("en-US", { month: "short" }),
-    value: p.value,
-  })) ?? [];
+  const trendBarData =
+    trendData?.series?.[0]?.points?.map((p) => ({
+      name: new Date(p.timestamp).toLocaleDateString("en-US", { month: "short" }),
+      value: p.value,
+    })) ?? [];
 
   return (
     <div className="space-y-6">
@@ -140,7 +150,9 @@ export default function ReportsPage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">No trend data available</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No trend data available
+              </p>
             )}
           </CardContent>
         </Card>
@@ -174,7 +186,7 @@ export default function ReportsPage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">
+              <p className="py-8 text-center text-sm text-muted-foreground">
                 No safety data available
               </p>
             )}
@@ -191,10 +203,12 @@ export default function ReportsPage() {
             <p className="text-sm text-muted-foreground">{reportData.description}</p>
             {reportData.recommendations.length > 0 && (
               <div>
-                <h3 className="font-medium mb-2">Recommendations</h3>
+                <h3 className="mb-2 font-medium">Recommendations</h3>
                 <ul className="space-y-1">
                   {reportData.recommendations.map((rec, i) => (
-                    <li key={i} className="text-sm text-muted-foreground">• {rec}</li>
+                    <li key={i} className="text-sm text-muted-foreground">
+                      • {rec}
+                    </li>
                   ))}
                 </ul>
               </div>

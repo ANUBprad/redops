@@ -19,7 +19,7 @@ export function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
     <div className="flex min-h-[400px] items-center justify-center p-6">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-2" />
+          <AlertTriangle className="mx-auto mb-2 h-12 w-12 text-destructive" />
           <CardTitle>Something went wrong</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-center">

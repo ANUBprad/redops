@@ -18,11 +18,7 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState } from "@/components/ui/loading-state";
 
-export default function ExperimentDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function ExperimentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -35,7 +31,11 @@ export default function ExperimentDetailPage({
   const [editStatus, setEditStatus] = useState("");
   const [editTags, setEditTags] = useState("");
 
-  const { data: experiment, isLoading, error } = useQuery({
+  const {
+    data: experiment,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["experiment", id],
     queryFn: () => api.getExperiment(id),
   });
@@ -85,7 +85,12 @@ export default function ExperimentDetailPage({
       hypothesis: editHypothesis || null,
       methodology: editMethodology || null,
       status: editStatus,
-      tags: editTags ? editTags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+      tags: editTags
+        ? editTags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [],
     });
   };
 
@@ -110,7 +115,7 @@ export default function ExperimentDetailPage({
     <div className="space-y-6">
       <div>
         <Link href="/experiments" className="text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="inline h-4 w-4 mr-1" />
+          <ArrowLeft className="mr-1 inline h-4 w-4" />
           Back to Experiments
         </Link>
       </div>
@@ -133,11 +138,15 @@ export default function ExperimentDetailPage({
                   Archive
                 </Button>
               )}
-              <Button variant="destructive" size="sm" onClick={() => {
-                if (window.confirm("Delete this experiment? This cannot be undone.")) {
-                  deleteMutation.mutate();
-                }
-              }}>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  if (window.confirm("Delete this experiment? This cannot be undone.")) {
+                    deleteMutation.mutate();
+                  }
+                }}
+              >
                 <Trash2 className="mr-1 h-4 w-4" />
                 Delete
               </Button>
@@ -168,15 +177,27 @@ export default function ExperimentDetailPage({
               </div>
               <div className="space-y-2">
                 <Label>Description</Label>
-                <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={3} />
+                <Textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={3}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Hypothesis</Label>
-                <Textarea value={editHypothesis} onChange={(e) => setEditHypothesis(e.target.value)} rows={2} />
+                <Textarea
+                  value={editHypothesis}
+                  onChange={(e) => setEditHypothesis(e.target.value)}
+                  rows={2}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Methodology</Label>
-                <Textarea value={editMethodology} onChange={(e) => setEditMethodology(e.target.value)} rows={2} />
+                <Textarea
+                  value={editMethodology}
+                  onChange={(e) => setEditMethodology(e.target.value)}
+                  rows={2}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -203,30 +224,32 @@ export default function ExperimentDetailPage({
               {exp.description && (
                 <div>
                   <span className="font-medium">Description:</span>
-                  <p className="text-muted-foreground mt-1">{exp.description}</p>
+                  <p className="mt-1 text-muted-foreground">{exp.description}</p>
                 </div>
               )}
               {exp.hypothesis && (
                 <div>
                   <span className="font-medium">Hypothesis:</span>
-                  <p className="text-muted-foreground mt-1">{exp.hypothesis}</p>
+                  <p className="mt-1 text-muted-foreground">{exp.hypothesis}</p>
                 </div>
               )}
               {exp.methodology && (
                 <div>
                   <span className="font-medium">Methodology:</span>
-                  <p className="text-muted-foreground mt-1">{exp.methodology}</p>
+                  <p className="mt-1 text-muted-foreground">{exp.methodology}</p>
                 </div>
               )}
               <div>
                 <span className="font-medium">Tags:</span>
-                <div className="flex flex-wrap gap-1 mt-1">
+                <div className="mt-1 flex flex-wrap gap-1">
                   {exp.tags.length > 0 ? (
                     exp.tags.map((tag) => (
-                      <Badge key={tag} variant="outline">{tag}</Badge>
+                      <Badge key={tag} variant="outline">
+                        {tag}
+                      </Badge>
                     ))
                   ) : (
-                    <span className="text-muted-foreground text-sm">No tags</span>
+                    <span className="text-sm text-muted-foreground">No tags</span>
                   )}
                 </div>
               </div>

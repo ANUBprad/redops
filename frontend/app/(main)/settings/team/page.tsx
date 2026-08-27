@@ -41,8 +41,7 @@ export default function TeamSettingsPage() {
   });
 
   const inviteMutation = useMutation({
-    mutationFn: (data: { email: string; role: string }) =>
-      api.inviteMember(orgId!, data),
+    mutationFn: (data: { email: string; role: string }) => api.inviteMember(orgId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members", orgId] });
       queryClient.invalidateQueries({ queryKey: ["invitations", orgId] });
@@ -106,8 +105,8 @@ export default function TeamSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {showInvite && (
-            <div className="rounded-md border p-4 space-y-3">
-              <div className="grid grid-cols-[1fr_120px_auto] gap-2 items-end">
+            <div className="space-y-3 rounded-md border p-4">
+              <div className="grid grid-cols-[1fr_120px_auto] items-end gap-2">
                 <div className="space-y-2">
                   <Label>Email Address</Label>
                   <Input
@@ -126,7 +125,10 @@ export default function TeamSettingsPage() {
                     <option value="admin">Admin</option>
                   </Select>
                 </div>
-                <Button onClick={handleInvite} disabled={inviteMutation.isPending || !inviteEmail.trim()}>
+                <Button
+                  onClick={handleInvite}
+                  disabled={inviteMutation.isPending || !inviteEmail.trim()}
+                >
                   {inviteMutation.isPending ? "Sending..." : "Send Invite"}
                 </Button>
               </div>
@@ -138,9 +140,12 @@ export default function TeamSettingsPage() {
           ) : (
             <div className="space-y-2">
               {memberList.map((member) => (
-                <div key={member.id} className="flex items-center justify-between rounded-md border p-3">
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between rounded-md border p-3"
+                >
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
                       {member.user_id.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
@@ -189,7 +194,10 @@ export default function TeamSettingsPage() {
           <CardContent>
             <div className="space-y-2">
               {invitationList.map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between rounded-md border p-3">
+                <div
+                  key={inv.id}
+                  className="flex items-center justify-between rounded-md border p-3"
+                >
                   <div>
                     <p className="text-sm font-medium">{inv.email}</p>
                     <p className="text-xs text-muted-foreground">

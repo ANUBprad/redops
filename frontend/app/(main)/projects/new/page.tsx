@@ -23,8 +23,7 @@ export default function NewProjectPage() {
   const [description, setDescription] = useState("");
 
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; description?: string }) =>
-      api.createProject(orgId!, data),
+    mutationFn: (data: { name: string; description?: string }) => api.createProject(orgId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       router.push("/projects");
@@ -43,13 +42,11 @@ export default function NewProjectPage() {
     <div className="space-y-6">
       <div>
         <Link href="/projects" className="text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="inline h-4 w-4 mr-1" />
+          <ArrowLeft className="mr-1 inline h-4 w-4" />
           Back to Projects
         </Link>
-        <h1 className="text-3xl font-bold mt-2">New Project</h1>
-        <p className="text-muted-foreground">
-          Create a project to organize evaluations and runs.
-        </p>
+        <h1 className="mt-2 text-3xl font-bold">New Project</h1>
+        <p className="text-muted-foreground">Create a project to organize evaluations and runs.</p>
       </div>
 
       <Card>

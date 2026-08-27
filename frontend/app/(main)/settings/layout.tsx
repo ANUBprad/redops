@@ -21,7 +21,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Settings</h1>
       <div className="flex flex-col gap-6 lg:flex-row">
-        <nav className="lg:w-56 shrink-0">
+        <nav className="shrink-0 lg:w-56">
           <div className="flex flex-col gap-1">
             {settingsLinks.map((link) => (
               <Link

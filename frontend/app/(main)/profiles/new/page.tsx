@@ -26,7 +26,9 @@ export default function NewProfilePage() {
   const [metricName, setMetricName] = useState("");
   const [metricWeight, setMetricWeight] = useState("1.0");
   const [metricEnabled, setMetricEnabled] = useState(true);
-  const [overrides, setOverrides] = useState<Record<string, { weight: number; enabled: boolean; parameters: Record<string, unknown> }>>({});
+  const [overrides, setOverrides] = useState<
+    Record<string, { weight: number; enabled: boolean; parameters: Record<string, unknown> }>
+  >({});
 
   const addMetric = () => {
     if (!metricName.trim()) return;
@@ -73,10 +75,10 @@ export default function NewProfilePage() {
     <div className="space-y-6">
       <div>
         <Link href="/profiles" className="text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="inline h-4 w-4 mr-1" />
+          <ArrowLeft className="mr-1 inline h-4 w-4" />
           Back to Profiles
         </Link>
-        <h1 className="text-3xl font-bold mt-2">New Profile</h1>
+        <h1 className="mt-2 text-3xl font-bold">New Profile</h1>
         <p className="text-muted-foreground">
           Create a scoring profile with custom metric weights.
         </p>
@@ -116,7 +118,7 @@ export default function NewProfilePage() {
                 <option value="cost">Cost</option>
               </Select>
             </div>
-            <div className="space-y-2 flex items-end pb-1">
+            <div className="flex items-end space-y-2 pb-1">
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -136,7 +138,7 @@ export default function NewProfilePage() {
           <CardTitle>Metric Overrides</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-[1fr_100px_100px_40px] gap-2 items-end">
+          <div className="grid grid-cols-[1fr_100px_100px_40px] items-end gap-2">
             <div className="space-y-2">
               <Label>Metric Name</Label>
               <Input
@@ -155,7 +157,7 @@ export default function NewProfilePage() {
                 step="0.1"
               />
             </div>
-            <div className="space-y-2 flex items-end pb-1">
+            <div className="flex items-end space-y-2 pb-1">
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -172,9 +174,9 @@ export default function NewProfilePage() {
           </div>
 
           {Object.keys(overrides).length > 0 && (
-            <div className="space-y-2 mt-4">
+            <div className="mt-4 space-y-2">
               {Object.entries(overrides).map(([metric, config]) => (
-                <div key={metric} className="flex items-center justify-between p-2 border rounded">
+                <div key={metric} className="flex items-center justify-between rounded border p-2">
                   <div className="flex items-center gap-3">
                     <Badge variant="outline">{metric}</Badge>
                     <span className="text-sm text-muted-foreground">Weight: {config.weight}</span>
@@ -192,10 +194,7 @@ export default function NewProfilePage() {
             <Button variant="outline" onClick={() => router.push("/profiles")}>
               Cancel
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={createMutation.isPending || !name.trim()}
-            >
+            <Button onClick={handleSubmit} disabled={createMutation.isPending || !name.trim()}>
               {createMutation.isPending ? "Creating..." : "Create Profile"}
             </Button>
           </div>

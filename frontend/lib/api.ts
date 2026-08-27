@@ -446,10 +446,10 @@ export const api = {
     }),
   getMe: () => request<unknown>("/auth/me"),
   refreshToken: (data: { refresh_token: string }) =>
-    request<{ access_token: string; refresh_token: string; expires_in: number }>(
-      "/auth/refresh",
-      { method: "POST", body: JSON.stringify(data) },
-    ),
+    request<{ access_token: string; refresh_token: string; expires_in: number }>("/auth/refresh", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
 
   // ─── Experiments ─────────────────────────────────────────────
@@ -535,9 +535,14 @@ export const api = {
     return request<unknown>(`/analytics/pass-fail-summary${query}`);
   },
   exportReport: (format: string, params: Record<string, string | number | undefined> = {}) => {
-    const qs = new URLSearchParams({ format, ...Object.fromEntries(
-      Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])
-    ) });
+    const qs = new URLSearchParams({
+      format,
+      ...Object.fromEntries(
+        Object.entries(params)
+          .filter(([, v]) => v !== undefined)
+          .map(([k, v]) => [k, String(v)]),
+      ),
+    });
     const query = qs.toString() ? `?${qs.toString()}` : "";
     return request<Blob>(`/analytics/reports/export${query}`, { method: "GET" });
   },
