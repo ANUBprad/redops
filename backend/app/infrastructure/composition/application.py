@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from structlog import get_logger
 
 from app.api.router import api_router
@@ -91,6 +92,14 @@ def create_application() -> FastAPI:
         lifespan=lifespan,
         docs_url="/docs" if app_config.debug else None,
         redoc_url="/redoc" if app_config.debug else None,
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=app_config.cors_origins_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     app.add_middleware(CorrelationIdMiddleware)
