@@ -1,3 +1,10 @@
+## [0.6.9](https://github.com/ANUBprad/redops/compare/v0.6.8...v0.6.9) (2026-08-29)
+
+
+### Bug Fixes
+
+* **frontend:** correct 3 API path/method mismatches in api.ts ([b4a06e1](https://github.com/ANUBprad/redops/commit/b4a06e19dd205a0b0c4fe1c1a9c62e469088019e))
+
 ## [0.6.8](https://github.com/ANUBprad/redops/compare/v0.6.7...v0.6.8) (2026-08-29)
 
 
