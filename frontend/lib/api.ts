@@ -524,8 +524,11 @@ export const api = {
     const query = qs.toString() ? `?${qs.toString()}` : "";
     return request<unknown>(`/analytics/experiment-comparison${query}`);
   },
-  getMetricDistribution: (runId: UUID) =>
-    request<unknown>(`/analytics/metric-distribution/${runId}`),
+  getMetricDistribution: (runId: UUID, metricName?: string) => {
+    const qs = new URLSearchParams({ run_id: runId });
+    if (metricName) qs.set("metric_name", metricName);
+    return request<unknown>(`/analytics/metric-distribution?${qs.toString()}`);
+  },
   getPassFailSummary: (params: Record<string, string | number | undefined> = {}) => {
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) {
