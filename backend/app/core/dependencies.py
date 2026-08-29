@@ -21,6 +21,7 @@ class CurrentUser:
     email: str = ""
     name: str = ""
     roles: tuple[str, ...] = ()
+    org_id: str | None = None
 
 
 async def get_current_user(request: Request) -> CurrentUser:
@@ -52,6 +53,7 @@ async def get_current_user(request: Request) -> CurrentUser:
             email=payload.get("email", ""),
             name=payload.get("name", ""),
             roles=tuple(payload.get("roles", [])),
+            org_id=payload.get("org_id"),
         )
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired") from None

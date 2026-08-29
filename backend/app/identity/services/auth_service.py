@@ -68,6 +68,7 @@ class AuthService:
     def create_access_token(
         self,
         user: User,
+        org_id: str | None = None,
         extra_claims: dict[str, Any] | None = None,
     ) -> str:
         """Create a JWT access token."""
@@ -81,6 +82,8 @@ class AuthService:
             "exp": now + timedelta(seconds=self._get_access_token_ttl()),
             "type": "access",
         }
+        if org_id is not None:
+            payload["org_id"] = org_id
         if extra_claims:
             payload.update(extra_claims)
         return jwt.encode(payload, self._get_secret_key(), algorithm=self._get_algorithm())

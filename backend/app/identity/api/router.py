@@ -41,6 +41,20 @@ def _get_auth_service(session: AsyncSession) -> AuthService:
     return AuthService(user_repo, refresh_repo)
 
 
+async def _resolve_org_id(session: AsyncSession, user_id: str) -> str | None:
+    """Find the user's first active organization membership, if any."""
+    from app.infrastructure.database.repositories.tenant_repository import (
+        SqlAlchemyMembershipRepository,
+    )
+
+    membership_repo = SqlAlchemyMembershipRepository(session)
+    memberships = await membership_repo.list_by_user(user_id)
+    for m in memberships:
+        if m.is_active:
+            return m.organization_id
+    return None
+
+
 def _user_to_response(user: User) -> UserResponse:
     return UserResponse(
         id=str(user.id),
@@ -69,7 +83,8 @@ async def register(
             display_name=body.display_name,
             password=body.password,
         )
-        access_token = service.create_access_token(user)
+        org_id = await _resolve_org_id(session, str(user.id))
+        access_token = service.create_access_token(user, org_id=org_id)
         raw_refresh, refresh_entity = service.create_refresh_token(user)
         from app.infrastructure.database.repositories.identity_repository import (
             SqlAlchemyRefreshTokenRepository,
@@ -95,7 +110,8 @@ async def login(
     service = _get_auth_service(session)
     try:
         user = await service.authenticate(email=body.email, password=body.password)
-        access_token = service.create_access_token(user)
+        org_id = await _resolve_org_id(session, str(user.id))
+        access_token = service.create_access_token(user, org_id=org_id)
         raw_refresh, refresh_entity = service.create_refresh_token(user)
         from app.infrastructure.database.repositories.identity_repository import (
             SqlAlchemyRefreshTokenRepository,
@@ -121,6 +137,9 @@ async def refresh_tokens(
     service = _get_auth_service(session)
     try:
         new_access, new_refresh, user = await service.refresh_tokens(body.refresh_token)
+        org_id = await _resolve_org_id(session, str(user.id))
+        # Re-create access token with org_id (refresh_tokens creates one without it)
+        new_access = service.create_access_token(user, org_id=org_id)
         return TokenPairResponse(
             access_token=new_access,
             refresh_token=new_refresh.token_hash,
@@ -234,6 +253,9 @@ async def github_callback(
             code=body.code,
             state=body.state,
         )
+        org_id = await _resolve_org_id(session, str(_user.id))
+        # Re-create access token with org_id
+        access_token = auth_svc.create_access_token(_user, org_id=org_id)
         return TokenResponse(
             access_token=access_token,
             refresh_token=raw_refresh,
@@ -260,6 +282,9 @@ async def google_callback(
             code=body.code,
             state=body.state,
         )
+        org_id = await _resolve_org_id(session, str(_user.id))
+        # Re-create access token with org_id
+        access_token = auth_svc.create_access_token(_user, org_id=org_id)
         return TokenResponse(
             access_token=access_token,
             refresh_token=raw_refresh,
