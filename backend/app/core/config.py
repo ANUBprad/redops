@@ -104,10 +104,15 @@ class AppConfig(BaseSettings):
     def validate_secret_key(cls, v: str) -> str:
         if not v:
             import os
+            import secrets
 
-            if os.getenv("APP_ENV", "development") == "production":
+            # Production must always have an explicit secret
+            env = os.getenv("APP_ENV", "development")
+            if env == "production":
                 msg = "APP_SECRET_KEY must be set in production"
                 raise ValueError(msg)
+            # Dev/test: auto-generate a random key so JWT signing works
+            return secrets.token_hex(32)
         return v
 
     # JWT
