@@ -1,3 +1,10 @@
+## [0.6.13](https://github.com/ANUBprad/redops/compare/v0.6.12...v0.6.13) (2026-08-29)
+
+
+### Bug Fixes
+
+* **security:** add org_id to CurrentUser and JWT claims ([01b37a3](https://github.com/ANUBprad/redops/commit/01b37a32d659cb79a71d3c5c61af220e373b3e3e))
+
 ## [0.6.12](https://github.com/ANUBprad/redops/compare/v0.6.11...v0.6.12) (2026-08-29)
 
 
