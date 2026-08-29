@@ -53,7 +53,7 @@ async def send_notification(
     """Send a notification."""
     service = _get_service(session)
     notification = await service.send_notification(
-        organization_id="",
+        organization_id=current_user.org_id or "",
         user_id=current_user.user_id,
         channel=body.channel,
         event=body.event,
