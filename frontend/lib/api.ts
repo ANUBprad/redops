@@ -510,10 +510,10 @@ export const api = {
     if (params?.page) qs.set("page", String(params.page));
     if (params?.page_size) qs.set("page_size", String(params.page_size));
     const query = qs.toString() ? `?${qs.toString()}` : "";
-    return request<PaginatedResponse<unknown>>(`/runs/${runId}/results${query}`);
+    return request<PaginatedResponse<unknown>>(`/metrics/runs/${runId}/results${query}`);
   },
   getMetricResultsForItem: (runId: UUID, itemIndex: number) =>
-    request<unknown[]>(`/runs/${runId}/items/${itemIndex}/metrics`),
+    request<unknown[]>(`/metrics/runs/${runId}/items/${itemIndex}/results`),
 
   // ─── Analytics (extra endpoints) ─────────────────────────────
   getExperimentComparison: (params: Record<string, string | number | undefined> = {}) => {
@@ -539,7 +539,7 @@ export const api = {
   },
   exportReport: (format: string, params: Record<string, string | number | undefined> = {}) => {
     const qs = new URLSearchParams({
-      format,
+      export_format: format,
       ...Object.fromEntries(
         Object.entries(params)
           .filter(([, v]) => v !== undefined)
@@ -547,7 +547,7 @@ export const api = {
       ),
     });
     const query = qs.toString() ? `?${qs.toString()}` : "";
-    return request<Blob>(`/analytics/reports/export${query}`, { method: "GET" });
+    return request<unknown>(`/analytics/export${query}`, { method: "POST" });
   },
 
   // ─── Organizations ───────────────────────────────────────────
