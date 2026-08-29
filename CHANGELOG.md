@@ -1,3 +1,10 @@
+## [0.6.16](https://github.com/ANUBprad/redops/compare/v0.6.15...v0.6.16) (2026-08-29)
+
+
+### Bug Fixes
+
+* **security:** propagate current_user.org_id to notification send endpoint ([114e177](https://github.com/ANUBprad/redops/commit/114e177030382947ab37cd7e830d3b413e34c298))
+
 ## [0.6.15](https://github.com/ANUBprad/redops/compare/v0.6.14...v0.6.15) (2026-08-29)
 
 
