@@ -177,7 +177,7 @@ async def get_experiment(
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
 
 
-@experiment_router.put("/{experiment_id}", response_model=ExperimentResponse)
+@experiment_router.patch("/{experiment_id}", response_model=ExperimentResponse)
 async def update_experiment(
     experiment_id: str,
     body: UpdateExperimentRequest,
