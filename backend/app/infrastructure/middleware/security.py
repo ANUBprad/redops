@@ -7,13 +7,21 @@ import uuid
 from collections import defaultdict
 from typing import Any
 
+import structlog
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import JSONResponse
 
+logger = structlog.get_logger()
+
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Simple in-memory rate limiter using sliding window.
+    """Distributed rate limiter using Redis sorted sets with in-memory fallback.
+
+    Uses a Redis ZSET-based sliding window when a Redis client is available
+    on ``request.app.state.redis_client``.  Falls back to an in-memory
+    ``defaultdict(list)`` when Redis is unreachable so that the application
+    remains functional (though limits won't be cross-process).
 
     Supports per-route limits via ``route_limits``, a mapping of path
     prefixes (or the special key ``"*"`` for the default) to
@@ -32,20 +40,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._default_max = max_requests
         self._default_window = window_seconds
         self._route_limits = route_limits or {}
-        self._requests: dict[str, list[float]] = defaultdict(list)
+        self._memory_store: dict[str, list[float]] = defaultdict(list)
 
     def _resolved_limit(self, path: str) -> tuple[str, int, int]:
         """Resolve the (route_key, max_requests, window_seconds) for a path.
 
         The route_key namespaces the per-client counter so limits are
         enforced independently per matched route.
-
-        Args:
-            path: The request path.
-
-        Returns:
-            A tuple of (route_key, max_requests, window_seconds).
-
         """
         if self._route_limits:
             best: tuple[int, int] | None = None
@@ -63,6 +64,53 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 return ("*", limit[0], limit[1])
         return ("_default", self._default_max, self._default_window)
 
+    async def _check_rate_limit_redis(
+        self,
+        redis_client: Any,
+        key: str,
+        max_requests: int,
+        window_seconds: int,
+    ) -> tuple[bool, int]:
+        """Check rate limit using Redis ZSET sliding window.
+
+        Returns (blocked, remaining).
+        """
+        now = time.time()
+        cutoff = now - window_seconds
+        redis_key = f"ratelimit:{key}"
+
+        pipe = redis_client.pipeline()
+        pipe.zremrangebyscore(redis_key, 0, cutoff)
+        pipe.zadd(redis_key, {str(uuid.uuid4()): now})
+        pipe.zcard(redis_key)
+        pipe.expire(redis_key, window_seconds)
+        results = await pipe.execute()
+
+        count = results[2]
+        remaining = max(0, max_requests - count)
+        blocked = count > max_requests
+        return blocked, remaining
+
+    def _check_rate_limit_memory(
+        self,
+        key: str,
+        max_requests: int,
+        window_seconds: int,
+    ) -> tuple[bool, int]:
+        """Check rate limit using in-memory sliding window."""
+        now = time.time()
+        cutoff = now - window_seconds
+
+        self._memory_store[key] = [t for t in self._memory_store[key] if t > cutoff]
+        count = len(self._memory_store[key])
+
+        if count >= max_requests:
+            return True, 0
+
+        self._memory_store[key].append(now)
+        remaining = max_requests - len(self._memory_store[key])
+        return False, remaining
+
     async def dispatch(
         self,
         request: Request,
@@ -71,12 +119,32 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         client_ip = request.client.host if request.client else "unknown"
         route_key, max_requests, window_seconds = self._resolved_limit(request.url.path)
         key = f"{client_ip}:{route_key}"
-        now = time.time()
-        cutoff = now - window_seconds
 
-        self._requests[key] = [t for t in self._requests[key] if t > cutoff]
+        redis_client = getattr(request.app.state, "redis_client", None)
 
-        if len(self._requests[key]) >= max_requests:
+        try:
+            if redis_client is not None:
+                blocked, remaining = await self._check_rate_limit_redis(
+                    redis_client,
+                    key,
+                    max_requests,
+                    window_seconds,
+                )
+            else:
+                blocked, remaining = self._check_rate_limit_memory(
+                    key,
+                    max_requests,
+                    window_seconds,
+                )
+        except Exception:
+            logger.warning("redis_rate_limit_fallback", exc_info=True)
+            blocked, remaining = self._check_rate_limit_memory(
+                key,
+                max_requests,
+                window_seconds,
+            )
+
+        if blocked:
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Too many requests. Please try again later."},
@@ -87,12 +155,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        self._requests[key].append(now)
-        remaining = max_requests - len(self._requests[key])
-
         response = await call_next(request)
         response.headers["X-RateLimit-Limit"] = str(max_requests)
-        response.headers["X-RateLimit-Remaining"] = str(max(0, remaining))
+        response.headers["X-RateLimit-Remaining"] = str(remaining)
         return response
 
 
