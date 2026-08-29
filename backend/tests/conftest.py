@@ -18,6 +18,7 @@ def _ensure_secret_key():
     cached AppConfig so it picks up the new value.
     """
     os.environ.setdefault("APP_SECRET_KEY", "test-secret-not-for-production")
+    os.environ.setdefault("APP_DEBUG", "true")
 
     from app.core.config import get_config
 

@@ -27,17 +27,14 @@ async def get_current_user(request: Request) -> CurrentUser:
     """Extract and validate the authenticated user from the JWT token.
 
     Decodes the JWT access token from the Authorization header.
-    Falls back to anonymous for backwards compatibility when no token
-    is present and AUTH is disabled (development mode).
+    Always requires a valid token — no anonymous fallback.
     """
     config = get_config()
+    from fastapi import HTTPException
+
     auth_header = request.headers.get("Authorization", "")
 
     if not auth_header.startswith("Bearer ") or not auth_header[7:]:
-        if config.debug:
-            return CurrentUser(user_id="anonymous")
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=401, detail="Missing authentication token")
 
     token = auth_header[7:]
@@ -49,10 +46,6 @@ async def get_current_user(request: Request) -> CurrentUser:
         )
         user_id = payload.get("sub", "")
         if not user_id:
-            if config.debug:
-                return CurrentUser(user_id="anonymous")
-            from fastapi import HTTPException
-
             raise HTTPException(status_code=401, detail="Invalid token: missing subject")
         return CurrentUser(
             user_id=user_id,
@@ -61,14 +54,8 @@ async def get_current_user(request: Request) -> CurrentUser:
             roles=tuple(payload.get("roles", [])),
         )
     except jwt.ExpiredSignatureError:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=401, detail="Token has expired") from None
     except jwt.InvalidTokenError:
-        if config.debug:
-            return CurrentUser(user_id="anonymous")
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=401, detail="Invalid authentication token") from None
 
 

@@ -29,7 +29,7 @@ class AppConfig(BaseSettings):
     app_env: AppEnv = Field(default="development", alias="APP_ENV")
     app_name: str = Field(default="redops-eval", alias="APP_NAME")
     app_version: str = Field(default="0.1.0", alias="APP_VERSION")
-    debug: bool = Field(default=True, alias="APP_DEBUG")
+    debug: bool = Field(default=False, alias="APP_DEBUG")
     app_log_level: str = Field(default="DEBUG", alias="APP_LOG_LEVEL")
 
     # SERVER
