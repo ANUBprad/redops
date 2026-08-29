@@ -1,3 +1,10 @@
+## [0.6.8](https://github.com/ANUBprad/redops/compare/v0.6.7...v0.6.8) (2026-08-29)
+
+
+### Bug Fixes
+
+* **frontend:** align getMetricDistribution to use query params ([f8deaea](https://github.com/ANUBprad/redops/commit/f8deaeaf109d73fa3d248e03b3eec70342a9bd34))
+
 ## [0.6.7](https://github.com/ANUBprad/redops/compare/v0.6.6...v0.6.7) (2026-08-29)
 
 
