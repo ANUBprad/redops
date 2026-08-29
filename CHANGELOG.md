@@ -1,3 +1,10 @@
+## [0.6.12](https://github.com/ANUBprad/redops/compare/v0.6.11...v0.6.12) (2026-08-29)
+
+
+### Bug Fixes
+
+* **security:** enforce APP_SECRET_KEY in production, auto-generate in dev ([8b10040](https://github.com/ANUBprad/redops/commit/8b1004030d2ba249642e4ed96b54a67d56817553))
+
 ## [0.6.11](https://github.com/ANUBprad/redops/compare/v0.6.10...v0.6.11) (2026-08-29)
 
 
