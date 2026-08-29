@@ -71,7 +71,7 @@ class OAuthCallbackRequest(BaseModel):
     """Request body for OAuth callback."""
 
     code: str
-    state: str = ""
+    state: str
 
 
 class RequestVerificationRequest(BaseModel):
