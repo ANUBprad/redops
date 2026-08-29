@@ -1,3 +1,10 @@
+## [0.6.11](https://github.com/ANUBprad/redops/compare/v0.6.10...v0.6.11) (2026-08-29)
+
+
+### Bug Fixes
+
+* **security:** remove anonymous auth bypass in debug mode ([a5957fd](https://github.com/ANUBprad/redops/commit/a5957fdfe042030459a2d82e6b1bada182c7c6cc))
+
 ## [0.6.10](https://github.com/ANUBprad/redops/compare/v0.6.9...v0.6.10) (2026-08-29)
 
 
