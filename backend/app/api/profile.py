@@ -159,7 +159,7 @@ async def get_profile(
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
 
 
-@profile_router.put("/{profile_id}", response_model=ProfileResponse)
+@profile_router.patch("/{profile_id}", response_model=ProfileResponse)
 async def update_profile(
     profile_id: str,
     body: UpdateProfileRequest,
