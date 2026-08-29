@@ -1,3 +1,10 @@
+## [0.6.6](https://github.com/ANUBprad/redops/compare/v0.6.5...v0.6.6) (2026-08-29)
+
+
+### Bug Fixes
+
+* **api:** change experiment update from PUT to PATCH ([24e95b3](https://github.com/ANUBprad/redops/commit/24e95b396acf366177367e843c7650d799ad5f25))
+
 ## [0.6.5](https://github.com/ANUBprad/redops/compare/v0.6.4...v0.6.5) (2026-08-27)
 
 
