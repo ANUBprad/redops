@@ -1,3 +1,10 @@
+## [0.6.10](https://github.com/ANUBprad/redops/compare/v0.6.9...v0.6.10) (2026-08-29)
+
+
+### Bug Fixes
+
+* **security:** use config.temporal_task_queue in redteam start_attack_run ([34fd300](https://github.com/ANUBprad/redops/commit/34fd300c2d187170e6f48011d7f736e69bd4c385))
+
 ## [0.6.9](https://github.com/ANUBprad/redops/compare/v0.6.8...v0.6.9) (2026-08-29)
 
 
