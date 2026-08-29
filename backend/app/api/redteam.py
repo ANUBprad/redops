@@ -7,7 +7,13 @@ from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.core.dependencies import get_current_user, get_db_session, get_temporal_client
+from app.core.config import AppConfig
+from app.core.dependencies import (
+    get_config_dependency,
+    get_current_user,
+    get_db_session,
+    get_temporal_client,
+)
 from app.infrastructure.database.repositories.attack_definition_repository import (
     SqlAlchemyAttackDefinitionRepository,
 )
@@ -402,6 +408,7 @@ async def start_attack_run(
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
     temporal_client: TemporalClient = Depends(get_temporal_client),
+    app_config: AppConfig = Depends(get_config_dependency),
 ) -> AttackRunResponse:
     repo = _get_run_repo(session)
     handler = StartAttackRunHandler(repo)
@@ -428,7 +435,7 @@ async def start_attack_run(
                 effectiveness_threshold=config.get("effectiveness_threshold", 0.8),
             ),
             id=workflow_id,
-            task_queue="redops-task-queue",
+            task_queue=app_config.temporal_task_queue,
             execution_timeout=timedelta(hours=3),
         )
     except BaseError as exc:
