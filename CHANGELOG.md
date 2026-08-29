@@ -1,3 +1,10 @@
+## [0.6.14](https://github.com/ANUBprad/redops/compare/v0.6.13...v0.6.14) (2026-08-29)
+
+
+### Bug Fixes
+
+* **security:** add OAuth CSRF state validation with Redis-backed single-use tokens ([3771e9d](https://github.com/ANUBprad/redops/commit/3771e9d5e6409d315aba4555bf15a6ecee6a76eb))
+
 ## [0.6.13](https://github.com/ANUBprad/redops/compare/v0.6.12...v0.6.13) (2026-08-29)
 
 
