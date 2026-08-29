@@ -1,3 +1,10 @@
+## [0.6.15](https://github.com/ANUBprad/redops/compare/v0.6.14...v0.6.15) (2026-08-29)
+
+
+### Bug Fixes
+
+* **security:** replace in-memory rate limiter with Redis ZSET sliding window ([292c6c1](https://github.com/ANUBprad/redops/commit/292c6c14c1708de0c2da743546060668df39af7e))
+
 ## [0.6.14](https://github.com/ANUBprad/redops/compare/v0.6.13...v0.6.14) (2026-08-29)
 
 
