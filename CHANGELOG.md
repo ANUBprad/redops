@@ -1,3 +1,10 @@
+## [0.6.7](https://github.com/ANUBprad/redops/compare/v0.6.6...v0.6.7) (2026-08-29)
+
+
+### Bug Fixes
+
+* **api:** change profile update from PUT to PATCH ([b4bf972](https://github.com/ANUBprad/redops/commit/b4bf972e7b1026b8b416b34297f08042d4ccc53f))
+
 ## [0.6.6](https://github.com/ANUBprad/redops/compare/v0.6.5...v0.6.6) (2026-08-29)
 
 
