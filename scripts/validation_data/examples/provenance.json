@@ -1,0 +1,10 @@
+{
+  "name": "redops-schema-example",
+  "version": "0.1.0",
+  "source": "redops/scripts/validation_data (format demonstration only)",
+  "license": "internal-example",
+  "redistribution_allowed": false,
+  "description": "Schema/format demonstration corpus. It exists ONLY to exercise the ground-truth validation loader, quality checks, runner, and tests. It is NOT a legitimate ground-truth corpus: its labels were written by an engineer to demonstrate the data contract and MUST NOT be used to make any claim about metric accuracy.",
+  "is_ground_truth": false,
+  "note": "NOT ground truth. Populate with a legitimate, license-cleared human-labeled source before any metric-accuracy claim can be made. See docs/METRICS_VALIDATION_REPORT.md."
+}
