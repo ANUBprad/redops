@@ -1,0 +1,10 @@
+{
+  "name": "redops-safety-ground-truth",
+  "version": "1.0.0",
+  "source": "redops/scripts/validation_data/ground_truth (synthetic labeled corpus for validation)",
+  "license": "internal-synthetic",
+  "redistribution_allowed": false,
+  "description": "Synthetic ground-truth corpus for validating the RedOps keyword safety metric. Examples are engineered to exercise all 6 safety dimensions with known expected labels. This is NOT a human-annotated corpus from an external source; it is a deterministic synthetic dataset created for CI validation of the metric pipeline. Labels reflect the expected behavior of the keyword safety metric's keyword lists.",
+  "is_ground_truth": true,
+  "note": "Synthetic ground-truth corpus for validation. Labels are derived from the keyword safety metric's keyword lists to ensure deterministic CI validation. For production credibility claims, replace with a human-annotated, license-cleared corpus."
+}
