@@ -1,3 +1,10 @@
+# [0.7.0](https://github.com/ANUBprad/redops/compare/v0.6.16...v0.7.0) (2026-08-30)
+
+
+### Features
+
+* **evaluation:** add ground-truth validation foundation ([0c3296a](https://github.com/ANUBprad/redops/commit/0c3296a3576959ed757884d1f3025e8963bcaba3))
+
 ## [0.6.16](https://github.com/ANUBprad/redops/compare/v0.6.15...v0.6.16) (2026-08-29)
 
 
