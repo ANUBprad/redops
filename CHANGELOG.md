@@ -1,3 +1,10 @@
+# [0.8.0](https://github.com/ANUBprad/redops/compare/v0.7.0...v0.8.0) (2026-08-30)
+
+
+### Features
+
+* **evaluation:** add validation CLI, ground-truth corpus, and credibility tests ([a42d99b](https://github.com/ANUBprad/redops/commit/a42d99b46590a8bab173dbb80175f8ef7012a38c))
+
 # [0.7.0](https://github.com/ANUBprad/redops/compare/v0.6.16...v0.7.0) (2026-08-30)
 
 
