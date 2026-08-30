@@ -42,7 +42,10 @@ from app.infrastructure.temporal.client import TemporalClientFactory
 from app.infrastructure.temporal.lifecycle import TemporalWorkerLifecycle
 from app.providers.cost.calculator import CostCalculator
 from app.providers.registry.registry import ProviderRegistry
-from app.redteam.temporal.activities import configure_redteam_provider_registry
+from app.redteam.temporal.activities import (
+    configure_redteam_metric_engine,
+    configure_redteam_provider_registry,
+)
 
 if TYPE_CHECKING:
     from app.kernel.container.di_container import DIContainer
@@ -274,6 +277,7 @@ class InfrastructureServices:
         configure_cost_calculator(cost_calculator)
 
         configure_redteam_provider_registry(provider_registry)
+        configure_redteam_metric_engine(metric_engine)
 
         agent_provider_registry = self._container.resolve(ProviderRegistry)
         configure_agent_provider_registry(agent_provider_registry)

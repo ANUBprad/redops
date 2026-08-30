@@ -15,8 +15,19 @@ from temporalio import activity
 from app.redteam.domain.campaign import AdaptiveCampaign, CampaignBudget, CampaignResult
 from app.redteam.domain.enums import AttackCategory
 from app.redteam.engine.campaign_engine import AdaptiveCampaignEngine
+from app.redteam.engine.semantic_judge import SemanticEffectivenessJudge
 
 _provider_registry: Any = None
+_metric_engine: Any = None
+
+# LLM-judge safety metrics evaluated against each attack result in production.
+REDTEAM_METRIC_NAMES: tuple[str, ...] = (
+    "safety",
+    "prompt_injection",
+    "jailbreak",
+    "toxicity",
+    "bias",
+)
 
 
 def configure_redteam_provider_registry(registry: Any) -> None:
@@ -25,11 +36,24 @@ def configure_redteam_provider_registry(registry: Any) -> None:
     _provider_registry = registry
 
 
+def configure_redteam_metric_engine(engine: Any) -> None:
+    """Set the metric engine for campaign execution activities."""
+    global _metric_engine
+    _metric_engine = engine
+
+
 def _get_provider_registry() -> Any:
     if _provider_registry is None:
         msg = "Provider registry not configured. Call configure_redteam_provider_registry first."
         raise RuntimeError(msg)
     return _provider_registry
+
+
+def _get_metric_engine() -> Any:
+    if _metric_engine is None:
+        msg = "Metric engine not configured. Call configure_redteam_metric_engine first."
+        raise RuntimeError(msg)
+    return _metric_engine
 
 
 # ---------------------------------------------------------------------------
@@ -151,6 +175,7 @@ async def red_team_campaign_activity(
 
     try:
         registry = _get_provider_registry()
+        metric_engine = _get_metric_engine()
 
         categories: tuple[AttackCategory, ...] = ()
         if input.attack_categories:
@@ -173,7 +198,31 @@ async def red_team_campaign_activity(
             budget=budget,
         )
 
-        engine = AdaptiveCampaignEngine(registry=registry)
+        # The judge uses the same provider/model as the target so the
+        # semantic effectiveness determination is made by a real LLM call
+        # against the assigned provider, mirroring the general-eval path.
+        from app.evaluation.judge.domain import JudgeConfig
+
+        judge_provider = registry.resolve(input.target_provider)
+        semantic_judge = SemanticEffectivenessJudge(
+            provider=judge_provider,
+            config=JudgeConfig(
+                provider_name=input.target_provider,
+                model=input.target_model,
+                temperature=0.0,
+                max_tokens=512,
+            ),
+        )
+
+        engine = AdaptiveCampaignEngine(
+            registry=registry,
+            metric_engine=metric_engine,
+            metric_names=REDTEAM_METRIC_NAMES,
+            semantic_judge=semantic_judge,
+            judge_provider=judge_provider,
+            judge_provider_name=input.target_provider,
+            judge_model=input.target_model,
+        )
 
         if activity.in_activity():
             activity.heartbeat("running campaign loop")

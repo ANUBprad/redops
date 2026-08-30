@@ -15,6 +15,7 @@ from app.infrastructure.temporal.worker import ActivityRegistry, WorkflowRegistr
 from app.redteam.temporal.activities import (
     RedTeamWorkflowInput,
     RedTeamWorkflowResult,
+    configure_redteam_metric_engine,
     configure_redteam_provider_registry,
     red_team_campaign_activity,
 )
@@ -83,6 +84,27 @@ class TestRedTeamActivityConfiguration:
                 mod._get_provider_registry()
         finally:
             mod._provider_registry = old
+
+    def test_configure_metric_engine(self) -> None:
+        import app.redteam.temporal.activities as mod
+
+        old = mod._metric_engine
+        try:
+            configure_redteam_metric_engine(MagicMock())
+            assert mod._metric_engine is not None
+        finally:
+            mod._metric_engine = old
+
+    def test_metric_engine_raises_when_none(self) -> None:
+        import app.redteam.temporal.activities as mod
+
+        old = mod._metric_engine
+        try:
+            mod._metric_engine = None
+            with pytest.raises(RuntimeError, match="Metric engine not configured"):
+                mod._get_metric_engine()
+        finally:
+            mod._metric_engine = old
 
 
 # ---------------------------------------------------------------------------

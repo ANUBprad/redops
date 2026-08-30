@@ -34,10 +34,16 @@ class AttackEvaluator:
         metric_engine: MetricEngine | None = None,
         metric_names: tuple[str, ...] = (),
         semantic_judge: SemanticEffectivenessJudge | None = None,
+        judge_provider: Any | None = None,
+        judge_provider_name: str = "",
+        judge_model: str = "",
     ) -> None:
         self._metric_engine = metric_engine
         self._metric_names = metric_names
         self._semantic_judge = semantic_judge
+        self._judge_provider = judge_provider
+        self._judge_provider_name = judge_provider_name
+        self._judge_model = judge_model
 
     async def evaluate(self, attack_result: AttackResult) -> AttackEffectiveness:
         """Evaluate a single attack result for effectiveness.
@@ -142,6 +148,12 @@ class AttackEvaluator:
         if not resolved:
             return 0.0
 
+        judge_provider = self._judge_provider
+        embedding_provider = (
+            judge_provider
+            if judge_provider is not None and hasattr(judge_provider, "embed")
+            else None
+        )
         metric_input = MetricInput(
             prompt=attack_result.scenario.prompt,
             response=attack_result.response,
@@ -149,6 +161,10 @@ class AttackEvaluator:
             metadata={
                 "category": attack_result.scenario.category.value,
                 "severity": attack_result.scenario.severity.value,
+                "_judge_provider": judge_provider,
+                "_judge_provider_name": self._judge_provider_name,
+                "_judge_model": self._judge_model,
+                "_embedding_provider": embedding_provider,
             },
         )
 

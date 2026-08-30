@@ -35,6 +35,7 @@ from app.redteam.engine.attack_evaluator import AttackEvaluator
 from app.redteam.engine.campaign_engine import AdaptiveCampaignEngine
 from app.redteam.engine.mutation import MutationStrategy
 from app.redteam.engine.mutation_selector import MutationStrategySelector
+from app.redteam.engine.semantic_judge import SemanticEffectivenessJudge
 from app.redteam.engine.target_executor import TargetExecutor
 
 
@@ -95,6 +96,39 @@ def _make_registry(provider: AsyncMock | None = None) -> ProviderRegistry:
 
     registry.register(_Provider(provider))
     return registry
+
+
+def _make_json_registry(
+    json_content: str = '{"verdict":"FAILURE","score":0.1,"confidence":0.9,'
+    '"reasoning":"Refused","evidence":"Cannot help"}',
+) -> tuple[ProviderRegistry, AsyncMock]:
+    """Create a registry whose provider returns JSON (e.g. a judge verdict).
+
+    The single registered provider serves both the target executor and the
+    semantic judge; returning valid judge JSON allows the judge to produce a
+    parsed verdict (evaluation_source == 'semantic_judge').
+    """
+    provider = AsyncMock()
+    provider.provider_name = "test-provider"
+    provider.health.return_value = True
+
+    class _JsonProvider:
+        provider_name = "test-provider"
+
+        async def chat(
+            self, messages: list[Any], *, model: str, options: Any = None
+        ) -> ChatResponse:
+            return _make_chat_response(json_content)
+
+        async def health(self) -> bool:
+            return True
+
+        def capabilities(self) -> Any:
+            return MagicMock()
+
+    registry = ProviderRegistry()
+    registry.register(_JsonProvider())
+    return registry, provider
 
 
 # ─── Campaign Domain Tests ────────────────────────────────────────
@@ -680,6 +714,49 @@ class TestAdaptiveCampaignEngine:
         for r in result.rounds:
             assert r.execution is not None
             assert r.effectiveness is not None
+
+    def test_campaign_with_semantic_judge_sets_source(self) -> None:
+        """Wiring a semantic judge makes evaluation_source 'semantic_judge'.
+
+        This is the P0-2 production seam: the activity now passes a real
+        SemanticEffectivenessJudge into the engine, so effectiveness is no
+        longer keyword-only in production.
+        """
+        from app.evaluation.judge.domain import JudgeConfig
+
+        registry, _ = _make_json_registry()
+        judge_provider = registry.resolve("test-provider")
+        judge = SemanticEffectivenessJudge(
+            provider=judge_provider,
+            config=JudgeConfig(
+                provider_name="test-provider",
+                model="test-model",
+                temperature=0.0,
+                max_tokens=512,
+            ),
+        )
+        engine = AdaptiveCampaignEngine(
+            registry,
+            semantic_judge=judge,
+            judge_provider=judge_provider,
+            judge_provider_name="test-provider",
+            judge_model="test-model",
+        )
+
+        campaign = AdaptiveCampaign.create(
+            name="Semantic Judge Test",
+            target_provider="test-provider",
+            target_model="test-model",
+            budget=CampaignBudget(max_rounds=3, max_attacks=3),
+        )
+
+        result = _run_async(engine.run_campaign(campaign))
+
+        assert result.total_rounds == 3
+        for r in result.rounds:
+            assert r.effectiveness is not None
+            assert r.effectiveness.evaluation_source == "semantic_judge"
+            assert r.effectiveness.semantic_verdict == "FAILURE"
 
     def test_campaign_stops_on_budget_exhaustion(self) -> None:
         provider = _make_mock_provider("Safe response")

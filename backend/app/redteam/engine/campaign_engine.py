@@ -6,7 +6,7 @@ Effectiveness Evaluation → Mutation/Strategy Selection → Next Attack.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from app.redteam.domain.campaign import (
     AdaptiveCampaign,
@@ -47,11 +47,21 @@ class AdaptiveCampaignEngine:
         metric_engine: MetricEngine | None = None,
         metric_names: tuple[str, ...] = (),
         semantic_judge: SemanticEffectivenessJudge | None = None,
+        judge_provider: Any | None = None,
+        judge_provider_name: str = "",
+        judge_model: str = "",
     ) -> None:
         self._registry = registry
         self._orchestrator = AttackOrchestrator()
         self._executor = TargetExecutor(registry)
-        self._evaluator = AttackEvaluator(metric_engine, metric_names, semantic_judge)
+        self._evaluator = AttackEvaluator(
+            metric_engine,
+            metric_names,
+            semantic_judge,
+            judge_provider=judge_provider,
+            judge_provider_name=judge_provider_name,
+            judge_model=judge_model,
+        )
         self._selector = MutationStrategySelector()
 
     @property

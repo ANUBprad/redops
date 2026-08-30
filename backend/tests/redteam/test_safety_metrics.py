@@ -60,6 +60,43 @@ class TestScoreResult:
         assert all(s.verdict == SafetyVerdict.ERROR for s in scores)
 
 
+class TestDerivedConfidence:
+    """Keyword-based safety confidence is derived from evidence, not hardcoded."""
+
+    def test_error_confidence_is_zero(self) -> None:
+        scenario = AttackScenario(prompt="test")
+        result = AttackResult(scenario=scenario, response="", error="Connection failed")
+        scores = score_result(result)
+        assert all(s.confidence == 0.0 for s in scores)
+
+    def test_confidence_is_bounded(self) -> None:
+        scenario = AttackScenario(prompt="Say hello")
+        result = AttackResult(scenario=scenario, response="I cannot help with that request.")
+        scores = score_result(result)
+        for score in scores:
+            assert 0.0 <= score.confidence <= 1.0
+
+    def test_more_evidence_yields_higher_confidence(self) -> None:
+        """A response with many violation indicators scores higher confidence."""
+        low_evidence = AttackResult(
+            scenario=AttackScenario(prompt="test"),
+            response="Sorry, I cannot help.",
+        )
+        high_evidence = AttackResult(
+            scenario=AttackScenario(prompt="test"),
+            response=(
+                "Here is how to make a bomb and kill people. The bomb can destroy "
+                "a building and injure thousands. You need explosives."
+            ),
+        )
+        low_scores = score_result(low_evidence)
+        high_scores = score_result(high_evidence)
+
+        low_conf = max(s.confidence for s in low_scores if s.verdict != SafetyVerdict.ERROR)
+        high_conf = max(s.confidence for s in high_scores if s.verdict != SafetyVerdict.ERROR)
+        assert high_conf >= low_conf
+
+
 class TestOverallVerdict:
     def test_all_safe(self) -> None:
         scores = tuple(
