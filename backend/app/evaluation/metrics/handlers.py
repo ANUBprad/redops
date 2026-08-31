@@ -92,6 +92,9 @@ class ScoreItemHandler:
                     },
                     execution_time_ms=r.execution_time_ms,
                     error=r.error,
+                    confidence=r.confidence,
+                    version=r.version,
+                    cost_usd=r.cost_usd,
                 ),
             )
 

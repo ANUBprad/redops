@@ -131,6 +131,9 @@ async def score_item(
             metadata=r.metadata,
             execution_time_ms=r.execution_time_ms,
             error=r.error,
+            confidence=r.confidence,
+            version=r.version,
+            cost_usd=r.cost_usd,
         )
         for r in results
     ]
@@ -178,6 +181,9 @@ async def score_batch(
             metadata=r.metadata,
             execution_time_ms=r.execution_time_ms,
             error=r.error,
+            confidence=r.confidence,
+            version=r.version,
+            cost_usd=r.cost_usd,
         )
         for r in results
     ]
@@ -215,6 +221,9 @@ async def get_metric_results(
                 metadata=r.metadata,
                 execution_time_ms=r.execution_time_ms,
                 error=r.error,
+                confidence=r.confidence,
+                version=r.version,
+                cost_usd=r.cost_usd,
             )
             for r in results
         ],
@@ -294,6 +303,9 @@ async def get_item_metric_results(
             metadata=r.metadata,
             execution_time_ms=r.execution_time_ms,
             error=r.error,
+            confidence=r.confidence,
+            version=r.version,
+            cost_usd=r.cost_usd,
         )
         for r in results
     ]

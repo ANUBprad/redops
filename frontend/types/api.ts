@@ -130,6 +130,9 @@ export interface MetricResult {
   metadata: Record<string, unknown>;
   execution_time_ms: number;
   error: string | null;
+  confidence: number;
+  version: string;
+  cost_usd: number;
 }
 
 export interface MetricAggregation {

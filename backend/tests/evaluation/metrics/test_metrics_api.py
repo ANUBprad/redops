@@ -175,6 +175,33 @@ class TestScoreItem:
         assert "execution_time_ms" in result
         assert "error" in result or result["error"] is None
 
+    def test_score_preserves_cost_usd_from_metadata(self, client: TestClient) -> None:
+        """cost metric surfaces the real cost_usd through the response.
+
+        Regression: the sync score path previously dropped cost_usd (and
+        confidence/version) when building the HTTP response, returning
+        defaults instead of the values produced during evaluation.
+        """
+        response = client.post(
+            "/metrics/score",
+            json={
+                "run_id": "00000000-0000-0000-0000-000000000001",
+                "item_id": "00000000-0000-0000-0000-000000000002",
+                "prompt": "test",
+                "response": "test response",
+                "metadata": {"cost_usd": 0.005},
+                "metric_names": ["cost"],
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        result = data[0]
+        assert result["metric_name"] == "cost"
+        assert result["cost_usd"] == 0.005
+        assert "confidence" in result
+        assert "version" in result
+
 
 class TestScoreBatch:
     """Tests for POST /metrics/score-batch."""
