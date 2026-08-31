@@ -1,3 +1,10 @@
+# [0.10.0](https://github.com/ANUBprad/redops/compare/v0.9.0...v0.10.0) (2026-08-31)
+
+
+### Features
+
+* **redteam:** persist and expose campaign results in production path (P1-1) ([b7591d6](https://github.com/ANUBprad/redops/commit/b7591d60ea5c73eafd61557a05f09b280635e211))
+
 # [0.9.0](https://github.com/ANUBprad/redops/compare/v0.8.0...v0.9.0) (2026-08-30)
 
 
