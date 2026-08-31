@@ -1,3 +1,10 @@
+# [0.12.0](https://github.com/ANUBprad/redops/compare/v0.11.0...v0.12.0) (2026-08-31)
+
+
+### Features
+
+* **redteam:** start attack run workflow from UI (P1-3) ([77ea9d7](https://github.com/ANUBprad/redops/commit/77ea9d77e217c447057fe65853cc290e7f132c21))
+
 # [0.11.0](https://github.com/ANUBprad/redops/compare/v0.10.0...v0.11.0) (2026-08-31)
 
 
