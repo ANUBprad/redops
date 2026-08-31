@@ -218,6 +218,7 @@ class AttackRun(AggregateRoot, VersionMixin):
         items_passed: int = 0,
         items_violated: int = 0,
         items_failed: int = 0,
+        campaign_results: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(entity_id=entity_id)
         VersionMixin.__init__(self)
@@ -230,6 +231,7 @@ class AttackRun(AggregateRoot, VersionMixin):
         self._items_passed = items_passed
         self._items_violated = items_violated
         self._items_failed = items_failed
+        self._campaign_results = campaign_results
         self._started_at: datetime | None = None
         self._completed_at: datetime | None = None
 
@@ -268,6 +270,10 @@ class AttackRun(AggregateRoot, VersionMixin):
     @property
     def items_failed(self) -> int:
         return self._items_failed
+
+    @property
+    def campaign_results(self) -> dict[str, Any] | None:
+        return self._campaign_results
 
     @property
     def started_at(self) -> datetime | None:
@@ -397,3 +403,12 @@ class AttackRun(AggregateRoot, VersionMixin):
             self._items_violated += 1
         else:
             self._items_passed += 1
+
+    def record_campaign_results(self, campaign_results: dict[str, Any]) -> None:
+        """Attach the terminal campaign results to the run.
+
+        Separately persisted (via ``persist_campaign_results``) so the
+        full per-round prompts/responses/effectiveness/semantic data is
+        durable and retrievable through the repository.
+        """
+        self._campaign_results = campaign_results

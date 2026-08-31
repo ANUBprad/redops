@@ -145,6 +145,7 @@ def _run_to_response(r: AttackRun) -> AttackRunResponse:
         items_violated=r.items_violated,
         items_failed=r.items_failed,
         progress=r.progress,
+        campaign_results=r.campaign_results,
         version=r.version,
         started_at=_dt_str(r.started_at) if r.started_at else None,
         completed_at=_dt_str(r.completed_at) if r.completed_at else None,

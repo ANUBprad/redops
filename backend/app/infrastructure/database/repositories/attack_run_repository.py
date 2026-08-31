@@ -152,6 +152,7 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
             items_violated=run.items_violated,
             items_failed=run.items_failed,
             version=run.version,
+            campaign_results=run.campaign_results,
             started_at=run.started_at,
             completed_at=run.completed_at,
             created_at=run.created_at,
@@ -175,6 +176,7 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
             items_passed=model.items_passed,
             items_violated=model.items_violated,
             items_failed=model.items_failed,
+            campaign_results=model.campaign_results,
         )
 
 

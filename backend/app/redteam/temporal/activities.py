@@ -8,17 +8,29 @@ configured during worker startup.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from datetime import datetime
+from enum import Enum
+from typing import TYPE_CHECKING, Any
 
 from temporalio import activity
 
-from app.redteam.domain.campaign import AdaptiveCampaign, CampaignBudget, CampaignResult
+from app.kernel.entities.base import UUIDv7
+from app.redteam.domain.campaign import (
+    AdaptiveCampaign,
+    CampaignBudget,
+    CampaignResult,
+    CampaignRound,
+)
 from app.redteam.domain.enums import AttackCategory
 from app.redteam.engine.campaign_engine import AdaptiveCampaignEngine
 from app.redteam.engine.semantic_judge import SemanticEffectivenessJudge
 
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
 _provider_registry: Any = None
 _metric_engine: Any = None
+_session_factory: async_sessionmaker[AsyncSession] | None = None
 
 # LLM-judge safety metrics evaluated against each attack result in production.
 REDTEAM_METRIC_NAMES: tuple[str, ...] = (
@@ -40,6 +52,23 @@ def configure_redteam_metric_engine(engine: Any) -> None:
     """Set the metric engine for campaign execution activities."""
     global _metric_engine
     _metric_engine = engine
+
+
+def configure_redteam_session_factory(factory: async_sessionmaker[AsyncSession]) -> None:
+    """Set the session factory for campaign execution activities.
+
+    Called once during worker startup so completed campaigns can persist
+    their results through the repository.
+    """
+    global _session_factory
+    _session_factory = factory
+
+
+def _get_session() -> AsyncSession:
+    if _session_factory is None:
+        msg = "Session factory not configured. Call configure_redteam_session_factory first."
+        raise RuntimeError(msg)
+    return _session_factory()
 
 
 def _get_provider_registry() -> Any:
@@ -148,6 +177,140 @@ def _build_result(attack_run_id: str, result: CampaignResult) -> RedTeamWorkflow
     )
 
 
+def _campaign_to_dict(result: CampaignResult) -> dict[str, Any]:
+    """Serialize a CampaignResult to a JSON-safe dict.
+
+    Preserves per-round prompts/responses/effectiveness and the
+    semantic judge data captured in each round so the completed
+    campaign is durable and retrievable through the repository.
+    """
+    return {
+        "campaign_id": result.campaign_id,
+        "state": result.state.value,
+        "total_rounds": result.total_rounds,
+        "total_attacks": result.total_attacks,
+        "total_tokens": result.total_tokens,
+        "total_cost_usd": result.total_cost_usd,
+        "total_duration_ms": result.total_duration_ms,
+        "final_effectiveness": result.final_effectiveness,
+        "peak_effectiveness": result.peak_effectiveness,
+        "violation_count": result.violation_count,
+        "severe_violation_count": result.severe_violation_count,
+        "budget_violation_reason": result.budget_violation_reason,
+        "category_stats": result.category_stats,
+        "completed_at": _jsonable(result.completed_at),
+        "rounds": [_round_to_dict(r) for r in result.rounds],
+    }
+
+
+def _round_to_dict(round_: CampaignRound) -> dict[str, Any]:
+    execution = round_.execution
+    effectiveness = round_.effectiveness
+    return {
+        "round_id": _jsonable(round_.round_id),
+        "round_number": round_.round_number,
+        "attack_category": round_.attack_category.value,
+        "mutation_strategy": round_.mutation_strategy,
+        "mutation_phase": round_.mutation_phase.value,
+        "attack_scenario": _scenario_to_dict(round_.attack_scenario),
+        "lineage": {
+            "lineage_id": _jsonable(round_.lineage.lineage_id),
+            "parent_lineage_id": _jsonable(round_.lineage.parent_lineage_id),
+            "generation": round_.lineage.generation,
+            "mutation_strategy": round_.lineage.mutation_strategy,
+            "attack_category": round_.lineage.attack_category,
+            "is_seed": round_.lineage.is_seed,
+        },
+        "execution": _execution_to_dict(execution) if execution else None,
+        "effectiveness": _effectiveness_to_dict(effectiveness) if effectiveness else None,
+        "tokens_used": round_.tokens_used,
+        "cost_usd": round_.cost_usd,
+        "duration_ms": round_.duration_ms,
+    }
+
+
+def _scenario_to_dict(scenario: Any) -> dict[str, Any]:
+    return {
+        "scenario_id": _jsonable(scenario.scenario_id),
+        "attack_definition_id": _jsonable(scenario.attack_definition_id),
+        "template_name": scenario.template_name,
+        "category": scenario.category.value,
+        "severity": scenario.severity.value,
+        "prompt": scenario.prompt,
+        "system_prompt_override": scenario.system_prompt_override,
+        "expected_behavior": scenario.expected_behavior,
+        "parameters": scenario.parameters,
+        "turn_index": scenario.turn_index,
+        "metadata": scenario.metadata,
+    }
+
+
+def _execution_to_dict(execution: Any) -> dict[str, Any]:
+    return {
+        "execution_id": _jsonable(execution.execution_id),
+        "attack_prompt": execution.attack_prompt,
+        "system_prompt": execution.system_prompt,
+        "target_response": execution.target_response,
+        "tokens_input": execution.tokens_input,
+        "tokens_output": execution.tokens_output,
+        "total_tokens": execution.total_tokens,
+        "cost_usd": execution.cost_usd,
+        "latency_ms": execution.latency_ms,
+        "provider_name": execution.provider_name,
+        "model_name": execution.model_name,
+        "error": execution.error,
+        "executed_at": _jsonable(execution.executed_at),
+    }
+
+
+def _effectiveness_to_dict(effectiveness: Any) -> dict[str, Any]:
+    return {
+        "effectiveness_id": _jsonable(effectiveness.effectiveness_id),
+        "safety_scores": [
+            {
+                "dimension": s.dimension.value,
+                "score": s.score,
+                "normalized_score": s.normalized_score,
+                "verdict": s.verdict.value,
+                "reasoning": s.reasoning,
+                "confidence": s.confidence,
+            }
+            for s in effectiveness.safety_scores
+        ],
+        "overall_safety_verdict": effectiveness.overall_safety_verdict.value,
+        "metric_score": effectiveness.metric_score,
+        "is_violation": effectiveness.is_violation,
+        "is_violation_severe": effectiveness.is_violation_severe,
+        "effectiveness_score": effectiveness.effectiveness_score,
+        "reasoning": effectiveness.reasoning,
+        "evaluation_source": effectiveness.evaluation_source,
+        "semantic_verdict": effectiveness.semantic_verdict,
+        "semantic_score": effectiveness.semantic_score,
+        "semantic_confidence": effectiveness.semantic_confidence,
+        "semantic_reasoning": effectiveness.semantic_reasoning,
+        "semantic_evidence": effectiveness.semantic_evidence,
+        "semantic_judge_model": effectiveness.semantic_judge_model,
+        "semantic_judge_cost_usd": effectiveness.semantic_judge_cost_usd,
+        "semantic_judge_tokens_input": effectiveness.semantic_judge_tokens_input,
+        "semantic_judge_tokens_output": effectiveness.semantic_judge_tokens_output,
+        "semantic_judge_latency_ms": effectiveness.semantic_judge_latency_ms,
+        "evaluated_at": _jsonable(effectiveness.evaluated_at),
+    }
+
+
+def _jsonable(value: Any) -> Any:
+    """Convert domain leaf values (UUIDv7, enum, datetime, None) to JSON-safe."""
+    if value is None:
+        return None
+    if isinstance(value, UUIDv7):
+        return str(value)
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return str(value)
+
+
 # ---------------------------------------------------------------------------
 # Activities
 # ---------------------------------------------------------------------------
@@ -237,6 +400,8 @@ async def red_team_campaign_activity(
             result.violation_count,
         )
 
+        await _persist_campaign_results(input.attack_run_id, result)
+
         return _build_result(input.attack_run_id, result)
 
     except Exception as exc:
@@ -250,3 +415,28 @@ async def red_team_campaign_activity(
             status="failed",
             error=str(exc),
         )
+
+
+async def _persist_campaign_results(
+    attack_run_id: str,
+    result: CampaignResult,
+) -> None:
+    """Persist the completed campaign results to the attack run.
+
+    Opens its own database session via the configured session factory
+    and writes the full per-round results to the existing
+    ``campaign_results`` JSON column, mirroring the general-eval
+    persistence pattern.
+    """
+    from app.infrastructure.database.repositories.attack_run_repository import (
+        SqlAlchemyAttackRunRepository,
+    )
+
+    campaign_json = _campaign_to_dict(result)
+    async with _get_session() as session:
+        repo = SqlAlchemyAttackRunRepository(session)
+        await repo.persist_campaign_results(
+            UUIDv7.from_string(attack_run_id),
+            campaign_json,
+        )
+        await session.commit()

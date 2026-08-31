@@ -45,6 +45,7 @@ from app.providers.registry.registry import ProviderRegistry
 from app.redteam.temporal.activities import (
     configure_redteam_metric_engine,
     configure_redteam_provider_registry,
+    configure_redteam_session_factory,
 )
 
 if TYPE_CHECKING:
@@ -257,6 +258,7 @@ class InfrastructureServices:
         configure_session_factory(engine.session_factory)
         configure_agent_session_factory(engine.session_factory)
         configure_export_session_factory(engine.session_factory)
+        configure_redteam_session_factory(engine.session_factory)
         self._service_registry.register("database", engine)
         self._health_registry.register(DatabaseHealthContributor(engine))
 
