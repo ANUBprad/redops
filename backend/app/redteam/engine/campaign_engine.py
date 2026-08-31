@@ -18,6 +18,7 @@ from app.redteam.domain.campaign_enums import CampaignState, MutationPhase
 from app.redteam.domain.enums import AttackCategory
 from app.redteam.domain.value_objects import AttackScenario
 from app.redteam.engine.attack_evaluator import AttackEvaluator
+from app.redteam.engine.mutation import MutationStrategy
 from app.redteam.engine.mutation_selector import MutationStrategySelector
 from app.redteam.engine.orchestrator import AttackOrchestrator
 from app.redteam.engine.target_executor import TargetExecutor
@@ -50,6 +51,9 @@ class AdaptiveCampaignEngine:
         judge_provider: Any | None = None,
         judge_provider_name: str = "",
         judge_model: str = "",
+        mutation_provider: Any | None = None,
+        mutation_model: str = "",
+        mutation_strategy: MutationStrategy | None = None,
     ) -> None:
         self._registry = registry
         self._orchestrator = AttackOrchestrator()
@@ -62,7 +66,23 @@ class AdaptiveCampaignEngine:
             judge_provider_name=judge_provider_name,
             judge_model=judge_model,
         )
-        self._selector = MutationStrategySelector()
+        self._selector = MutationStrategySelector(
+            llm_provider=mutation_provider,
+            llm_model=mutation_model,
+        )
+        self._mutation_strategy = mutation_strategy
+        if (
+            mutation_strategy == MutationStrategy.PROMPT_VARIATION
+            and (mutation_provider is None or not mutation_model)
+        ):
+            from app.kernel.exceptions.errors import ValidationError
+
+            raise ValidationError(
+                message=(
+                    "LLM prompt variation was requested but no mutation provider/model "
+                    "was configured"
+                ),
+            )
 
     @property
     def orchestrator(self) -> AttackOrchestrator:
@@ -119,9 +139,13 @@ class AdaptiveCampaignEngine:
     async def _execute_round(self, campaign: AdaptiveCampaign) -> CampaignRound:
         """Execute a single round of the campaign loop."""
         category = self._select_category(campaign)
-        strategy = self._selector.select_strategy(
-            campaign.mutation_phase,
-            list(campaign.rounds),
+        strategy = (
+            self._mutation_strategy
+            if self._mutation_strategy is not None
+            else self._selector.select_strategy(
+                campaign.mutation_phase,
+                list(campaign.rounds),
+            )
         )
 
         scenario = await self._generate_scenario(campaign, category)
@@ -133,6 +157,8 @@ class AdaptiveCampaignEngine:
                 strategy,
             )
             scenario = AttackScenario(
+                scenario_id=scenario.scenario_id,
+                attack_definition_id=scenario.attack_definition_id,
                 template_name=scenario.template_name,
                 category=scenario.category,
                 severity=scenario.severity,
@@ -140,6 +166,13 @@ class AdaptiveCampaignEngine:
                 system_prompt_override=scenario.system_prompt_override,
                 expected_behavior=scenario.expected_behavior,
                 parameters=scenario.parameters,
+                turn_index=scenario.turn_index,
+                metadata={
+                    **scenario.metadata,
+                    **mutation_result.metadata,
+                    "original_prompt": mutation_result.original_prompt,
+                    "mutation_strategy": mutation_result.strategy.value,
+                },
             )
 
         lineage = AttackLineage(

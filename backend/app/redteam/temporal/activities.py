@@ -23,6 +23,7 @@ from app.redteam.domain.campaign import (
 )
 from app.redteam.domain.enums import AttackCategory
 from app.redteam.engine.campaign_engine import AdaptiveCampaignEngine
+from app.redteam.engine.mutation import MutationStrategy
 from app.redteam.engine.semantic_judge import SemanticEffectivenessJudge
 
 if TYPE_CHECKING:
@@ -85,6 +86,30 @@ def _get_metric_engine() -> Any:
     return _metric_engine
 
 
+def _resolve_mutation_provider(
+    registry: Any,
+    mutation_provider: str,
+) -> Any:
+    """Resolve the mutation provider from the registry, or None when unset."""
+    if not mutation_provider:
+        return None
+    return registry.resolve(mutation_provider)
+
+
+def _parse_mutation_strategy(raw: str) -> MutationStrategy | None:
+    """Parse the configured mutation strategy value, or None when unset."""
+    if not raw:
+        return None
+    try:
+        return MutationStrategy(raw)
+    except ValueError:
+        from app.kernel.exceptions.errors import ValidationError
+
+        raise ValidationError(
+            message=f"Unknown mutation strategy: {raw}",
+        ) from None
+
+
 # ---------------------------------------------------------------------------
 # Activity input / output dataclasses
 # ---------------------------------------------------------------------------
@@ -97,6 +122,9 @@ class RedTeamWorkflowInput:
     attack_run_id: str = ""
     target_provider: str = ""
     target_model: str = ""
+    mutation_provider: str = ""
+    mutation_model: str = ""
+    mutation_strategy: str = ""
     attack_categories: tuple[str, ...] = ()
     max_rounds: int = 10
     max_attacks: int = 100
@@ -385,6 +413,9 @@ async def red_team_campaign_activity(
             judge_provider=judge_provider,
             judge_provider_name=input.target_provider,
             judge_model=input.target_model,
+            mutation_provider=_resolve_mutation_provider(registry, input.mutation_provider),
+            mutation_model=input.mutation_model,
+            mutation_strategy=_parse_mutation_strategy(input.mutation_strategy),
         )
 
         if activity.in_activity():
