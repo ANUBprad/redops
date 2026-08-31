@@ -8,7 +8,7 @@ execution records.
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from app.providers.models.messages import Message
 from app.providers.models.options import ChatOptions
@@ -64,6 +64,12 @@ class TargetExecutor:
             )
             latency_ms = int((time.monotonic() - start) * 1000)
 
+            cost_usd = self._estimate_cost(
+                provider_name=provider_name,
+                model=model,
+                usage=response.usage,
+            )
+
             execution = TargetExecution(
                 attack_prompt=scenario.prompt,
                 system_prompt=scenario.system_prompt_override,
@@ -71,7 +77,7 @@ class TargetExecutor:
                 tokens_input=response.usage.input_tokens,
                 tokens_output=response.usage.output_tokens,
                 total_tokens=response.usage.total_tokens,
-                cost_usd=0.0,
+                cost_usd=cost_usd,
                 latency_ms=latency_ms,
                 provider_name=provider_name,
                 model_name=model,
@@ -105,6 +111,38 @@ class TargetExecutor:
                 error=str(exc),
             )
             return execution, attack_result
+
+    def _estimate_cost(
+        self,
+        *,
+        provider_name: str,
+        model: str,
+        usage: Any,
+    ) -> float:
+        """Estimate the target call cost from token usage.
+
+        Reuses the default cost calculator and pricing table already
+        used by the general-eval and semantic-judge paths. Unknown
+        provider/model pricing yields 0.0 (the call still succeeded;
+        only accounting is unavailable), never a fabricated cost.
+        """
+        from app.providers.cost.defaults import build_default_cost_calculator
+        from app.providers.tokenization.usage import TokenUsage
+
+        calculator = build_default_cost_calculator()
+        try:
+            return calculator.estimate_cost(
+                provider_name,
+                model,
+                TokenUsage(
+                    input_tokens=usage.input_tokens,
+                    output_tokens=usage.output_tokens,
+                    cached_tokens=usage.cached_tokens,
+                    audio_tokens=usage.audio_tokens,
+                ),
+            )
+        except KeyError:
+            return 0.0
 
     async def execute_batch(
         self,

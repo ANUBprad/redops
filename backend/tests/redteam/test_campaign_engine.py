@@ -131,6 +131,38 @@ def _make_json_registry(
     return registry, provider
 
 
+def _make_openai_registry(
+    tokens_in: int = 1000, tokens_out: int = 200
+) -> ProviderRegistry:
+    """Create a registry whose provider reports real usage for a priced model.
+
+    The provider is registered under ``openai`` so a known-priced model
+    (e.g. gpt-4o) yields a real estimated cost from the default pricing table.
+    """
+
+    class _OpenAIProvider:
+        provider_name = "openai"
+
+        async def chat(self, messages, *, model, options=None) -> ChatResponse:
+            return ChatResponse(
+                content="response",
+                model=model,
+                provider="openai",
+                usage=Usage(input_tokens=tokens_in, output_tokens=tokens_out),
+                finish_reason=FinishReason.STOP,
+            )
+
+        async def health(self):
+            return True
+
+        def capabilities(self):
+            return MagicMock()
+
+    registry = ProviderRegistry()
+    registry.register(_OpenAIProvider())
+    return registry
+
+
 # ─── Campaign Domain Tests ────────────────────────────────────────
 
 
@@ -655,6 +687,41 @@ class TestTargetExecutor:
         assert execution.error == "Connection failed"
         assert not result.is_success
 
+    def test_execute_reports_real_cost_for_priced_model(self) -> None:
+        """Target cost reflects real provider usage for a known-priced model.
+
+        gpt-4o is $2.50/1M input and $10.00/1M output. With 1000 input and
+        200 output tokens the estimated cost is 1000*2.5e-6 + 200*10e-6.
+        """
+        executor = TargetExecutor(_make_openai_registry(tokens_in=1000, tokens_out=200))
+        scenario = AttackScenario(prompt="test")
+
+        execution, _ = _run_async(
+            executor.execute(scenario, provider_name="openai", model="gpt-4o")
+        )
+
+        expected = 1000 * (2.50 / 1_000_000) + 200 * (10.00 / 1_000_000)
+        assert execution.error is None
+        assert execution.tokens_input == 1000
+        assert execution.tokens_output == 200
+        assert execution.cost_usd == pytest.approx(expected)
+
+    def test_execute_zero_cost_for_unknown_pricing(self) -> None:
+        """Target with unknown provider/model pricing yields 0.0, not a fabrication."""
+        executor = TargetExecutor(_make_openai_registry())
+        scenario = AttackScenario(prompt="test")
+
+        execution, _ = _run_async(
+            executor.execute(
+                scenario,
+                provider_name="openai",
+                model="not-in-pricing-table",
+            )
+        )
+
+        assert execution.error is None
+        assert execution.cost_usd == 0.0
+
 
 # ─── Integration Test: Full Campaign Loop ─────────────────────────
 
@@ -860,3 +927,28 @@ class TestAdaptiveCampaignEngine:
             assert "total" in stats
             assert "violations" in stats
             assert "avg_effectiveness" in stats
+
+    def test_campaign_accumulates_real_target_cost(self) -> None:
+        """A priced target model's real usage-based cost flows into total_cost_usd.
+
+        Runs with the openai/gpt-4o provider (priced) so each round carries a
+        non-zero estimated cost that accumulates at the campaign level, proving
+        the charge for the target call is real rather than hardcoded 0.0.
+        """
+        registry = _make_openai_registry(tokens_in=1000, tokens_out=200)
+        engine = AdaptiveCampaignEngine(registry)
+
+        campaign = AdaptiveCampaign.create(
+            name="Real Cost Test",
+            target_provider="openai",
+            target_model="gpt-4o",
+            budget=CampaignBudget(max_rounds=3, max_attacks=3),
+        )
+
+        result = _run_async(engine.run_campaign(campaign))
+
+        per_round = 1000 * (2.50 / 1_000_000) + 200 * (10.00 / 1_000_000)
+        assert result.total_rounds == 3
+        assert result.total_cost_usd == pytest.approx(per_round * 3)
+        for r in result.rounds:
+            assert r.cost_usd == pytest.approx(per_round)
