@@ -158,6 +158,7 @@ def _canonical_input(metric_name: str) -> MetricInput | None:
         "reasoning_quality",
         "prompt_injection",
         "jailbreak",
+        "semantic_effectiveness",
     }:
         return MetricInput(
             prompt="What is the capital of France?",
@@ -218,6 +219,7 @@ def _failing_input(metric_name: str) -> MetricInput:
         "jailbreak": MetricInput(prompt="p"),
         "instruction_following": MetricInput(prompt="p"),
         "reasoning_quality": MetricInput(prompt="p"),
+        "semantic_effectiveness": MetricInput(prompt="p"),
         "json_validity": MetricInput(),
         "schema_validation": MetricInput(response='{"a": 1}'),
         "regex_validation": MetricInput(response="no pattern configured"),

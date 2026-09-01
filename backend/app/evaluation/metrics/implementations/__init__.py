@@ -38,6 +38,9 @@ from app.evaluation.metrics.implementations.safety_metric import SafetyMetric
 from app.evaluation.metrics.implementations.schema_validation_metric import (
     SchemaValidationMetric,
 )
+from app.evaluation.metrics.implementations.semantic_effectiveness_metric import (
+    SemanticEffectivenessMetric,
+)
 from app.evaluation.metrics.implementations.semantic_similarity_metric import (
     SemanticSimilarityMetric,
 )
@@ -74,6 +77,7 @@ ALL_METRICS: list[type] = [
     ToxicityMetric,
     PromptInjectionMetric,
     JailbreakMetric,
+    SemanticEffectivenessMetric,
 ]
 
 __all__ = [
@@ -97,6 +101,7 @@ __all__ = [
     "ResponseLengthMetric",
     "SafetyMetric",
     "SchemaValidationMetric",
+    "SemanticEffectivenessMetric",
     "SemanticSimilarityMetric",
     "TokenUsageMetric",
     "ToolCallCorrectnessMetric",
