@@ -432,6 +432,7 @@ async def red_team_campaign_activity(
         )
 
         await _persist_campaign_results(input.attack_run_id, result)
+        await _persist_metric_results(input.attack_run_id, result)
 
         return _build_result(input.attack_run_id, result)
 
@@ -471,3 +472,54 @@ async def _persist_campaign_results(
             campaign_json,
         )
         await session.commit()
+
+
+async def _persist_metric_results(
+    attack_run_id: str,
+    result: CampaignResult,
+) -> int:
+    """Persist canonical semantic-effectiveness MetricResults.
+
+    Walks the completed campaign's rounds and stores each round's
+    canonical ``semantic_effectiveness`` MetricResult into the shared
+    ``metric_results`` table with ``run_id=attack_run_id`` and
+    ``item_id=round_id``. Existing rows for the same (run_id, item_id)
+    are replaced (delete-then-insert), mirroring the general-eval
+    ``persist_metric_results_activity`` so re-persistence is idempotent.
+
+    Returns the number of rows persisted.
+    """
+    from sqlalchemy import delete
+
+    from app.evaluation.metrics.domain import MetricResult
+    from app.infrastructure.database.models.metric_result import MetricResultModel
+    from app.infrastructure.database.repositories.metric_result_repository import (
+        SqlAlchemyMetricResultRepository,
+    )
+
+    rows: list[tuple[MetricResult, str, str]] = []
+    for r in result.rounds:
+        if r.effectiveness is None or r.effectiveness.semantic_metric_result is None:
+            continue
+        metric = r.effectiveness.semantic_metric_result
+        item_id = str(r.round_id)
+        metric.metadata["run_id"] = attack_run_id
+        metric.metadata["item_id"] = item_id
+        rows.append((metric, attack_run_id, item_id))
+
+    if not rows:
+        return 0
+
+    async with _get_session() as session:
+        repo = SqlAlchemyMetricResultRepository(session)
+        for _metric, run_id, item_id in rows:
+            await session.execute(
+                delete(MetricResultModel).where(
+                    MetricResultModel.run_id == run_id,
+                    MetricResultModel.item_id == item_id,
+                )
+            )
+        for metric, _run_id, _item_id in rows:
+            await repo.save_many([metric])
+        await session.commit()
+    return len(rows)

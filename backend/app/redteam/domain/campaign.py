@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.kernel.entities.base import AggregateRoot, UUIDv7, VersionMixin
 from app.kernel.exceptions.errors import ConflictError, DomainError
@@ -24,6 +24,9 @@ from app.redteam.domain.events import (
     AttackRunStarted,
 )
 from app.redteam.domain.value_objects import AttackScenario, SafetyScore
+
+if TYPE_CHECKING:
+    from app.evaluation.metrics.domain import MetricResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,6 +155,11 @@ class AttackEffectiveness:
     semantic_judge_tokens_output: int = 0
     semantic_judge_latency_ms: int = 0
     evaluated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    # Canonical general-metric representation of the semantic judgment.
+    # Produced alongside the domain fields by AttackEvaluator and persisted
+    # to the metric_results table so red-team runs are visible through the
+    # canonical /metrics pipeline.
+    semantic_metric_result: MetricResult | None = None
 
 
 @dataclass(frozen=True, slots=True)

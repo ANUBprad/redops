@@ -28,6 +28,47 @@ from app.evaluation.metrics.domain import (
 )
 
 
+def build_semantic_effectiveness_result(
+    verdict: Any,
+    *,
+    provider_name: str,
+    execution_time_ms: int = 0,
+) -> MetricResult:
+    """Map a red-team ``SemanticVerdict`` to a canonical ``MetricResult``.
+
+    Shared by ``SemanticEffectivenessMetric.evaluate`` and the red-team
+    persistence path so the general engine and real campaign rounds
+    produce the exact same canonical representation of a semantic
+    effectiveness judgment.
+    """
+    metric_def = SemanticEffectivenessMetric().definition()
+    error = verdict.error
+    score = verdict.score if not verdict.has_error else 0.0
+
+    return MetricResult(
+        metric_name=metric_def.name,
+        score=score,
+        normalized_score=max(0.0, min(1.0, score)),
+        raw_output="",
+        reasoning=verdict.reasoning,
+        metadata={
+            "verdict": verdict.verdict,
+            "evidence": verdict.evidence,
+            "judge_model": verdict.judge_model,
+            "judge_cost_usd": verdict.judge_cost_usd,
+            "tokens_input": verdict.judge_tokens_input,
+            "tokens_output": verdict.judge_tokens_output,
+            "judge_latency_ms": verdict.judge_latency_ms,
+            "provider": provider_name,
+        },
+        confidence=verdict.confidence,
+        version=metric_def.version,
+        cost_usd=verdict.judge_cost_usd,
+        execution_time_ms=execution_time_ms,
+        error=error,
+    )
+
+
 class SemanticEffectivenessMetric(Metric):
     """Evaluates how effectively a prompt achieved its intended objective.
 
@@ -133,9 +174,7 @@ class SemanticEffectivenessMetric(Metric):
         objective = input_data.context or ""
         if not objective:
             category = str(input_data.metadata.get("category") or "harmful")
-            objective = (
-                f"The attack aims to cause the target model to exhibit {category} behavior"
-            )
+            objective = f"The attack aims to cause the target model to exhibit {category} behavior"
 
         try:
             verdict = await judge.evaluate(
@@ -156,28 +195,8 @@ class SemanticEffectivenessMetric(Metric):
                 error=str(exc),
             )
 
-        error = verdict.error
-        score = verdict.score if not verdict.has_error else 0.0
-
-        return MetricResult(
-            metric_name=metric_def.name,
-            score=score,
-            normalized_score=max(0.0, min(1.0, score)),
-            raw_output="",
-            reasoning=verdict.reasoning,
-            metadata={
-                "verdict": verdict.verdict,
-                "evidence": verdict.evidence,
-                "judge_model": verdict.judge_model,
-                "judge_cost_usd": verdict.judge_cost_usd,
-                "tokens_input": verdict.judge_tokens_input,
-                "tokens_output": verdict.judge_tokens_output,
-                "judge_latency_ms": verdict.judge_latency_ms,
-                "provider": self._resolve_provider_name(input_data, provider),
-            },
-            confidence=verdict.confidence,
-            version=metric_def.version,
-            cost_usd=verdict.judge_cost_usd,
+        return build_semantic_effectiveness_result(
+            verdict,
+            provider_name=self._resolve_provider_name(input_data, provider),
             execution_time_ms=int((time.monotonic() - start) * 1000),
-            error=error,
         )

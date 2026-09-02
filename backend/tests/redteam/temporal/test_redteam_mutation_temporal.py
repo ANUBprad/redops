@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.infrastructure.database.models.attack_run import AttackRunModel
 from app.infrastructure.database.models.base import Base
+from app.infrastructure.database.models.metric_result import MetricResultModel
 from app.infrastructure.database.repositories.attack_run_repository import (
     SqlAlchemyAttackRunRepository,
 )
@@ -108,7 +109,12 @@ async def _build_factory() -> async_sessionmaker[Any]:
     async with engine.begin() as conn:
         await conn.run_sync(
             Base.metadata.create_all,
-            ([AttackRunModel.__table__]),
+            (
+                [
+                    AttackRunModel.__table__,
+                    MetricResultModel.__table__,
+                ]
+            ),
         )
     return async_sessionmaker(engine, expire_on_commit=False)
 

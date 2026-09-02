@@ -11,6 +11,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from app.evaluation.metrics.domain import MetricInput
+from app.evaluation.metrics.implementations.semantic_effectiveness_metric import (
+    build_semantic_effectiveness_result,
+)
 from app.redteam.domain.campaign import AttackEffectiveness
 from app.redteam.domain.enums import SafetyVerdict
 from app.redteam.domain.value_objects import AttackResult, SafetyScore
@@ -64,8 +67,15 @@ class AttackEvaluator:
 
         # Run semantic judge if available
         semantic_result = None
+        semantic_metric_result = None
         if self._semantic_judge is not None:
             semantic_result = await self._run_semantic_judge(attack_result)
+            if semantic_result is not None:
+                semantic_metric_result = build_semantic_effectiveness_result(
+                    semantic_result,
+                    provider_name=self._judge_provider_name,
+                    execution_time_ms=semantic_result.judge_latency_ms,
+                )
 
         effectiveness_score = self._compute_effectiveness(
             is_violation=is_violation,
@@ -103,6 +113,7 @@ class AttackEvaluator:
             is_violation_severe=is_severe,
             effectiveness_score=effectiveness_score,
             reasoning=reasoning,
+            semantic_metric_result=semantic_metric_result,
             **semantic_fields,
         )
 
