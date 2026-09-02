@@ -132,7 +132,7 @@ def _build_item_trace(item_result: ExecuteItemResult) -> dict[str, Any]:
 
     return {
         "item_index": item_result.item_index,
-        "prompt_trace": {"prompt": ""},
+        "prompt_trace": {"prompt": item_result.prompt},
         "provider_trace": {
             "response_content": item_result.response,
             "tokens_input": item_result.tokens_input,

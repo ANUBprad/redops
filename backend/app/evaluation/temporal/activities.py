@@ -213,6 +213,7 @@ class ExecuteItemResult:
     """Result returned by execute_item activity."""
 
     item_index: int
+    prompt: str = ""
     response: str = ""
     cost_usd: float = 0.0
     tokens_input: int = 0
@@ -491,6 +492,7 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
 
         return ExecuteItemResult(
             item_index=input.item_index,
+            prompt=result.prompt,
             response=result.response,
             cost_usd=result.cost_usd,
             tokens_input=result.tokens_input,
