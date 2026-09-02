@@ -1,87 +1,46 @@
-"""Groundedness metric — embedding-based evaluation."""
+"""Groundedness metric — LLM judge-backed evaluation.
+
+Evaluates whether claims in the response are supported by the supplied
+context/evidence using the LLM-as-judge pipeline. This replaces the
+previous embedding-based (cosine similarity) implementation with a
+semantically richer evaluation that distinguishes fully grounded,
+partially grounded, and ungrounded responses.
+"""
 
 from __future__ import annotations
-
-import time
 
 from app.evaluation.metrics.domain import (
     EvaluatorType,
     MetricCategory,
     MetricDefinition,
     MetricInput,
-    MetricResult,
     MetricScale,
 )
-from app.evaluation.metrics.implementations.embedding_base import EmbeddingMetric
+from app.evaluation.metrics.implementations.llm_judge_base import LLMJudgeMetric
 
 
-class GroundednessMetric(EmbeddingMetric):
-    """Evaluates whether the response is supported by the context using embeddings."""
+class GroundednessMetric(LLMJudgeMetric):
+    """Evaluates whether response claims are supported by context using LLM-as-judge.
+
+    Measures if the response is semantically supported by the provided
+    context, distinguishing fully grounded, partially grounded, and
+    ungrounded responses via a structured judge verdict.
+    """
 
     def definition(self) -> MetricDefinition:
         return MetricDefinition(
             name="groundedness",
             display_name="Groundedness",
-            description="Measures if the response is supported by the context",
+            description="Measures whether claims in the response are supported by the context",
             category=MetricCategory.QUALITY,
             scale=MetricScale.CONTINUOUS,
-            evaluator_type=EvaluatorType.HEURISTIC,
-            required_inputs=("prompt", "response", "context"),
             requires_context=True,
-            tags=("quality", "faithfulness", "rag", "embedding"),
+            tags=("quality", "faithfulness", "rag", "llm_judge"),
+            evaluator_type=EvaluatorType.LLM_JUDGE,
+            required_inputs=("prompt", "response", "context"),
         )
 
     def validate_input(self, input_data: MetricInput) -> str | None:
         if not input_data.context:
             return "Groundedness requires context to evaluate against"
         return None
-
-    async def evaluate(self, input_data: MetricInput) -> MetricResult:
-        start = time.monotonic()
-
-        if not input_data.response:
-            return self._build_embedding_result(
-                "groundedness",
-                0.0,
-                start,
-                reasoning="Missing response",
-                error="Missing response",
-            )
-
-        validation_error = self.validate_input(input_data)
-        if validation_error:
-            return self._build_embedding_result(
-                "groundedness",
-                0.0,
-                start,
-                reasoning=validation_error,
-                error=validation_error,
-            )
-
-        try:
-            response_emb, model, provider_name = await self._get_embedding(
-                input_data.response, input_data
-            )
-            context_emb, _, _ = await self._get_embedding(input_data.context, input_data)
-        except RuntimeError as exc:
-            return self._build_embedding_result(
-                "groundedness",
-                0.0,
-                start,
-                reasoning=str(exc),
-                error=str(exc),
-            )
-
-        groundedness = self._cosine_similarity(response_emb, context_emb)
-
-        return self._build_embedding_result(
-            "groundedness",
-            groundedness,
-            start,
-            reasoning=f"Response-context groundedness: {groundedness:.4f}",
-            metadata={
-                "method": "cosine_similarity",
-                "embedding_model": model,
-                "embedding_provider": provider_name,
-            },
-        )

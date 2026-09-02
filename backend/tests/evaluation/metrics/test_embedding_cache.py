@@ -18,7 +18,6 @@ from app.evaluation.metrics.implementations.answer_relevance_metric import (
 from app.evaluation.metrics.implementations.context_relevance_metric import (
     ContextRelevanceMetric,
 )
-from app.evaluation.metrics.implementations.groundedness_metric import GroundednessMetric
 from app.evaluation.metrics.implementations.semantic_similarity_metric import (
     SemanticSimilarityMetric,
 )
@@ -65,7 +64,6 @@ class CountingEmbeddingProvider:
 EMBEDDING_METRICS = [
     SemanticSimilarityMetric(),
     AnswerRelevanceMetric(),
-    GroundednessMetric(),
     ContextRelevanceMetric(),
 ]
 
@@ -93,7 +91,7 @@ async def test_baseline_embeds_duplicate_texts_without_cache() -> None:
 
     total = _texts_embedded(provider)
     unique = len({t for batch in provider.calls for t in batch})
-    assert total == 8  # two round-trips per metric
+    assert total == 6  # two round-trips per metric (3 metrics)
     assert unique == 4  # prompt, response, reference, context
 
 
@@ -147,6 +145,6 @@ async def test_cache_reduces_wall_clock_latency() -> None:
     baseline_elapsed, baseline_calls = await run(shared_metadata=False)
     cached_elapsed, cached_calls = await run(shared_metadata=True)
 
-    assert baseline_calls == 8  # isolated inputs: every metric pays again
+    assert baseline_calls == 6  # isolated inputs: every metric pays again
     assert cached_calls == 4  # shared item boundary: unique texts only
     assert cached_elapsed < baseline_elapsed * 0.8

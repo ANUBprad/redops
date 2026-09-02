@@ -124,9 +124,10 @@ def _canonical_input(metric_name: str) -> MetricInput | None:
             metadata={"_embedding_provider": embedding_provider},
         ),
         "groundedness": MetricInput(
+            prompt="What is the capital of France?",
             response="Paris is the capital of France",
             context="France is a country in Europe. Its capital is Paris.",
-            metadata={"_embedding_provider": embedding_provider},
+            metadata={"_judge_provider": judge_provider},
         ),
         "context_relevance": MetricInput(
             prompt="What is the capital of France?",
