@@ -1,3 +1,10 @@
+## [0.13.1](https://github.com/ANUBprad/redops/compare/v0.13.0...v0.13.1) (2026-09-14)
+
+
+### Bug Fixes
+
+* **evaluation:** execute retry runs through temporal ([ca70cc7](https://github.com/ANUBprad/redops/commit/ca70cc7d93dd74dadeaed463f7f08f174396979f))
+
 # [0.13.0](https://github.com/ANUBprad/redops/compare/v0.12.0...v0.13.0) (2026-09-14)
 
 
