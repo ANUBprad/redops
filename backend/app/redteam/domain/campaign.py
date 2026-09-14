@@ -160,6 +160,11 @@ class AttackEffectiveness:
     # to the metric_results table so red-team runs are visible through the
     # canonical /metrics pipeline.
     semantic_metric_result: MetricResult | None = None
+    # Individual metric results from MetricEngine.evaluate_batch(),
+    # one per metric name (e.g. safety, prompt_injection, jailbreak,
+    # toxicity, bias).  Stored so _persist_metric_results can write
+    # every metric to the shared metric_results table.
+    individual_metric_results: tuple[MetricResult, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

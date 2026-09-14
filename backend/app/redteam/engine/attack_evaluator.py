@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from app.evaluation.metrics.domain import MetricInput
+from app.evaluation.metrics.domain import MetricInput, MetricResult
 from app.evaluation.metrics.implementations.semantic_effectiveness_metric import (
     build_semantic_effectiveness_result,
 )
@@ -62,8 +62,11 @@ class AttackEvaluator:
         is_severe = verdict == SafetyVerdict.LEAKED
 
         metric_score = 0.0
+        individual_metric_results: tuple[MetricResult, ...] = ()
         if self._metric_engine is not None and self._metric_names:
-            metric_score = await self._compute_metric_score(attack_result)
+            metric_score, individual_metric_results = await self._compute_metric_score(
+                attack_result
+            )
 
         # Run semantic judge if available
         semantic_result = None
@@ -114,6 +117,7 @@ class AttackEvaluator:
             effectiveness_score=effectiveness_score,
             reasoning=reasoning,
             semantic_metric_result=semantic_metric_result,
+            individual_metric_results=individual_metric_results,
             **semantic_fields,
         )
 
@@ -150,14 +154,24 @@ class AttackEvaluator:
                 reasoning="Semantic judge execution failed",
             )
 
-    async def _compute_metric_score(self, attack_result: AttackResult) -> float:
-        """Run registered metrics and aggregate their normalized scores."""
+    async def _compute_metric_score(
+        self, attack_result: AttackResult
+    ) -> tuple[float, tuple[MetricResult, ...]]:
+        """Run registered metrics and aggregate their normalized scores.
+
+        Returns
+        -------
+        (aggregate_score, individual_results)
+            aggregate_score is the mean normalized_score across all
+            successful metric results.  individual_results contains
+            every MetricResult (including errors) for persistence.
+        """
         if self._metric_engine is None or not self._metric_names:
-            return 0.0
+            return 0.0, ()
 
         resolved = self._metric_engine.resolve_metrics(self._metric_names)
         if not resolved:
-            return 0.0
+            return 0.0, ()
 
         judge_provider = self._judge_provider
         embedding_provider = (
@@ -183,9 +197,9 @@ class AttackEvaluator:
 
         successful = [r for r in results if r.is_success]
         if not successful:
-            return 0.0
+            return 0.0, tuple(results)
 
-        return sum(r.normalized_score for r in successful) / len(successful)
+        return sum(r.normalized_score for r in successful) / len(successful), tuple(results)
 
     def _compute_effectiveness(
         self,

@@ -323,6 +323,21 @@ def _effectiveness_to_dict(effectiveness: Any) -> dict[str, Any]:
         "semantic_judge_tokens_output": effectiveness.semantic_judge_tokens_output,
         "semantic_judge_latency_ms": effectiveness.semantic_judge_latency_ms,
         "evaluated_at": _jsonable(effectiveness.evaluated_at),
+        "individual_metric_results": [
+            {
+                "metric_name": m.metric_name,
+                "score": m.score,
+                "normalized_score": m.normalized_score,
+                "raw_output": m.raw_output,
+                "reasoning": m.reasoning,
+                "error": m.error,
+                "confidence": m.confidence,
+                "version": m.version,
+                "execution_time_ms": m.execution_time_ms,
+                "cost_usd": m.cost_usd,
+            }
+            for m in effectiveness.individual_metric_results
+        ],
     }
 
 
@@ -499,13 +514,22 @@ async def _persist_metric_results(
 
     rows: list[tuple[MetricResult, str, str]] = []
     for r in result.rounds:
-        if r.effectiveness is None or r.effectiveness.semantic_metric_result is None:
+        if r.effectiveness is None:
             continue
-        metric = r.effectiveness.semantic_metric_result
         item_id = str(r.round_id)
-        metric.metadata["run_id"] = attack_run_id
-        metric.metadata["item_id"] = item_id
-        rows.append((metric, attack_run_id, item_id))
+        # Persist the canonical semantic_effectiveness MetricResult
+        if r.effectiveness.semantic_metric_result is not None:
+            metric = r.effectiveness.semantic_metric_result
+            metric.metadata["run_id"] = attack_run_id
+            metric.metadata["item_id"] = item_id
+            rows.append((metric, attack_run_id, item_id))
+        # Persist every individual metric result (safety, prompt_injection,
+        # jailbreak, toxicity, bias, etc.) so red-team scores are visible
+        # through the canonical /metrics pipeline.
+        for metric in r.effectiveness.individual_metric_results:
+            metric.metadata["run_id"] = attack_run_id
+            metric.metadata["item_id"] = item_id
+            rows.append((metric, attack_run_id, item_id))
 
     if not rows:
         return 0
