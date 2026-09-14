@@ -1,3 +1,10 @@
+# [0.13.0](https://github.com/ANUBprad/redops/compare/v0.12.0...v0.13.0) (2026-09-14)
+
+
+### Features
+
+* **redteam:** persist individual metric results ([1bbc061](https://github.com/ANUBprad/redops/commit/1bbc06102692089dc8a07d57a083bee6c3aa5439))
+
 # [0.12.0](https://github.com/ANUBprad/redops/compare/v0.11.0...v0.12.0) (2026-08-31)
 
 
