@@ -321,13 +321,50 @@ async def retry_run(
     run_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    temporal_client: TemporalClient = Depends(get_temporal_client),
+    config: AppConfig = Depends(get_config_dependency),
 ) -> RunResponse:
-    """Retry a failed evaluation run."""
+    """Retry a failed evaluation run.
+
+    Creates a new run from the source run's persisted configuration and
+    schedules the production EvaluationRunWorkflow via Temporal.  The new
+    run receives a unique workflow ID so it cannot collide with the
+    original execution.
+
+    Known limitation: ``dataset_items`` and ``prompt_template`` are not
+    persisted on EvaluationRun, so the retry workflow receives an empty
+    item list.  Dataset propagation (P1) is tracked separately.
+    """
     repo = _get_repository(session)
     handler = RetryEvaluationRunHandler(repo)
     command = RetryEvaluationRunCommand(run_id=run_id)
     try:
         run = await handler.handle(command)
+        await session.flush()
+
+        workflow_id = f"evaluation-run-{run.id}"
+        await temporal_client.start_workflow(
+            EvaluationRunWorkflow.run,
+            EvaluationRunWorkflowInput(
+                run_id=str(run.id),
+                total_items=run.items_total,
+                provider_name=run.profile.provider_name,
+                model_id=run.profile.model_id,
+                metric_names=run.config.metrics,
+                dataset_items=(),
+                prompt_template=None,
+                system_prompt=run.profile.system_prompt,
+            ),
+            id=workflow_id,
+            task_queue=config.temporal_task_queue,
+            execution_timeout=timedelta(hours=24),
+        )
+
+        queue_handler = QueueEvaluationRunHandler(repo)
+        queue_command = QueueEvaluationRunCommand(run_id=str(run.id))
+        run = await queue_handler.handle(queue_command)
+        run.workflow_id = workflow_id
+        await repo.save(run)
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
     return _run_to_response(run)
