@@ -18,6 +18,7 @@ from app.redteam.domain.enums import (
     SafetyVerdict,
 )
 from app.redteam.domain.events import (
+    AttackRunCancelled,
     AttackRunCompleted,
     AttackRunCreated,
     AttackRunFailed,
@@ -424,6 +425,23 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
             AttackRunCompleted(
                 run_id=self.id,
                 items_total=self._budget.max_attacks,
+                items_completed=self.current_round_number,
+            ),
+        )
+
+    def cancel(self, reason: str = "") -> None:
+        """Transition campaign to cancelled state."""
+        if self._state.is_terminal:
+            raise ConflictError(
+                message=f"Cannot cancel campaign in {self._state.value} state",
+                details={"campaign_id": str(self.id), "state": self._state.value},
+            )
+        self._state = CampaignState.CANCELLED
+        self._completed_at = datetime.now(UTC)
+        self.increment_version()
+        self.raise_event(
+            AttackRunCancelled(
+                run_id=self.id,
                 items_completed=self.current_round_number,
             ),
         )

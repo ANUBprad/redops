@@ -214,6 +214,8 @@ class StartAttackRunHandler:
         run = await self._repository.find_by_id(run_id)
         if run is None:
             raise NotFoundError(f"Attack run {command.run_id} not found")
+        if run.status == AttackStatus.CREATED:
+            run.queue()
         run.start(total_items=command.total_items)
         await self._repository.save(run)
         return run
@@ -256,8 +258,9 @@ class CancelAttackRunHandler:
         run = await self._repository.find_by_id(run_id)
         if run is None:
             raise NotFoundError(f"Attack run {command.run_id} not found")
-        run.cancel()
-        await self._repository.save(run)
+        if run.status != AttackStatus.CANCELLED:
+            run.cancel()
+            await self._repository.save(run)
         return run
 
 

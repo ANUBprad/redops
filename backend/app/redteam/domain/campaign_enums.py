@@ -15,10 +15,11 @@ class CampaignState(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     BUDGET_EXHAUSTED = "budget_exhausted"
+    CANCELLED = "cancelled"
 
     @property
     def is_terminal(self) -> bool:
-        return self.value in ("completed", "failed", "budget_exhausted")
+        return self.value in ("completed", "failed", "budget_exhausted", "cancelled")
 
     @property
     def is_active(self) -> bool:

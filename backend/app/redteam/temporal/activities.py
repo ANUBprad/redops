@@ -7,6 +7,7 @@ configured during worker startup.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -431,12 +432,14 @@ async def red_team_campaign_activity(
             mutation_provider=_resolve_mutation_provider(registry, input.mutation_provider),
             mutation_model=input.mutation_model,
             mutation_strategy=_parse_mutation_strategy(input.mutation_strategy),
+            cancelled=_activity_cancelled_hook(),
         )
 
         if activity.in_activity():
             activity.heartbeat("running campaign loop")
 
         result = await engine.run_campaign(campaign)
+        cancelled_flag = activity.in_activity() and activity.is_cancelled()
 
         activity.logger.info(
             "Red team campaign completed attack_run_id=%s status=%s rounds=%d violations=%d",
@@ -446,7 +449,7 @@ async def red_team_campaign_activity(
             result.violation_count,
         )
 
-        await _persist_campaign_results(input.attack_run_id, result)
+        await _finalize_run(input.attack_run_id, result, cancelled_flag)
         await _persist_metric_results(input.attack_run_id, result)
 
         return _build_result(input.attack_run_id, result)
@@ -457,6 +460,7 @@ async def red_team_campaign_activity(
             input.attack_run_id,
             str(exc),
         )
+        await _fail_run(input.attack_run_id, str(exc))
         return RedTeamWorkflowResult(
             attack_run_id=input.attack_run_id,
             status="failed",
@@ -464,29 +468,77 @@ async def red_team_campaign_activity(
         )
 
 
-async def _persist_campaign_results(
+def _activity_cancelled_hook() -> Callable[[], bool] | None:
+    """Return a cooperative-cancellation probe when inside a Temporal worker.
+
+    Outside an activity context (e.g. direct activity calls in tests) returns
+    None so the engine runs without cancellation observation.
+    """
+    if not activity.in_activity():
+        return None
+    return activity.is_cancelled
+
+
+async def _finalize_run(
     attack_run_id: str,
     result: CampaignResult,
+    cancelled: bool,
 ) -> None:
-    """Persist the completed campaign results to the attack run.
+    """Write campaign results and transition the run to a terminal state.
 
-    Opens its own database session via the configured session factory
-    and writes the full per-round results to the existing
-    ``campaign_results`` JSON column, mirroring the general-eval
-    persistence pattern.
+    Only transitions when the run is still RUNNING (production path).
+    Writes completed rounds as per-round counters for live progress.
+    If cancelled, transitions to CANCELLED instead of COMPLETED.
+    For already-CANCELLED runs (e.g. endpoint raced ahead), only
+    persists the campaign results JSON without changing status.
     """
     from app.infrastructure.database.repositories.attack_run_repository import (
         SqlAlchemyAttackRunRepository,
     )
+    from app.redteam.domain.enums import AttackStatus
 
     campaign_json = _campaign_to_dict(result)
     async with _get_session() as session:
         repo = SqlAlchemyAttackRunRepository(session)
-        await repo.persist_campaign_results(
-            UUIDv7.from_string(attack_run_id),
-            campaign_json,
-        )
+        run = await repo.find_by_id(UUIDv7.from_string(attack_run_id))
+        if run is None:
+            activity.logger.warning("AttackRun not found during finalization: %s", attack_run_id)
+            return
+        run.record_campaign_results(campaign_json)
+        if run.status == AttackStatus.RUNNING:
+            for rnd in result.rounds:
+                run.record_scenario_result(
+                    is_violation=rnd.effectiveness.is_violation if rnd.effectiveness else False,
+                    is_error=(rnd.execution.error is not None) if rnd.execution else True,
+                )
+            if cancelled:
+                run.cancel()
+            else:
+                run.complete()
+        await repo.save(run)
+        await repo.persist_campaign_results(run.id, campaign_json)
         await session.commit()
+
+
+async def _fail_run(attack_run_id: str, error_message: str) -> None:
+    """Transition the run to FAILED when the activity raised an exception.
+
+    Only writes when the run is still RUNNING; leaves CANCELLED runs alone.
+    """
+    from app.infrastructure.database.repositories.attack_run_repository import (
+        SqlAlchemyAttackRunRepository,
+    )
+    from app.redteam.domain.enums import AttackStatus
+
+    async with _get_session() as session:
+        repo = SqlAlchemyAttackRunRepository(session)
+        run = await repo.find_by_id(UUIDv7.from_string(attack_run_id))
+        if run is None:
+            return
+        if run.status == AttackStatus.RUNNING:
+            run.fail(error_message)
+            await repo.save(run)
+            await session.commit()
 
 
 async def _persist_metric_results(

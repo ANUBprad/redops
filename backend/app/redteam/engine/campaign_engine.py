@@ -6,6 +6,7 @@ Effectiveness Evaluation → Mutation/Strategy Selection → Next Attack.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from app.redteam.domain.campaign import (
@@ -27,6 +28,10 @@ if TYPE_CHECKING:
     from app.evaluation.metrics.engine import MetricEngine
     from app.providers.registry.registry import ProviderRegistry
     from app.redteam.engine.semantic_judge import SemanticEffectivenessJudge
+
+
+class _CampaignCancelled(Exception):
+    """Raised internally to break the campaign loop on cooperative cancellation."""
 
 
 class AdaptiveCampaignEngine:
@@ -54,6 +59,7 @@ class AdaptiveCampaignEngine:
         mutation_provider: Any | None = None,
         mutation_model: str = "",
         mutation_strategy: MutationStrategy | None = None,
+        cancelled: Callable[[], bool] | None = None,
     ) -> None:
         self._registry = registry
         self._orchestrator = AttackOrchestrator()
@@ -71,9 +77,9 @@ class AdaptiveCampaignEngine:
             llm_model=mutation_model,
         )
         self._mutation_strategy = mutation_strategy
-        if (
-            mutation_strategy == MutationStrategy.PROMPT_VARIATION
-            and (mutation_provider is None or not mutation_model)
+        self._cancelled = cancelled
+        if mutation_strategy == MutationStrategy.PROMPT_VARIATION and (
+            mutation_provider is None or not mutation_model
         ):
             from app.kernel.exceptions.errors import ValidationError
 
@@ -100,6 +106,13 @@ class AdaptiveCampaignEngine:
     def selector(self) -> MutationStrategySelector:
         return self._selector
 
+    def _is_cancelled(self) -> bool:
+        return self._cancelled is not None and self._cancelled()
+
+    def _check_cancelled(self) -> None:
+        if self._is_cancelled():
+            raise _CampaignCancelled()
+
     async def run_campaign(self, campaign: AdaptiveCampaign) -> CampaignResult:
         """Execute the full adaptive campaign loop.
 
@@ -110,7 +123,10 @@ class AdaptiveCampaignEngine:
 
         try:
             while campaign.can_continue():
-                campaign_round = await self._execute_round(campaign)
+                try:
+                    campaign_round = await self._execute_round(campaign)
+                except _CampaignCancelled:
+                    break
                 campaign.record_round(campaign_round)
 
                 if self._should_stop_early(campaign, campaign_round):
@@ -123,7 +139,10 @@ class AdaptiveCampaignEngine:
                 if phase_recommendation is not None:
                     campaign.set_mutation_phase(phase_recommendation)
 
-            if campaign.state == CampaignState.RUNNING:
+            if self._is_cancelled():
+                if campaign.state.is_active:
+                    campaign.cancel("cancelled")
+            elif campaign.state == CampaignState.RUNNING:
                 if not campaign.can_continue():
                     violation = campaign.check_budget_violation()
                     campaign.exhaust_budget(violation or "unknown")
@@ -138,6 +157,7 @@ class AdaptiveCampaignEngine:
 
     async def _execute_round(self, campaign: AdaptiveCampaign) -> CampaignRound:
         """Execute a single round of the campaign loop."""
+        self._check_cancelled()
         category = self._select_category(campaign)
         strategy = (
             self._mutation_strategy
@@ -152,6 +172,7 @@ class AdaptiveCampaignEngine:
 
         mutation_result = None
         if campaign.current_round_number > 0:
+            self._check_cancelled()
             mutation_result = await self._selector.apply_mutation(
                 scenario.prompt,
                 strategy,
@@ -183,12 +204,14 @@ class AdaptiveCampaignEngine:
             is_seed=campaign.current_round_number == 0,
         )
 
+        self._check_cancelled()
         execution, attack_result = await self._executor.execute(
             scenario,
             provider_name=campaign.target_provider,
             model=campaign.target_model,
         )
 
+        self._check_cancelled()
         effectiveness = await self._evaluator.evaluate(attack_result)
 
         duration_ms = execution.latency_ms

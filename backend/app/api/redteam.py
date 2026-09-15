@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from temporalio.service import RPCError, RPCStatusCode
 
 from app.core.config import AppConfig
 from app.core.dependencies import (
@@ -416,32 +417,41 @@ async def start_attack_run(
     command = StartAttackRunCommand(run_id=run_id, total_items=body.total_items)
     try:
         run = await handler.handle(command)
-        await session.flush()
+        await session.commit()
 
         workflow_id = f"red-team-run-{run_id}"
-        config = run.configuration or {}
-        categories = config.get("categories", [])
-        await temporal_client.start_workflow(
-            RedTeamWorkflow.run,
-            RedTeamWorkflowInput(
-                attack_run_id=run_id,
-                target_provider=config.get("target_provider", ""),
-                target_model=config.get("target_model", ""),
-                mutation_provider=config.get("mutation_provider", ""),
-                mutation_model=config.get("mutation_model", ""),
-                mutation_strategy=config.get("mutation_strategy", ""),
-                attack_categories=tuple(categories),
-                max_rounds=config.get("max_rounds", 10),
-                max_attacks=config.get("max_attacks", 100),
-                max_total_tokens=config.get("max_total_tokens", 1_000_000),
-                max_cost_usd=config.get("max_cost_usd", 50.0),
-                max_duration_seconds=config.get("max_duration_seconds", 3600),
-                effectiveness_threshold=config.get("effectiveness_threshold", 0.8),
-            ),
-            id=workflow_id,
-            task_queue=app_config.temporal_task_queue,
-            execution_timeout=timedelta(hours=3),
-        )
+        config = run.configuration
+        try:
+            await temporal_client.start_workflow(
+                RedTeamWorkflow.run,
+                RedTeamWorkflowInput(
+                    attack_run_id=run_id,
+                    target_provider=config.target_provider,
+                    target_model=config.target_model,
+                    attack_categories=tuple(c.value for c in config.categories),
+                ),
+                id=workflow_id,
+                task_queue=app_config.temporal_task_queue,
+                execution_timeout=timedelta(hours=3),
+            )
+        except Exception as exc:
+            # Workflow scheduling failed. Never report success, do not leave
+            # the run in a misleading RUNNING state, and re-surface the error.
+            try:
+                fail_handler = FailAttackRunHandler(repo)
+                await fail_handler.handle(
+                    FailAttackRunCommand(
+                        run_id=run_id,
+                        error_message=f"workflow start failed: {exc}",
+                    )
+                )
+                await session.commit()
+            except BaseError:
+                pass  # Run already reached a terminal state concurrently.
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to schedule red team workflow for run {run_id}: {exc}",
+            ) from exc
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
     return _run_to_response(run)
@@ -485,12 +495,29 @@ async def cancel_attack_run(
     run_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    temporal_client: TemporalClient = Depends(get_temporal_client),
 ) -> AttackRunResponse:
     repo = _get_run_repo(session)
     handler = CancelAttackRunHandler(repo)
     command = CancelAttackRunCommand(run_id=run_id)
     try:
         run = await handler.handle(command)
+        await session.commit()
+
+        workflow_id = f"red-team-run-{run_id}"
+        try:
+            await temporal_client.get_workflow_handle(workflow_id).signal("cancel")
+        except RPCError as exc:
+            if exc.status != RPCStatusCode.NOT_FOUND:
+                raise HTTPException(
+                    status_code=502,
+                    detail=(f"Failed to notify Temporal of cancellation for run {run_id}: {exc}"),
+                ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=(f"Failed to notify Temporal of cancellation for run {run_id}: {exc}"),
+            ) from exc
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
     return _run_to_response(run)
