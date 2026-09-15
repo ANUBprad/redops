@@ -1,3 +1,10 @@
+## [0.13.2](https://github.com/ANUBprad/redops/compare/v0.13.1...v0.13.2) (2026-09-15)
+
+
+### Bug Fixes
+
+* **evaluation:** preserve retry execution inputs ([e8a955b](https://github.com/ANUBprad/redops/commit/e8a955b7ff1c5a608e3c73ac78b962780a70f1aa))
+
 ## [0.13.1](https://github.com/ANUBprad/redops/compare/v0.13.0...v0.13.1) (2026-09-14)
 
 
