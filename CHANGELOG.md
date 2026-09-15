@@ -1,3 +1,10 @@
+## [0.13.8](https://github.com/ANUBprad/redops/compare/v0.13.7...v0.13.8) (2026-09-15)
+
+
+### Bug Fixes
+
+* **redteam:** propagate campaign budget configuration ([ec698da](https://github.com/ANUBprad/redops/commit/ec698da13277baf7123c1a51504bf307d318a79b))
+
 ## [0.13.7](https://github.com/ANUBprad/redops/compare/v0.13.6...v0.13.7) (2026-09-15)
 
 
