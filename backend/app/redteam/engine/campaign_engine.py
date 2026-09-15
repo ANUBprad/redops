@@ -209,6 +209,8 @@ class AdaptiveCampaignEngine:
             scenario,
             provider_name=campaign.target_provider,
             model=campaign.target_model,
+            temperature=campaign.target_temperature,
+            max_tokens=campaign.target_max_tokens,
         )
 
         self._check_cancelled()
@@ -321,6 +323,8 @@ class AdaptiveCampaignEngine:
             scenario,
             provider_name=campaign.target_provider,
             model=campaign.target_model,
+            temperature=campaign.target_temperature,
+            max_tokens=campaign.target_max_tokens,
         )
 
         effectiveness = await self._evaluator.evaluate(attack_result)

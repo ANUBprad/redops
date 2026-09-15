@@ -226,6 +226,8 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
         description: str = "",
         target_provider: str = "",
         target_model: str = "",
+        target_temperature: float = 0.0,
+        target_max_tokens: int = 2048,
         attack_categories: tuple[AttackCategory, ...] = (),
         budget: CampaignBudget | None = None,
         mutation_phase: MutationPhase = MutationPhase.EXPLORATION,
@@ -242,6 +244,8 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
         self._description = description
         self._target_provider = target_provider
         self._target_model = target_model
+        self._target_temperature = target_temperature
+        self._target_max_tokens = target_max_tokens
         self._attack_categories = attack_categories or (
             AttackCategory.PROMPT_INJECTION,
             AttackCategory.JAILBREAK,
@@ -270,6 +274,14 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
     @property
     def target_model(self) -> str:
         return self._target_model
+
+    @property
+    def target_temperature(self) -> float:
+        return self._target_temperature
+
+    @property
+    def target_max_tokens(self) -> int:
+        return self._target_max_tokens
 
     @property
     def attack_categories(self) -> tuple[AttackCategory, ...]:
@@ -326,6 +338,8 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
         description: str = "",
         target_provider: str,
         target_model: str,
+        target_temperature: float = 0.0,
+        target_max_tokens: int = 2048,
         attack_categories: tuple[AttackCategory, ...] = (),
         budget: CampaignBudget | None = None,
     ) -> AdaptiveCampaign:
@@ -348,6 +362,8 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
             description=description.strip(),
             target_provider=target_provider,
             target_model=target_model,
+            target_temperature=target_temperature,
+            target_max_tokens=target_max_tokens,
             attack_categories=attack_categories or (),
             budget=budget or CampaignBudget(),
         )

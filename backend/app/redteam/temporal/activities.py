@@ -123,6 +123,8 @@ class RedTeamWorkflowInput:
     attack_run_id: str = ""
     target_provider: str = ""
     target_model: str = ""
+    target_temperature: float = 0.0
+    target_max_tokens: int = 2048
     mutation_provider: str = ""
     mutation_model: str = ""
     mutation_strategy: str = ""
@@ -401,6 +403,8 @@ async def red_team_campaign_activity(
             name=f"attack-run-{input.attack_run_id}",
             target_provider=input.target_provider,
             target_model=input.target_model,
+            target_temperature=input.target_temperature,
+            target_max_tokens=input.target_max_tokens,
             attack_categories=categories,
             budget=budget,
         )

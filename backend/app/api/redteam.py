@@ -428,6 +428,8 @@ async def start_attack_run(
                     attack_run_id=run_id,
                     target_provider=config.target_provider,
                     target_model=config.target_model,
+                    target_temperature=config.temperature,
+                    target_max_tokens=config.max_tokens,
                     attack_categories=tuple(c.value for c in config.categories),
                 ),
                 id=workflow_id,
