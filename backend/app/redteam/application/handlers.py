@@ -301,6 +301,9 @@ def _dict_to_config(data: dict[str, Any] | None) -> AttackConfiguration | None:
         target_model=data.get("target_model", ""),
         temperature=data.get("temperature", 0.0),
         max_tokens=data.get("max_tokens", 2048),
+        mutation_provider=data.get("mutation_provider", ""),
+        mutation_model=data.get("mutation_model", ""),
+        mutation_strategy=data.get("mutation_strategy", ""),
         timeout_seconds=data.get("timeout_seconds", 60),
         system_prompt=data.get("system_prompt", ""),
         attack_definitions=tuple(

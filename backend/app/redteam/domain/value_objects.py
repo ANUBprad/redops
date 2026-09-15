@@ -86,6 +86,9 @@ class AttackConfiguration:
     target_model: str = ""
     temperature: float = 0.0
     max_tokens: int = 2048
+    mutation_provider: str = ""
+    mutation_model: str = ""
+    mutation_strategy: str = ""
     timeout_seconds: int = 60
     system_prompt: str = ""
     attack_definitions: tuple[UUIDv7, ...] = field(default_factory=tuple)
