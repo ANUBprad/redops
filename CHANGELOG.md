@@ -1,3 +1,10 @@
+## [0.13.5](https://github.com/ANUBprad/redops/compare/v0.13.4...v0.13.5) (2026-09-15)
+
+
+### Bug Fixes
+
+* **redteam:** implement workflow lifecycle cancellation ([c4a2d02](https://github.com/ANUBprad/redops/commit/c4a2d02b0748114f97a17e4efbb2bf2c58cc75bd))
+
 ## [0.13.4](https://github.com/ANUBprad/redops/compare/v0.13.3...v0.13.4) (2026-09-15)
 
 
