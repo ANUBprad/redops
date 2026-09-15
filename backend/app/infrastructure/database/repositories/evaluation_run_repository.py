@@ -419,6 +419,8 @@ def _serialize_config(config: EvaluationConfiguration) -> dict[str, Any]:
             "timeout_per_item_seconds": config.policy.timeout_per_item_seconds,
         },
         "priority": config.priority.value,
+        "prompt_template": config.prompt_template,
+        "dataset_items": list(config.dataset_items),
     }
 
 
@@ -494,6 +496,12 @@ def _deserialize_config(data: dict[str, Any]) -> EvaluationConfiguration:
             timeout_per_item_seconds=policy_data.get("timeout_per_item_seconds"),
         ),
         priority=Priority(data.get("priority", "normal")),
+        prompt_template=data.get("prompt_template"),
+        dataset_items=tuple(
+            {str(k): str(v) for k, v in item.items()}
+            for item in (data.get("dataset_items") or ())
+            if isinstance(item, dict)
+        ),
     )
 
 

@@ -53,6 +53,7 @@ def _make_run(
         eval_type=EvaluationType.SINGLE,
         profile=EvaluationProfile(provider_name="openai", model_id="gpt-4"),
         metrics=("accuracy",),
+        dataset_items=({"prompt": "hello"},),
     )
     run = EvaluationRun(
         evaluation_name=name,

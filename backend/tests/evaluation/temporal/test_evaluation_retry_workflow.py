@@ -42,9 +42,19 @@ MODEL = "gpt-4"
 METRICS = ("accuracy", "faithfulness")
 SYSTEM_PROMPT = "You are a helpful assistant."
 EVAL_NAME = "test-evaluation"
+PROMPT_TEMPLATE = "Answer against the context:\n{context}\n\nQuestion: {prompt}"
+DATASET_ITEMS = (
+    {"prompt": "What is the capital of France?", "context": "Paris is the capital of France."},
+    {"prompt": "What is 2 + 2?", "context": "Basic arithmetic."},
+)
 
 
-def _make_source_run(*, status: RunStatus = RunStatus.FAILED) -> EvaluationRun:
+def _make_source_run(
+    *,
+    status: RunStatus = RunStatus.FAILED,
+    dataset_items: tuple[dict[str, str], ...] = DATASET_ITEMS,
+    prompt_template: str | None = PROMPT_TEMPLATE,
+) -> EvaluationRun:
     """Create a source EvaluationRun with the standard test configuration."""
     config = EvaluationConfiguration(
         name=EVAL_NAME,
@@ -55,6 +65,8 @@ def _make_source_run(*, status: RunStatus = RunStatus.FAILED) -> EvaluationRun:
             system_prompt=SYSTEM_PROMPT,
         ),
         metrics=METRICS,
+        prompt_template=prompt_template,
+        dataset_items=dataset_items,
     )
     run = EvaluationRun(
         evaluation_name=EVAL_NAME,
@@ -82,7 +94,11 @@ def _make_source_run(*, status: RunStatus = RunStatus.FAILED) -> EvaluationRun:
     return run
 
 
-def _make_new_run() -> EvaluationRun:
+def _make_new_run(
+    *,
+    dataset_items: tuple[dict[str, str], ...] = DATASET_ITEMS,
+    prompt_template: str | None = PROMPT_TEMPLATE,
+) -> EvaluationRun:
     """Create the new run returned by the handler after creation."""
     config = EvaluationConfiguration(
         name=EVAL_NAME,
@@ -93,6 +109,8 @@ def _make_new_run() -> EvaluationRun:
             system_prompt=SYSTEM_PROMPT,
         ),
         metrics=METRICS,
+        prompt_template=prompt_template,
+        dataset_items=dataset_items,
     )
     run = EvaluationRun(
         evaluation_name=EVAL_NAME,
@@ -209,6 +227,37 @@ class TestRetryPreservesConfiguration:
         assert inp.model_id == MODEL
         assert inp.metric_names == METRICS
         assert inp.system_prompt == SYSTEM_PROMPT
+
+    async def test_workflow_input_reproduces_persisted_execution_inputs(self) -> None:
+        new_run = _make_new_run()
+        handler = AsyncMock(spec=RetryEvaluationRunHandler)
+        handler.handle = AsyncMock(return_value=new_run)
+
+        captured_inputs: list[EvaluationRunWorkflowInput] = []
+
+        async def _capture(workflow: Any, input_data: Any, **kwargs: Any) -> None:
+            captured_inputs.append(input_data)
+
+        mock_tc = MagicMock()
+        mock_tc.start_workflow = _capture
+        mock_config = MagicMock()
+        mock_config.temporal_task_queue = "redops-eval"
+
+        await _call_retry_endpoint(
+            temporal_client=mock_tc,
+            config=mock_config,
+            handler_instance=handler,
+        )
+
+        assert len(captured_inputs) == 1
+        inp = captured_inputs[0]
+        assert inp.provider_name == PROVIDER
+        assert inp.model_id == MODEL
+        assert inp.metric_names == METRICS
+        assert inp.system_prompt == SYSTEM_PROMPT
+        assert inp.prompt_template == PROMPT_TEMPLATE
+        assert inp.dataset_items == DATASET_ITEMS
+        assert inp.total_items == new_run.items_total
 
 
 # ---------------------------------------------------------------------------
@@ -631,3 +680,69 @@ class TestExistingRetryHandlerBehavior:
 
         with pytest.raises(ConflictError, match="Only failed"):
             await handler.handle(command)
+
+
+# ---------------------------------------------------------------------------
+# P3-4: Legacy runs without persisted dataset inputs are rejected
+# ---------------------------------------------------------------------------
+
+
+class TestRetryRejectsLegacyRuns:
+    """Legacy runs predating input persistence cannot be retried faithfully."""
+
+    async def test_handler_rejects_legacy_run_without_dataset_inputs(self) -> None:
+        source = _make_source_run(dataset_items=(), prompt_template=None)
+
+        mock_repo = AsyncMock()
+        mock_repo.find_by_id = AsyncMock(return_value=source)
+        mock_repo.save = AsyncMock()
+
+        handler = RetryEvaluationRunHandler(mock_repo)
+        from app.evaluation.application.run_commands import RetryEvaluationRunCommand
+
+        command = RetryEvaluationRunCommand(run_id=SOURCE_RUN_ID)
+
+        with pytest.raises(ConflictError, match="dataset inputs were not persisted"):
+            await handler.handle(command)
+
+        mock_repo.save.assert_not_called()
+
+    async def test_legacy_run_retry_returns_409_and_does_not_schedule(self) -> None:
+        from fastapi import HTTPException
+
+        source = _make_source_run(dataset_items=(), prompt_template=None)
+
+        mock_repo = AsyncMock()
+        mock_repo.find_by_id = AsyncMock(return_value=source)
+        mock_repo.save = AsyncMock()
+
+        mock_tc = MagicMock()
+        mock_tc.start_workflow = AsyncMock()
+        mock_config = MagicMock()
+
+        mock_session = AsyncMock()
+        mock_session.flush = AsyncMock()
+
+        queue_instance = AsyncMock()
+
+        with (
+            patch("app.api.evaluation_run._get_repository", return_value=mock_repo),
+            patch("app.api.evaluation_run.QueueEvaluationRunHandler", return_value=queue_instance),
+            patch("app.api.evaluation_run._run_to_response", return_value=MagicMock()),
+        ):
+            from app.api.evaluation_run import retry_run
+
+            with pytest.raises(HTTPException) as exc_info:
+                await retry_run(
+                    SOURCE_RUN_ID,
+                    current_user=MagicMock(user_id="test-user"),
+                    session=mock_session,
+                    temporal_client=mock_tc,
+                    config=mock_config,
+                )
+
+            assert exc_info.value.status_code == 409
+
+        mock_tc.start_workflow.assert_not_called()
+        queue_instance.handle.assert_not_called()
+        mock_repo.save.assert_not_called()

@@ -71,6 +71,7 @@ class CreateEvaluationRunHandler:
             profile=profile,
             metrics=command.metrics or ("accuracy",),
             prompt_template=command.prompt_template,
+            dataset_items=command.dataset_items,
         )
 
         metadata = EvaluationMetadata(
@@ -373,6 +374,15 @@ class RetryEvaluationRunHandler:
             raise ConflictError(
                 message="Only failed or timed-out runs can be retried",
                 details={"run_id": command.run_id, "status": source.status.value},
+            )
+
+        if not source.config.dataset_items:
+            raise ConflictError(
+                message=(
+                    "Evaluation run cannot be retried because its original dataset "
+                    "inputs were not persisted"
+                ),
+                details={"run_id": command.run_id, "replayable": False},
             )
 
         new_run = EvaluationRun(

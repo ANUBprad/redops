@@ -329,11 +329,10 @@ async def retry_run(
     Creates a new run from the source run's persisted configuration and
     schedules the production EvaluationRunWorkflow via Temporal.  The new
     run receives a unique workflow ID so it cannot collide with the
-    original execution.
-
-    Known limitation: ``dataset_items`` and ``prompt_template`` are not
-    persisted on EvaluationRun, so the retry workflow receives an empty
-    item list.  Dataset propagation (P1) is tracked separately.
+    original execution.  The persisted dataset inputs and prompt template
+    are reproduced in the retry workflow; legacy runs created before input
+    persistence are rejected with 409 since their original inputs cannot
+    be reconstructed.
     """
     repo = _get_repository(session)
     handler = RetryEvaluationRunHandler(repo)
@@ -351,8 +350,8 @@ async def retry_run(
                 provider_name=run.profile.provider_name,
                 model_id=run.profile.model_id,
                 metric_names=run.config.metrics,
-                dataset_items=(),
-                prompt_template=None,
+                dataset_items=run.config.dataset_items,
+                prompt_template=run.config.prompt_template,
                 system_prompt=run.profile.system_prompt,
             ),
             id=workflow_id,
