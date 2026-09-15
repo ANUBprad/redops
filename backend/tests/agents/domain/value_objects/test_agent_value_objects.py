@@ -17,8 +17,8 @@ class TestAgentProfile:
         profile = AgentProfile()
         assert profile.provider_name == ""
         assert profile.model_id == ""
-        assert profile.temperature == 0.0
-        assert profile.max_tokens == 4096
+        assert profile.temperature is None
+        assert profile.max_tokens is None
 
     def test_equality(self) -> None:
         p1 = AgentProfile(provider_name="openai", model_id="gpt-4")

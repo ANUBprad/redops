@@ -42,12 +42,19 @@ DATASET_ITEMS = (
 def _make_source_run(
     dataset_items: tuple[dict[str, str], ...] = DATASET_ITEMS,
     prompt_template: str | None = PROMPT_TEMPLATE,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
 ) -> EvaluationRun:
     """Build a FAILED run carrying the given persisted inputs."""
     config = EvaluationConfiguration(
         name="retry-source",
         eval_type=EvaluationType.SINGLE,
-        profile=EvaluationProfile(provider_name="openai", model_id="gpt-4"),
+        profile=EvaluationProfile(
+            provider_name="openai",
+            model_id="gpt-4",
+            temperature=temperature,
+            max_tokens=max_tokens,
+        ),
         metrics=("accuracy",),
         prompt_template=prompt_template,
         dataset_items=dataset_items,
@@ -55,7 +62,12 @@ def _make_source_run(
     run = EvaluationRun(
         evaluation_name="retry-source",
         config=config,
-        profile=EvaluationProfile(provider_name="openai", model_id="gpt-4"),
+        profile=EvaluationProfile(
+            provider_name="openai",
+            model_id="gpt-4",
+            temperature=temperature,
+            max_tokens=max_tokens,
+        ),
     )
     run.queue()
     run.start(total_items=2)
@@ -118,6 +130,26 @@ class TestCreateHandlerCapturesExecutionInputs:
 
         assert result.config.prompt_template == PROMPT_TEMPLATE
 
+    async def test_create_handler_stores_generation_parameters(self) -> None:
+        repo = AsyncMock()
+        repo.save = AsyncMock()
+        handler = CreateEvaluationRunHandler(repo)
+        command = CreateEvaluationRunCommand(
+            evaluation_name="create-capture",
+            provider="openai",
+            model="gpt-4",
+            metrics=("accuracy",),
+            temperature=0.7,
+            max_tokens=128,
+        )
+
+        result = await handler.handle(command)
+
+        assert result.profile.temperature == 0.7
+        assert result.profile.max_tokens == 128
+        assert result.config.profile.temperature == 0.7
+        assert result.config.profile.max_tokens == 128
+
 
 class TestRetryHandlerCopiesExecutionInputs:
     """Retry handler reproduces the source run's execution inputs."""
@@ -157,6 +189,20 @@ class TestRetryHandlerCopiesExecutionInputs:
         assert source.config.dataset_items == DATASET_ITEMS
         assert source.config.prompt_template == PROMPT_TEMPLATE
 
+    async def test_retry_handler_copies_generation_parameters(self) -> None:
+        source = _make_source_run(temperature=0.5, max_tokens=256)
+        repo = AsyncMock()
+        repo.find_by_id = AsyncMock(return_value=source)
+        repo.save = AsyncMock()
+        handler = RetryEvaluationRunHandler(repo)
+
+        result = await handler.handle(RetryEvaluationRunCommand(run_id=str(source.id)))
+
+        assert result.profile.temperature == 0.5
+        assert result.profile.max_tokens == 256
+        assert result.config.profile.temperature == 0.5
+        assert result.config.profile.max_tokens == 256
+
 
 class TestCreateEndpointSchedulesSameInputs:
     """Create endpoint schedules a workflow with the request's execution inputs."""
@@ -188,6 +234,8 @@ class TestCreateEndpointSchedulesSameInputs:
             metrics=["accuracy"],
             system_prompt="sys-prompt",
             prompt_template=PROMPT_TEMPLATE,
+            temperature=0.7,
+            max_tokens=128,
             dataset_items=[
                 DatasetItemRequest(prompt="q1", context="c1"),
                 DatasetItemRequest(prompt="q2"),
@@ -217,6 +265,8 @@ class TestCreateEndpointSchedulesSameInputs:
         assert inp.metric_names == ("accuracy",)
         assert inp.system_prompt == "sys-prompt"
         assert inp.prompt_template == PROMPT_TEMPLATE
+        assert inp.temperature == 0.7
+        assert inp.max_tokens == 128
         assert inp.dataset_items == (
             {"prompt": "q1", "context": "c1"},
             {"prompt": "q2"},

@@ -171,6 +171,8 @@ class ExecuteItemInput:
         item_id: Optional stable item identifier.
         prompt_template: Optional template with ``{variable}`` placeholders.
         system_prompt: Optional system prompt for the provider call.
+        temperature: Optional sampling temperature forwarded as a chat option.
+        max_tokens: Optional maximum generated tokens forwarded as a chat option.
 
     """
 
@@ -185,6 +187,8 @@ class ExecuteItemInput:
     item_id: str = ""
     prompt_template: str | None = None
     system_prompt: str | None = None
+    temperature: float | None = None
+    max_tokens: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -447,6 +451,7 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
         from app.evaluation.data.dataset import DatasetItem
         from app.evaluation.execution.item_executor import ItemExecutor
         from app.evaluation.execution.prompt_builder import PromptTemplate
+        from app.providers.models.options import ChatOptions
         from app.providers.registry.registry import ProviderRegistry
 
         registry: Any = _provider_registry if _provider_registry is not None else ProviderRegistry()
@@ -474,6 +479,10 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
             model_id=input.model_id,
             item=item,
             item_index=input.item_index,
+            options=ChatOptions(
+                temperature=input.temperature,
+                max_tokens=input.max_tokens,
+            ),
         )
 
         elapsed_ms = int((time.monotonic() - start) * 1000)

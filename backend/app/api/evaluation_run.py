@@ -198,6 +198,8 @@ async def create_run(
         system_prompt=body.system_prompt,
         prompt_template=body.prompt_template,
         dataset_items=tuple(_item_to_payload(item) for item in body.dataset_items),
+        temperature=body.temperature,
+        max_tokens=body.max_tokens,
     )
     try:
         run = await handler.handle(command)
@@ -222,6 +224,8 @@ async def create_run(
                 dataset_items=dataset_items,
                 prompt_template=body.prompt_template,
                 system_prompt=body.system_prompt,
+                temperature=body.temperature,
+                max_tokens=body.max_tokens,
             ),
             id=workflow_id,
             task_queue=config.temporal_task_queue,
@@ -353,6 +357,8 @@ async def retry_run(
                 dataset_items=run.config.dataset_items,
                 prompt_template=run.config.prompt_template,
                 system_prompt=run.profile.system_prompt,
+                temperature=run.profile.temperature,
+                max_tokens=run.profile.max_tokens,
             ),
             id=workflow_id,
             task_queue=config.temporal_task_queue,

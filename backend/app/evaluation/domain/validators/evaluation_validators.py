@@ -79,14 +79,14 @@ class EvaluationValidator:
             errors.append(
                 ValidationError("Model ID is required", field="profile.model_id"),
             )
-        if not (0.0 <= profile.temperature <= _MAX_TEMPERATURE):
+        if profile.temperature is not None and not (0.0 <= profile.temperature <= _MAX_TEMPERATURE):
             errors.append(
                 ValidationError(
                     "Temperature must be between 0.0 and 2.0",
                     field="profile.temperature",
                 ),
             )
-        if profile.max_tokens < 1:
+        if profile.max_tokens is not None and profile.max_tokens < 1:
             errors.append(
                 ValidationError("Max tokens must be >= 1", field="profile.max_tokens"),
             )

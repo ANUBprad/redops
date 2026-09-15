@@ -51,6 +51,17 @@ class CreateEvaluationRunRequest(BaseModel):
         default=None,
         description="Prompt template with {variable} placeholders",
     )
+    temperature: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=2.0,
+        description="Sampling temperature forwarded to the provider; omitted means provider default",
+    )
+    max_tokens: int | None = Field(
+        default=None,
+        ge=1,
+        description="Maximum tokens the provider may generate; omitted means provider default",
+    )
     dataset_items: list[DatasetItemRequest] = Field(
         default_factory=list,
         description="Dataset items to evaluate",

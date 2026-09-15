@@ -64,6 +64,8 @@ class EvaluationRunWorkflowInput:
     dataset_items: tuple[dict[str, str], ...] = ()
     prompt_template: str | None = None
     system_prompt: str | None = None
+    temperature: float | None = None
+    max_tokens: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +89,8 @@ def _compute_workflow_fingerprint(
     provider: str,
     model: str,
     metrics: tuple[str, ...],
+    temperature: float | None = None,
+    max_tokens: int | None = None,
 ) -> str:
     """Compute a deterministic fingerprint for the evaluation configuration.
 
@@ -107,6 +111,10 @@ def _compute_workflow_fingerprint(
     components["provider"] = provider
     components["model"] = model
     components["metrics"] = json.dumps(sorted(metrics), sort_keys=True)
+    if temperature is not None:
+        components["temperature"] = repr(temperature)
+    if max_tokens is not None:
+        components["max_tokens"] = str(max_tokens)
 
     canonical = json.dumps(components, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()[:32]
@@ -220,6 +228,8 @@ class EvaluationRunWorkflow:
             provider=input.provider_name,
             model=input.model_id,
             metrics=input.metric_names,
+            temperature=input.temperature,
+            max_tokens=input.max_tokens,
         )
 
         await workflow.execute_activity(
@@ -283,6 +293,8 @@ class EvaluationRunWorkflow:
                         item_id=item_data.get("item_id", ""),
                         prompt_template=input.prompt_template,
                         system_prompt=input.system_prompt,
+                        temperature=input.temperature,
+                        max_tokens=input.max_tokens,
                     ),
                     start_to_close_timeout=timedelta(seconds=120),
                     schedule_to_close_timeout=timedelta(minutes=5),

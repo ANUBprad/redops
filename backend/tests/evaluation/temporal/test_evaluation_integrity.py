@@ -151,6 +151,21 @@ class TestFingerprint:
         )
         assert fp1 != fp2
 
+    def test_different_generation_parameters_different_fingerprint(self) -> None:
+        """P4-B: different temperature/max_tokens produce different fingerprint."""
+        base = {
+            "prompt_template": "{prompt}",
+            "system_prompt": "",
+            "provider": "openai",
+            "model": "gpt-4",
+            "metrics": ("correctness",),
+        }
+        fp1 = _compute_workflow_fingerprint(**base)
+        fp2 = _compute_workflow_fingerprint(**base, temperature=0.7)
+        fp3 = _compute_workflow_fingerprint(**base, temperature=0.7, max_tokens=128)
+        assert fp1 != fp2
+        assert fp2 != fp3
+
     def test_compute_fingerprint_library(self) -> None:
         """The reliability fingerprint library produces stable results."""
         fp1 = compute_fingerprint(

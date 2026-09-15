@@ -466,8 +466,8 @@ def _deserialize_config(data: dict[str, Any]) -> EvaluationConfiguration:
         profile=EvaluationProfile(
             provider_name=profile_data.get("provider_name", ""),
             model_id=profile_data.get("model_id", ""),
-            temperature=profile_data.get("temperature", 0.0),
-            max_tokens=profile_data.get("max_tokens", 4096),
+            temperature=profile_data.get("temperature"),
+            max_tokens=profile_data.get("max_tokens"),
             timeout_seconds=profile_data.get("timeout_seconds", 60),
             system_prompt=profile_data.get("system_prompt"),
         ),
@@ -510,8 +510,8 @@ def _deserialize_profile(data: dict[str, Any]) -> EvaluationProfile:
     return EvaluationProfile(
         provider_name=data.get("provider_name", ""),
         model_id=data.get("model_id", ""),
-        temperature=data.get("temperature", 0.0),
-        max_tokens=data.get("max_tokens", 4096),
+        temperature=data.get("temperature"),
+        max_tokens=data.get("max_tokens"),
         timeout_seconds=data.get("timeout_seconds", 60),
         system_prompt=data.get("system_prompt"),
     )

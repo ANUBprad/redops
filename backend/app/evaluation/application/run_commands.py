@@ -23,6 +23,8 @@ class CreateEvaluationRunCommand:
     system_prompt: str | None = None
     prompt_template: str | None = None
     dataset_items: tuple[dict[str, str], ...] = ()
+    temperature: float | None = None
+    max_tokens: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

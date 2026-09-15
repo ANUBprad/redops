@@ -63,6 +63,8 @@ class CreateEvaluationRunHandler:
             provider_name=command.provider,
             model_id=command.model,
             system_prompt=command.system_prompt,
+            temperature=command.temperature,
+            max_tokens=command.max_tokens,
         )
 
         config = EvaluationConfiguration(
