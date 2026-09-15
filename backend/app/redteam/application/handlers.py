@@ -312,6 +312,9 @@ def _dict_to_config(data: dict[str, Any] | None) -> AttackConfiguration | None:
         categories=tuple(AttackCategory(c) for c in data.get("categories", [])),
         severities=tuple(AttackSeverity(s) for s in data.get("severities", [])),
         max_scenarios=data.get("max_scenarios", 0),
+        max_rounds=data.get("max_rounds", 10),
+        max_cost_usd=data.get("max_cost_usd", 50.0),
+        max_duration_seconds=data.get("max_duration_seconds", 3600),
         continue_on_violation=data.get("continue_on_violation", True),
         metadata=dict(data.get("metadata", {})),
     )

@@ -95,6 +95,9 @@ class AttackConfiguration:
     categories: tuple[AttackCategory, ...] = field(default_factory=tuple)
     severities: tuple[AttackSeverity, ...] = field(default_factory=tuple)
     max_scenarios: int = 0
+    max_rounds: int = 10
+    max_cost_usd: float = 50.0
+    max_duration_seconds: int = 3600
     mutations: tuple[AttackMutation, ...] = field(default_factory=tuple)
     continue_on_violation: bool = True
     metadata: dict[str, Any] = field(default_factory=dict)
