@@ -1,3 +1,10 @@
+## [0.13.4](https://github.com/ANUBprad/redops/compare/v0.13.3...v0.13.4) (2026-09-15)
+
+
+### Bug Fixes
+
+* **evaluation:** preserve metric failure semantics ([a80cee2](https://github.com/ANUBprad/redops/commit/a80cee2281dd09cea79bfc467dc0b7524d0cdcaf))
+
 ## [0.13.3](https://github.com/ANUBprad/redops/compare/v0.13.2...v0.13.3) (2026-09-15)
 
 
