@@ -1,3 +1,10 @@
+## [0.13.7](https://github.com/ANUBprad/redops/compare/v0.13.6...v0.13.7) (2026-09-15)
+
+
+### Bug Fixes
+
+* **redteam:** propagate mutation configuration ([750f4cb](https://github.com/ANUBprad/redops/commit/750f4cb422ad901450df9f7de8972c6a30d2acda))
+
 ## [0.13.6](https://github.com/ANUBprad/redops/compare/v0.13.5...v0.13.6) (2026-09-15)
 
 
