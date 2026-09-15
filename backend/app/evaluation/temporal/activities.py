@@ -765,21 +765,27 @@ async def finalize_run_integrity_activity(
                 if definition is None:
                     continue
                 threshold = definition.default_threshold
-                if threshold is None:
-                    continue
 
                 metric_results = [r for r in all_results if r.metric_name == metric_name]
                 if not metric_results:
-                    threshold_evaluations[metric_name] = None
+                    if threshold is not None:
+                        threshold_evaluations[metric_name] = None
                     continue
 
-                # Evaluate threshold against aggregated mean
+                # A metric with NO successful result for the whole run failed.
+                # Mirror the error verdict rule thresholded metrics already
+                # have so the run cannot appear fully successful when any
+                # configured metric produced only errors.
                 successful = [r for r in metric_results if r.is_success]
                 if not successful:
                     threshold_evaluations[metric_name] = None
                     verdict = "error" if verdict != "fail" else verdict
                     continue
 
+                if threshold is None:
+                    continue
+
+                # Evaluate threshold against aggregated mean
                 mean_score = sum(r.normalized_score for r in successful) / len(successful)
                 passed = mean_score >= threshold
                 threshold_evaluations[metric_name] = passed
