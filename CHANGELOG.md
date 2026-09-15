@@ -1,3 +1,10 @@
+## [0.13.9](https://github.com/ANUBprad/redops/compare/v0.13.8...v0.13.9) (2026-09-15)
+
+
+### Bug Fixes
+
+* **redteam:** propagate system prompt ([9973774](https://github.com/ANUBprad/redops/commit/99737741b47c58beed058c6f5952d75a41e1c1aa))
+
 ## [0.13.8](https://github.com/ANUBprad/redops/compare/v0.13.7...v0.13.8) (2026-09-15)
 
 
