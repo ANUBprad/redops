@@ -1,3 +1,10 @@
+## [0.13.3](https://github.com/ANUBprad/redops/compare/v0.13.2...v0.13.3) (2026-09-15)
+
+
+### Bug Fixes
+
+* **evaluation:** propagate generation parameters to provider calls ([2f41cd7](https://github.com/ANUBprad/redops/commit/2f41cd7aef54312dc4ee1ed027b1c2ef82b042a6))
+
 ## [0.13.2](https://github.com/ANUBprad/redops/compare/v0.13.1...v0.13.2) (2026-09-15)
 
 
