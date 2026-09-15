@@ -430,6 +430,7 @@ async def start_attack_run(
                     target_model=config.target_model,
                     target_temperature=config.temperature,
                     target_max_tokens=config.max_tokens,
+                    system_prompt=config.system_prompt,
                     mutation_provider=config.mutation_provider,
                     mutation_model=config.mutation_model,
                     mutation_strategy=config.mutation_strategy,

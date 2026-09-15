@@ -228,6 +228,7 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
         target_model: str = "",
         target_temperature: float = 0.0,
         target_max_tokens: int = 2048,
+        system_prompt: str = "",
         attack_categories: tuple[AttackCategory, ...] = (),
         budget: CampaignBudget | None = None,
         mutation_phase: MutationPhase = MutationPhase.EXPLORATION,
@@ -246,6 +247,7 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
         self._target_model = target_model
         self._target_temperature = target_temperature
         self._target_max_tokens = target_max_tokens
+        self._system_prompt = system_prompt
         self._attack_categories = attack_categories or (
             AttackCategory.PROMPT_INJECTION,
             AttackCategory.JAILBREAK,
@@ -282,6 +284,10 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
     @property
     def target_max_tokens(self) -> int:
         return self._target_max_tokens
+
+    @property
+    def system_prompt(self) -> str:
+        return self._system_prompt
 
     @property
     def attack_categories(self) -> tuple[AttackCategory, ...]:
@@ -340,6 +346,7 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
         target_model: str,
         target_temperature: float = 0.0,
         target_max_tokens: int = 2048,
+        system_prompt: str = "",
         attack_categories: tuple[AttackCategory, ...] = (),
         budget: CampaignBudget | None = None,
     ) -> AdaptiveCampaign:
@@ -364,6 +371,7 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
             target_model=target_model,
             target_temperature=target_temperature,
             target_max_tokens=target_max_tokens,
+            system_prompt=system_prompt,
             attack_categories=attack_categories or (),
             budget=budget or CampaignBudget(),
         )

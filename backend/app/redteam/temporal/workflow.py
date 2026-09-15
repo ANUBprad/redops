@@ -69,6 +69,7 @@ class RedTeamWorkflow:
                 target_model=input.target_model,
                 target_temperature=input.target_temperature,
                 target_max_tokens=input.target_max_tokens,
+                system_prompt=input.system_prompt,
                 mutation_provider=input.mutation_provider,
                 mutation_model=input.mutation_model,
                 mutation_strategy=input.mutation_strategy,

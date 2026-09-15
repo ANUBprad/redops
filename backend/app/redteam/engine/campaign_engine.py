@@ -7,6 +7,7 @@ Effectiveness Evaluation → Mutation/Strategy Selection → Next Attack.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from app.redteam.domain.campaign import (
@@ -169,6 +170,8 @@ class AdaptiveCampaignEngine:
         )
 
         scenario = await self._generate_scenario(campaign, category)
+        if campaign.system_prompt:
+            scenario = replace(scenario, system_prompt_override=campaign.system_prompt)
 
         mutation_result = None
         if campaign.current_round_number > 0:
