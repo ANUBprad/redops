@@ -1,3 +1,10 @@
+## [0.13.6](https://github.com/ANUBprad/redops/compare/v0.13.5...v0.13.6) (2026-09-15)
+
+
+### Bug Fixes
+
+* **redteam:** propagate target generation parameters ([64bb038](https://github.com/ANUBprad/redops/commit/64bb0385170086468d9104813a44e46faadd0f33))
+
 ## [0.13.5](https://github.com/ANUBprad/redops/compare/v0.13.4...v0.13.5) (2026-09-15)
 
 
