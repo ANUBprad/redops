@@ -277,11 +277,13 @@ async def test_retry_after_completed_rounds_does_not_recall_providers(
     assert provider.chat_calls == 4
     run_after_first = await _load_run(factory, run.id)
     assert run_after_first is not None
-    # The simulated worker crash never reached finalization: no campaign JSON,
-    # no metric rows, and the run is still RUNNING for the retry to resume.
+    # The simulated worker crash never reached finalization: no campaign JSON
+    # and the run is still RUNNING for the retry to resume. The F7 ordering
+    # fix runs metric persistence BEFORE finalization, so the already-produced
+    # metric rows ARE durable even though finalize crashed.
     assert run_after_first.status == AttackStatus.RUNNING
     assert run_after_first.campaign_results is None
-    assert len(await _metric_rows(factory, str(run.id))) == 0
+    assert len(await _metric_rows(factory, str(run.id))) == 2
 
     monkeypatch.setattr(mod, "_finalize_run", real_finalize)
     monkeypatch.setattr(mod, "_fail_run", real_fail_run)

@@ -45,6 +45,17 @@ class _RoundPersistenceError(Exception):
     """
 
 
+class _MetricPersistenceError(Exception):
+    """Raised when final metric/result persistence fails and the attempt must retry.
+
+    Mirrors ``_RoundPersistenceError`` for the metric-results persistence
+    phase that runs AFTER all rounds complete. On Temporal retry, durable
+    rounds are already checkpointed (P6-C2/C3) so providers are not
+    re-invoked; the activity re-persists metric rows via the idempotent
+    delete-then-insert path in ``_persist_metric_results``.
+    """
+
+
 class AdaptiveCampaignEngine:
     """Orchestrates the complete adaptive red team campaign loop.
 

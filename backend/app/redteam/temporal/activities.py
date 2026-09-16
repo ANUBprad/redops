@@ -39,6 +39,7 @@ from app.redteam.domain.enums import (
 from app.redteam.domain.value_objects import AttackScenario, SafetyScore
 from app.redteam.engine.campaign_engine import (
     AdaptiveCampaignEngine,
+    _MetricPersistenceError,
     _RoundPersistenceError,
 )
 from app.redteam.engine.mutation import MutationStrategy
@@ -776,8 +777,8 @@ async def red_team_campaign_activity(
             result.violation_count,
         )
 
-        await _finalize_run(input.attack_run_id, result, cancelled_flag)
         await _persist_metric_results(input.attack_run_id, result)
+        await _finalize_run(input.attack_run_id, result, cancelled_flag)
 
         return _build_result(input.attack_run_id, result)
 
@@ -785,6 +786,13 @@ async def red_team_campaign_activity(
         # Durable checkpoint/load failure: re-raise so Temporal retries
         # the whole attempt; the retry resumes from the first incomplete
         # round instead of failing the run.
+        raise
+    except _MetricPersistenceError:
+        # Final metric/result persistence failure: re-raise so Temporal
+        # retries the whole attempt. Durable rounds are already
+        # checkpointed, so the retry re-persists the already-produced
+        # provider results without re-invoking any provider or marking
+        # the run FAILED.
         raise
     except Exception as exc:
         activity.logger.error(
@@ -886,6 +894,10 @@ async def _persist_metric_results(
     are replaced (delete-then-insert), mirroring the general-eval
     ``persist_metric_results_activity`` so re-persistence is idempotent.
 
+    Raises ``_MetricPersistenceError`` on any DB failure so the Temporal
+    activity retries the whole attempt; durable rounds are already
+    checkpointed (P6-C2/C3) so providers are not re-invoked on retry.
+
     Returns the number of rows persisted.
     """
     from sqlalchemy import delete
@@ -895,38 +907,45 @@ async def _persist_metric_results(
         SqlAlchemyMetricResultRepository,
     )
 
-    rows: list[tuple[MetricResult, str, str]] = []
-    for r in result.rounds:
-        if r.effectiveness is None:
-            continue
-        item_id = str(r.round_id)
-        # Persist the canonical semantic_effectiveness MetricResult
-        if r.effectiveness.semantic_metric_result is not None:
-            metric = r.effectiveness.semantic_metric_result
-            metric.metadata["run_id"] = attack_run_id
-            metric.metadata["item_id"] = item_id
-            rows.append((metric, attack_run_id, item_id))
-        # Persist every individual metric result (safety, prompt_injection,
-        # jailbreak, toxicity, bias, etc.) so red-team scores are visible
-        # through the canonical /metrics pipeline.
-        for metric in r.effectiveness.individual_metric_results:
-            metric.metadata["run_id"] = attack_run_id
-            metric.metadata["item_id"] = item_id
-            rows.append((metric, attack_run_id, item_id))
+    try:
+        rows: list[tuple[MetricResult, str, str]] = []
+        for r in result.rounds:
+            if r.effectiveness is None:
+                continue
+            item_id = str(r.round_id)
+            # Persist the canonical semantic_effectiveness MetricResult
+            if r.effectiveness.semantic_metric_result is not None:
+                metric = r.effectiveness.semantic_metric_result
+                metric.metadata["run_id"] = attack_run_id
+                metric.metadata["item_id"] = item_id
+                rows.append((metric, attack_run_id, item_id))
+            # Persist every individual metric result (safety, prompt_injection,
+            # jailbreak, toxicity, bias, etc.) so red-team scores are visible
+            # through the canonical /metrics pipeline.
+            for metric in r.effectiveness.individual_metric_results:
+                metric.metadata["run_id"] = attack_run_id
+                metric.metadata["item_id"] = item_id
+                rows.append((metric, attack_run_id, item_id))
 
-    if not rows:
-        return 0
+        if not rows:
+            return 0
 
-    async with _get_session() as session:
-        repo = SqlAlchemyMetricResultRepository(session)
-        for _metric, run_id, item_id in rows:
-            await session.execute(
-                delete(MetricResultModel).where(
-                    MetricResultModel.run_id == run_id,
-                    MetricResultModel.item_id == item_id,
+        async with _get_session() as session:
+            repo = SqlAlchemyMetricResultRepository(session)
+            for _metric, run_id, item_id in rows:
+                await session.execute(
+                    delete(MetricResultModel).where(
+                        MetricResultModel.run_id == run_id,
+                        MetricResultModel.item_id == item_id,
+                    )
                 )
-            )
-        for metric, _run_id, _item_id in rows:
-            await repo.save_many([metric])
-        await session.commit()
-    return len(rows)
+            for metric, _run_id, _item_id in rows:
+                await repo.save_many([metric])
+            await session.commit()
+        return len(rows)
+    except _MetricPersistenceError:
+        raise
+    except Exception as exc:
+        raise _MetricPersistenceError(
+            f"Metric persistence failed for run {attack_run_id}: {exc}"
+        ) from exc
