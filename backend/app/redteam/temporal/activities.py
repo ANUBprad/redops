@@ -7,23 +7,40 @@ configured during worker startup.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+import sqlalchemy as sa
 from temporalio import activity
+from temporalio.exceptions import CancelledError
 
+from app.evaluation.metrics.domain import MetricResult
 from app.kernel.entities.base import UUIDv7
 from app.redteam.domain.campaign import (
     AdaptiveCampaign,
+    AttackEffectiveness,
+    AttackLineage,
     CampaignBudget,
     CampaignResult,
     CampaignRound,
+    TargetExecution,
 )
-from app.redteam.domain.enums import AttackCategory
-from app.redteam.engine.campaign_engine import AdaptiveCampaignEngine
+from app.redteam.domain.campaign_enums import MutationPhase
+from app.redteam.domain.enums import (
+    AttackCategory,
+    AttackSeverity,
+    AttackStatus,
+    SafetyDimension,
+    SafetyVerdict,
+)
+from app.redteam.domain.value_objects import AttackScenario, SafetyScore
+from app.redteam.engine.campaign_engine import (
+    AdaptiveCampaignEngine,
+    _RoundPersistenceError,
+)
 from app.redteam.engine.mutation import MutationStrategy
 from app.redteam.engine.semantic_judge import SemanticEffectivenessJudge
 
@@ -327,6 +344,11 @@ def _effectiveness_to_dict(effectiveness: Any) -> dict[str, Any]:
         "semantic_judge_tokens_output": effectiveness.semantic_judge_tokens_output,
         "semantic_judge_latency_ms": effectiveness.semantic_judge_latency_ms,
         "evaluated_at": _jsonable(effectiveness.evaluated_at),
+        "semantic_metric_result": (
+            _metric_result_to_dict(effectiveness.semantic_metric_result)
+            if effectiveness.semantic_metric_result is not None
+            else None
+        ),
         "individual_metric_results": [
             {
                 "metric_name": m.metric_name,
@@ -334,10 +356,12 @@ def _effectiveness_to_dict(effectiveness: Any) -> dict[str, Any]:
                 "normalized_score": m.normalized_score,
                 "raw_output": m.raw_output,
                 "reasoning": m.reasoning,
+                "metadata": m.metadata,
+                "execution_time_ms": m.execution_time_ms,
                 "error": m.error,
+                "created_at": _jsonable(m.created_at),
                 "confidence": m.confidence,
                 "version": m.version,
-                "execution_time_ms": m.execution_time_ms,
                 "cost_usd": m.cost_usd,
             }
             for m in effectiveness.individual_metric_results
@@ -356,6 +380,279 @@ def _jsonable(value: Any) -> Any:
     if isinstance(value, datetime):
         return value.isoformat()
     return str(value)
+
+
+# ---------------------------------------------------------------------------
+# Round reconstruction (retry-idempotent resume)
+# ---------------------------------------------------------------------------
+
+
+def _metric_result_to_dict(metric: MetricResult) -> dict[str, Any]:
+    return {
+        "metric_name": metric.metric_name,
+        "score": metric.score,
+        "normalized_score": metric.normalized_score,
+        "raw_output": metric.raw_output,
+        "reasoning": metric.reasoning,
+        "metadata": metric.metadata,
+        "execution_time_ms": metric.execution_time_ms,
+        "error": metric.error,
+        "created_at": _jsonable(metric.created_at),
+        "confidence": metric.confidence,
+        "version": metric.version,
+        "cost_usd": metric.cost_usd,
+    }
+
+
+def _metric_result_from_dict(d: dict[str, Any]) -> MetricResult:
+    created_at = d.get("created_at")
+    return MetricResult(
+        metric_name=d["metric_name"],
+        score=d["score"],
+        normalized_score=d["normalized_score"],
+        raw_output=d.get("raw_output", ""),
+        reasoning=d.get("reasoning", ""),
+        metadata=d.get("metadata") or {},
+        execution_time_ms=d.get("execution_time_ms", 0),
+        error=d.get("error"),
+        created_at=datetime.fromisoformat(created_at) if created_at else None,
+        confidence=d.get("confidence", 0.0),
+        version=d.get("version", "1.0.0"),
+        cost_usd=d.get("cost_usd", 0.0),
+    )
+
+
+def _safety_score_from_dict(d: dict[str, Any]) -> SafetyScore:
+    return SafetyScore(
+        dimension=SafetyDimension(d["dimension"]),
+        score=d["score"],
+        normalized_score=d["normalized_score"],
+        verdict=SafetyVerdict(d["verdict"]),
+        reasoning=d.get("reasoning", ""),
+        confidence=d.get("confidence", 1.0),
+    )
+
+
+def _scenario_from_dict(d: dict[str, Any]) -> AttackScenario:
+    attack_definition_id = d.get("attack_definition_id")
+    return AttackScenario(
+        scenario_id=UUIDv7.from_string(d["scenario_id"]),
+        attack_definition_id=(
+            UUIDv7.from_string(attack_definition_id) if attack_definition_id else None
+        ),
+        template_name=d.get("template_name", ""),
+        category=AttackCategory(d["category"]),
+        severity=AttackSeverity(d["severity"]),
+        prompt=d.get("prompt", ""),
+        system_prompt_override=d.get("system_prompt_override"),
+        expected_behavior=d.get("expected_behavior", ""),
+        parameters=d.get("parameters") or {},
+        turn_index=d.get("turn_index", 0),
+        metadata=d.get("metadata") or {},
+    )
+
+
+def _lineage_from_dict(d: dict[str, Any]) -> AttackLineage:
+    parent_lineage_id = d.get("parent_lineage_id")
+    return AttackLineage(
+        lineage_id=UUIDv7.from_string(d["lineage_id"]),
+        parent_lineage_id=(UUIDv7.from_string(parent_lineage_id) if parent_lineage_id else None),
+        generation=d.get("generation", 0),
+        mutation_strategy=d.get("mutation_strategy", ""),
+        attack_category=d.get("attack_category", ""),
+        is_seed=d.get("is_seed", False),
+    )
+
+
+def _execution_from_dict(d: dict[str, Any]) -> TargetExecution:
+    executed_at = d.get("executed_at")
+    return TargetExecution(
+        execution_id=UUIDv7.from_string(d["execution_id"]),
+        attack_prompt=d.get("attack_prompt", ""),
+        system_prompt=d.get("system_prompt"),
+        target_response=d.get("target_response", ""),
+        tokens_input=d.get("tokens_input", 0),
+        tokens_output=d.get("tokens_output", 0),
+        total_tokens=d.get("total_tokens", 0),
+        cost_usd=d.get("cost_usd", 0.0),
+        latency_ms=d.get("latency_ms", 0),
+        provider_name=d.get("provider_name", ""),
+        model_name=d.get("model_name", ""),
+        error=d.get("error"),
+        executed_at=datetime.fromisoformat(executed_at) if executed_at else datetime.now(UTC),
+    )
+
+
+def _effectiveness_from_dict(d: dict[str, Any]) -> AttackEffectiveness:
+    evaluated_at = d.get("evaluated_at")
+    return AttackEffectiveness(
+        effectiveness_id=UUIDv7.from_string(d["effectiveness_id"]),
+        safety_scores=tuple(_safety_score_from_dict(s) for s in d.get("safety_scores") or ()),
+        overall_safety_verdict=SafetyVerdict(d["overall_safety_verdict"]),
+        metric_score=d["metric_score"],
+        is_violation=d["is_violation"],
+        is_violation_severe=d["is_violation_severe"],
+        effectiveness_score=d["effectiveness_score"],
+        reasoning=d["reasoning"],
+        evaluation_source=d["evaluation_source"],
+        semantic_verdict=d.get("semantic_verdict", ""),
+        semantic_score=d.get("semantic_score", 0.0),
+        semantic_confidence=d.get("semantic_confidence", 0.0),
+        semantic_reasoning=d.get("semantic_reasoning", ""),
+        semantic_evidence=d.get("semantic_evidence", ""),
+        semantic_judge_model=d.get("semantic_judge_model", ""),
+        semantic_judge_cost_usd=d.get("semantic_judge_cost_usd", 0.0),
+        semantic_judge_tokens_input=d.get("semantic_judge_tokens_input", 0),
+        semantic_judge_tokens_output=d.get("semantic_judge_tokens_output", 0),
+        semantic_judge_latency_ms=d.get("semantic_judge_latency_ms", 0),
+        evaluated_at=(datetime.fromisoformat(evaluated_at) if evaluated_at else datetime.now(UTC)),
+        semantic_metric_result=(
+            _metric_result_from_dict(d["semantic_metric_result"])
+            if d.get("semantic_metric_result")
+            else None
+        ),
+        individual_metric_results=tuple(
+            _metric_result_from_dict(m) for m in d.get("individual_metric_results") or ()
+        ),
+    )
+
+
+def _round_from_dict(d: dict[str, Any]) -> CampaignRound:
+    return CampaignRound(
+        round_id=UUIDv7.from_string(d["round_id"]),
+        round_number=d["round_number"],
+        attack_category=AttackCategory(d["attack_category"]),
+        mutation_strategy=d["mutation_strategy"],
+        mutation_phase=MutationPhase(d["mutation_phase"]),
+        attack_scenario=_scenario_from_dict(d["attack_scenario"]),
+        lineage=_lineage_from_dict(d["lineage"]),
+        execution=_execution_from_dict(d["execution"]) if d.get("execution") else None,
+        effectiveness=(
+            _effectiveness_from_dict(d["effectiveness"]) if d.get("effectiveness") else None
+        ),
+        tokens_used=d["tokens_used"],
+        cost_usd=d["cost_usd"],
+        duration_ms=d["duration_ms"],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Durable round checkpointing
+# ---------------------------------------------------------------------------
+
+
+async def _durable_round_schema_present() -> bool:
+    """Return True when the red_team_rounds table exists.
+
+    When the table is absent (schema not migrated into this database)
+    the durable checkpoint/resume boundary is skipped entirely and
+    campaign execution behaves exactly as before. Real database errors
+    raise so a database outage retries the attempt instead of silently
+    re-running rounds without any durable boundary.
+    """
+    if _session_factory is None:
+        return False
+    from app.infrastructure.database.models.red_team_round import RedTeamRoundModel
+
+    try:
+        async with _get_session() as session:
+            conn = await session.connection()
+            has_table = await conn.run_sync(
+                lambda sync_conn: sa.inspect(sync_conn).has_table(
+                    RedTeamRoundModel.__tablename__,
+                )
+            )
+            return bool(has_table)
+    except CancelledError:
+        raise
+    except Exception as exc:
+        raise _RoundPersistenceError(
+            f"Failed to inspect durable round schema: {exc}",
+        ) from exc
+
+
+async def _load_run_status(attack_run_id: str) -> AttackStatus | None:
+    """Return the run's status, or None when the run does not exist."""
+    from app.infrastructure.database.repositories.attack_run_repository import (
+        SqlAlchemyAttackRunRepository,
+    )
+
+    try:
+        run_id = UUIDv7.from_string(attack_run_id)
+    except ValueError:
+        return None
+
+    try:
+        async with _get_session() as session:
+            repo = SqlAlchemyAttackRunRepository(session)
+            run = await repo.find_by_id(run_id)
+            return run.status if run is not None else None
+    except CancelledError:
+        raise
+    except Exception as exc:
+        raise _RoundPersistenceError(
+            f"Failed to load run status for {attack_run_id}: {exc}",
+        ) from exc
+
+
+async def _load_durable_rounds(attack_run_id: str) -> tuple[CampaignRound, ...]:
+    """Load durably completed rounds for a run, in round-number order."""
+    from app.infrastructure.database.repositories.red_team_round_repository import (
+        SqlAlchemyRedTeamRoundRepository,
+    )
+
+    try:
+        async with _get_session() as session:
+            repo = SqlAlchemyRedTeamRoundRepository(session)
+            rows = await repo.find_all(attack_run_id)
+    except CancelledError:
+        raise
+    except Exception as exc:
+        raise _RoundPersistenceError(
+            f"Failed to load durable rounds for {attack_run_id}: {exc}",
+        ) from exc
+
+    return tuple(_round_from_dict(row.round_json) for row in rows)
+
+
+async def _checkpoint_durable_round(attack_run_id: str, round_: CampaignRound) -> None:
+    """Durably record a fully executed round before the activity returns.
+
+    A persistence failure raises ``_RoundPersistenceError`` so Temporal
+    retries the attempt (mirroring the P6-C2 durable-execution boundary);
+    the retry restores the recorded rounds and re-executes only the
+    in-flight round.
+    """
+    from app.infrastructure.database.repositories.red_team_round_repository import (
+        SqlAlchemyRedTeamRoundRepository,
+    )
+
+    try:
+        async with _get_session() as session:
+            repo = SqlAlchemyRedTeamRoundRepository(session)
+            await repo.upsert(
+                attack_run_id,
+                round_.round_number,
+                _round_to_dict(round_),
+            )
+            await session.commit()
+    except CancelledError:
+        raise
+    except Exception as exc:
+        raise _RoundPersistenceError(
+            f"Failed to checkpoint round {round_.round_number} for {attack_run_id}: {exc}",
+        ) from exc
+
+
+def _make_round_checkpoint(
+    attack_run_id: str,
+) -> Callable[[CampaignRound], Awaitable[None]]:
+    """Return a checkpoint callable bound to the given run."""
+
+    async def checkpoint(round_: CampaignRound) -> None:
+        await _checkpoint_durable_round(attack_run_id, round_)
+
+    return checkpoint
 
 
 # ---------------------------------------------------------------------------
@@ -386,6 +683,28 @@ async def red_team_campaign_activity(
     try:
         registry = _get_provider_registry()
         metric_engine = _get_metric_engine()
+
+        # Durable retry-idempotency boundary (P6-C3): when the
+        # red_team_rounds table is present, completed rounds are
+        # checkpointed after every provider call and metric computation,
+        # and a re-executed activity resumes from the first incomplete
+        # round without re-calling the providers for completed rounds.
+        # Without the table (legacy schema) campaign execution is
+        # unchanged.
+        resume_rounds: tuple[CampaignRound, ...] = ()
+        checkpoint_round: Callable[[CampaignRound], Awaitable[None]] | None = None
+        if _session_factory is not None and await _durable_round_schema_present():
+            # Only a RUNNING run may resume; a CANCELLED/COMPLETED/FAILED
+            # run must never continue executing rounds.
+            if await _load_run_status(input.attack_run_id) == AttackStatus.RUNNING:
+                resume_rounds = await _load_durable_rounds(input.attack_run_id)
+                if resume_rounds:
+                    activity.logger.info(
+                        "Resuming red team campaign attack_run_id=%s from %d durable round(s)",
+                        input.attack_run_id,
+                        len(resume_rounds),
+                    )
+            checkpoint_round = _make_round_checkpoint(input.attack_run_id)
 
         categories: tuple[AttackCategory, ...] = ()
         if input.attack_categories:
@@ -439,6 +758,8 @@ async def red_team_campaign_activity(
             mutation_model=input.mutation_model,
             mutation_strategy=_parse_mutation_strategy(input.mutation_strategy),
             cancelled=_activity_cancelled_hook(),
+            resume_rounds=resume_rounds,
+            checkpoint_round=checkpoint_round,
         )
 
         if activity.in_activity():
@@ -460,6 +781,11 @@ async def red_team_campaign_activity(
 
         return _build_result(input.attack_run_id, result)
 
+    except _RoundPersistenceError:
+        # Durable checkpoint/load failure: re-raise so Temporal retries
+        # the whole attempt; the retry resumes from the first incomplete
+        # round instead of failing the run.
+        raise
     except Exception as exc:
         activity.logger.error(
             "Red team campaign failed attack_run_id=%s error=%s",
@@ -564,7 +890,6 @@ async def _persist_metric_results(
     """
     from sqlalchemy import delete
 
-    from app.evaluation.metrics.domain import MetricResult
     from app.infrastructure.database.models.metric_result import MetricResultModel
     from app.infrastructure.database.repositories.metric_result_repository import (
         SqlAlchemyMetricResultRepository,

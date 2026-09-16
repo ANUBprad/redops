@@ -6,7 +6,7 @@ Effectiveness Evaluation → Mutation/Strategy Selection → Next Attack.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
@@ -35,6 +35,16 @@ class _CampaignCancelled(Exception):
     """Raised internally to break the campaign loop on cooperative cancellation."""
 
 
+class _RoundPersistenceError(Exception):
+    """Raised when a durable round checkpoint fails and the attempt must retry.
+
+    Propagates through the campaign engine and the Temporal activity (both
+    re-raise it unhandled) so Temporal retries the whole attempt instead of
+    the run being marked failed. Completed rounds that were already
+    checkpointed are reused on the retry; the in-flight round is re-run.
+    """
+
+
 class AdaptiveCampaignEngine:
     """Orchestrates the complete adaptive red team campaign loop.
 
@@ -61,6 +71,8 @@ class AdaptiveCampaignEngine:
         mutation_model: str = "",
         mutation_strategy: MutationStrategy | None = None,
         cancelled: Callable[[], bool] | None = None,
+        resume_rounds: tuple[CampaignRound, ...] = (),
+        checkpoint_round: Callable[[CampaignRound], Awaitable[None]] | None = None,
     ) -> None:
         self._registry = registry
         self._orchestrator = AttackOrchestrator()
@@ -79,6 +91,8 @@ class AdaptiveCampaignEngine:
         )
         self._mutation_strategy = mutation_strategy
         self._cancelled = cancelled
+        self._resume_rounds = resume_rounds
+        self._checkpoint_round = checkpoint_round
         if mutation_strategy == MutationStrategy.PROMPT_VARIATION and (
             mutation_provider is None or not mutation_model
         ):
@@ -123,6 +137,22 @@ class AdaptiveCampaignEngine:
         campaign.start()
 
         try:
+            # Replay rounds durably completed by a previous attempt (the
+            # Temporal retry path). Pure in-memory state restoration: no
+            # provider is called, budget/effectiveness totals are
+            # recomputed, and the loop resumes at the first incomplete
+            # round.
+            for resumed_round in self._resume_rounds:
+                campaign.record_round(resumed_round)
+                if self._should_stop_early(campaign, resumed_round):
+                    break
+                phase_recommendation = self._selector.recommend_phase_transition(
+                    list(campaign.rounds),
+                    campaign.mutation_phase,
+                )
+                if phase_recommendation is not None:
+                    campaign.set_mutation_phase(phase_recommendation)
+
             while campaign.can_continue():
                 try:
                     campaign_round = await self._execute_round(campaign)
@@ -150,6 +180,8 @@ class AdaptiveCampaignEngine:
                 else:
                     campaign.complete()
 
+        except _RoundPersistenceError:
+            raise
         except Exception as exc:
             if campaign.state.is_active:
                 campaign.fail(str(exc))
@@ -221,7 +253,7 @@ class AdaptiveCampaignEngine:
 
         duration_ms = execution.latency_ms
 
-        return CampaignRound(
+        campaign_round = CampaignRound(
             round_number=campaign.current_round_number + 1,
             attack_category=category,
             mutation_strategy=strategy.value,
@@ -234,6 +266,20 @@ class AdaptiveCampaignEngine:
             cost_usd=execution.cost_usd,
             duration_ms=duration_ms,
         )
+
+        # Durable checkpoint: persist the completed round AFTER every
+        # provider (target/mutation/judge) and metric computation has
+        # produced it, so a retry resumes from the first incomplete
+        # round. Rounds whose target execution failed are NOT
+        # checkpointed — they stay re-executable on retry.
+        if (
+            self._checkpoint_round is not None
+            and campaign_round.execution is not None
+            and campaign_round.execution.error is None
+        ):
+            await self._checkpoint_round(campaign_round)
+
+        return campaign_round
 
     async def _generate_scenario(
         self,

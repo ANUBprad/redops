@@ -9,6 +9,7 @@ from app.infrastructure.database.models.item_execution import ItemExecutionModel
 from app.infrastructure.database.models.metric_definition import MetricDefinitionModel
 from app.infrastructure.database.models.metric_result import MetricResultModel
 from app.infrastructure.database.models.project import ProjectModel
+from app.infrastructure.database.models.red_team_round import RedTeamRoundModel
 from app.infrastructure.database.models.run_event import RunEventModel
 from app.infrastructure.database.models.run_log import RunLogModel
 
@@ -22,6 +23,7 @@ __all__ = [
     "MetricDefinitionModel",
     "MetricResultModel",
     "ProjectModel",
+    "RedTeamRoundModel",
     "RunEventModel",
     "RunLogModel",
 ]
