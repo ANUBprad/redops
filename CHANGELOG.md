@@ -1,3 +1,10 @@
+## [0.13.12](https://github.com/ANUBprad/redops/compare/v0.13.11...v0.13.12) (2026-09-16)
+
+
+### Bug Fixes
+
+* **redteam:** make metric-result persistence failures retryable ([88fdd7b](https://github.com/ANUBprad/redops/commit/88fdd7bd066fe207c53c123792e6b4932d5fe78e))
+
 ## [0.13.11](https://github.com/ANUBprad/redops/compare/v0.13.10...v0.13.11) (2026-09-16)
 
 
