@@ -1,3 +1,10 @@
+## [0.13.11](https://github.com/ANUBprad/redops/compare/v0.13.10...v0.13.11) (2026-09-16)
+
+
+### Bug Fixes
+
+* **redteam:** make campaign retries idempotent ([0ff90e0](https://github.com/ANUBprad/redops/commit/0ff90e03641ed720c694229d0e6d3b17c605c057))
+
 ## [0.13.10](https://github.com/ANUBprad/redops/compare/v0.13.9...v0.13.10) (2026-09-16)
 
 
