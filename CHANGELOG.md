@@ -1,3 +1,10 @@
+## [0.13.10](https://github.com/ANUBprad/redops/compare/v0.13.9...v0.13.10) (2026-09-16)
+
+
+### Bug Fixes
+
+* **evaluation:** make item execution retry-idempotent ([1c7488e](https://github.com/ANUBprad/redops/commit/1c7488e5005add92374c7ada5e23256eed6986af))
+
 ## [0.13.9](https://github.com/ANUBprad/redops/compare/v0.13.8...v0.13.9) (2026-09-15)
 
 
