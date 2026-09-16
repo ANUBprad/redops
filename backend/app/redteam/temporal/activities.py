@@ -28,7 +28,7 @@ from app.redteam.domain.campaign import (
     CampaignRound,
     TargetExecution,
 )
-from app.redteam.domain.campaign_enums import MutationPhase
+from app.redteam.domain.campaign_enums import CampaignState, MutationPhase
 from app.redteam.domain.enums import (
     AttackCategory,
     AttackSeverity,
@@ -694,18 +694,41 @@ async def red_team_campaign_activity(
         # unchanged.
         resume_rounds: tuple[CampaignRound, ...] = ()
         checkpoint_round: Callable[[CampaignRound], Awaitable[None]] | None = None
+        run_status: AttackStatus | None = None
         if _session_factory is not None and await _durable_round_schema_present():
-            # Only a RUNNING run may resume; a CANCELLED/COMPLETED/FAILED
-            # run must never continue executing rounds.
-            if await _load_run_status(input.attack_run_id) == AttackStatus.RUNNING:
-                resume_rounds = await _load_durable_rounds(input.attack_run_id)
-                if resume_rounds:
+            # Durable retry-idempotency boundary (P6-C3): durable rounds
+            # are loaded regardless of run status. A RUNNING run resumes
+            # from the first incomplete round without re-calling the
+            # providers for completed rounds. A redelivered run that
+            # already reached a terminal state (e.g. COMPLETED committed
+            # by a crashed-finalize attempt before the activity ack)
+            # reconstructs its result from the durable rounds WITHOUT
+            # re-executing any provider (P6-C6 boundary-G fix).
+            run_status = await _load_run_status(input.attack_run_id)
+            resume_rounds = await _load_durable_rounds(input.attack_run_id)
+            if resume_rounds:
+                if run_status == AttackStatus.RUNNING:
                     activity.logger.info(
                         "Resuming red team campaign attack_run_id=%s from %d durable round(s)",
                         input.attack_run_id,
                         len(resume_rounds),
                     )
+                elif run_status is not None and run_status.is_terminal:
+                    activity.logger.info(
+                        "Reconstructing terminal red team campaign attack_run_id=%s "
+                        "from %d durable round(s)",
+                        input.attack_run_id,
+                        len(resume_rounds),
+                    )
             checkpoint_round = _make_round_checkpoint(input.attack_run_id)
+
+        terminal_state: CampaignState | None = None
+        if run_status == AttackStatus.COMPLETED:
+            terminal_state = CampaignState.COMPLETED
+        elif run_status == AttackStatus.CANCELLED:
+            terminal_state = CampaignState.CANCELLED
+        elif run_status == AttackStatus.FAILED:
+            terminal_state = CampaignState.FAILED
 
         categories: tuple[AttackCategory, ...] = ()
         if input.attack_categories:
@@ -766,7 +789,30 @@ async def red_team_campaign_activity(
         if activity.in_activity():
             activity.heartbeat("running campaign loop")
 
-        result = await engine.run_campaign(campaign)
+        if (
+            terminal_state is not None
+            and run_status is not None
+            and not resume_rounds
+        ):
+            # Terminal run with no replayable durable rounds (e.g. cancelled
+            # before the first checkpoint committed): never re-execute
+            # providers and never fabricate a result from thin air.
+            activity.logger.warning(
+                "Refusing to re-execute red team campaign attack_run_id=%s in "
+                "terminal state %s with no durable rounds",
+                input.attack_run_id,
+                run_status.value,
+            )
+            return RedTeamWorkflowResult(
+                attack_run_id=input.attack_run_id,
+                status=run_status.value,
+                error=(
+                    "Run is already terminal with no replayable durable rounds; "
+                    "refusing to re-execute provider calls."
+                ),
+            )
+
+        result = await engine.run_campaign(campaign, terminal_state=terminal_state)
         cancelled_flag = activity.in_activity() and activity.is_cancelled()
 
         activity.logger.info(

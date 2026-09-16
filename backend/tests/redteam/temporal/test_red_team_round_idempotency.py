@@ -24,6 +24,11 @@ Scenarios:
   E. Campaign results of completed rounds are preserved across the retry.
   F. Distinct attack runs never reuse each other's durable rounds.
   G. Metric persistence is keyed by the stable durable round ids.
+  H. Redelivery AFTER the run committed COMPLETED reconstructs the result
+     from durable rounds without re-calling target/mutation/judge providers
+     (P6-C6 boundary-G, fails pre-fix).
+  I. A terminal run with no durable rounds refuses to re-execute providers
+     and fabricates nothing (P6-C6).
   Legacy. Without the red_team_rounds table the activity behaves as before.
   E2E. Full workflow through a real time-skipping Temporal environment.
 """
@@ -608,3 +613,140 @@ async def test_workflow_checkpoints_rounds_with_durable_schema(time_skipping_env
     rows = await _durable_rounds(factory, str(run.id))
     assert [r.round_number for r in rows] == [1, 2]
     assert len(await _metric_rows(factory, str(run.id))) == 2
+
+
+# ---------------------------------------------------------------------------
+# Scenario H — P6-C6 boundary-G: redelivery AFTER finalize committed
+# COMPLETED reconstructs the result from durable rounds without re-calling
+# the target/mutation/judge providers. Fails pre-fix.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_completed_redelivery_does_not_recall_providers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory = await _make_database(
+        AttackRunModel.__table__,
+        MetricResultModel.__table__,
+        RedTeamRoundModel.__table__,
+    )
+    run = await _create_running_run(factory)
+    provider = RecordingProvider()
+    mutation_provider = RecordingProvider(provider_name="mutation-llm")
+
+    registry = ProviderRegistry()
+    registry.register(provider)
+    registry.register(mutation_provider)
+    configure_redteam_provider_registry(registry)
+    configure_redteam_metric_engine(_EmptyMetricEngine())
+    configure_redteam_session_factory(factory)
+
+    def _input_with_mutation() -> RedTeamWorkflowInput:
+        return RedTeamWorkflowInput(
+            attack_run_id=str(run.id),
+            target_provider="recording",
+            target_model="m",
+            mutation_provider="mutation-llm",
+            mutation_model="m",
+            mutation_strategy="prompt_variation",
+            max_rounds=2,
+            max_attacks=2,
+            effectiveness_threshold=0.8,
+        )
+
+    real_finalize = mod._finalize_run
+
+    async def _crash_after_finalize(attack_run_id: str, result: Any, cancelled: bool) -> None:
+        await real_finalize(attack_run_id, result, cancelled)
+        raise RuntimeError("simulated crash after COMPLETED run committed, before activity ack")
+
+    async def _noop_fail_run(attack_run_id: str, error_message: str) -> None:
+        return None
+
+    monkeypatch.setattr(mod, "_finalize_run", _crash_after_finalize)
+    monkeypatch.setattr(mod, "_fail_run", _noop_fail_run)
+
+    first = await red_team_campaign_activity(_input_with_mutation())
+
+    assert first.status == "failed"
+    assert "simulated crash after COMPLETED" in first.error
+    # Every provider call happened exactly once BEFORE the crash: 2 target +
+    # 2 judge calls on the target provider, 1 mutation call on round-2.
+    assert provider.chat_calls == 4
+    assert mutation_provider.chat_calls == 1
+
+    run_after_first = await _load_run(factory, run.id)
+    assert run_after_first is not None
+    # The crash happened AFTER finalize committed, so the durable run is
+    # COMPLETED: the redelivery must NOT re-execute the campaign.
+    assert run_after_first.status == AttackStatus.COMPLETED
+    rows_after_first = await _durable_rounds(factory, str(run.id))
+    assert [r.round_number for r in rows_after_first] == [1, 2]
+    assert len(await _metric_rows(factory, str(run.id))) == 2
+
+    monkeypatch.setattr(mod, "_finalize_run", real_finalize)
+    monkeypatch.setattr(mod, "_fail_run", mod._fail_run)
+
+    second = await red_team_campaign_activity(_input_with_mutation())
+
+    # Boundary-G closed: the redelivery reconstructed the result from the
+    # durable rounds. Target, judge AND mutation providers were not re-called.
+    assert provider.chat_calls == 4
+    assert mutation_provider.chat_calls == 1
+    assert second.status == "completed"
+    assert second.total_rounds == 2
+
+    done = await _load_run(factory, run.id)
+    assert done is not None
+    assert done.status == AttackStatus.COMPLETED
+    assert len(done.campaign_results["rounds"]) == 2
+    assert [r["round_number"] for r in done.campaign_results["rounds"]] == [1, 2]
+    final_rows = await _durable_rounds(factory, str(run.id))
+    assert [r.round_number for r in final_rows] == [1, 2]
+    assert len(await _metric_rows(factory, str(run.id))) == 2
+
+
+# ---------------------------------------------------------------------------
+# Scenario I — P6-C6: a terminal run with NO durable rounds refuses to
+# re-execute providers and fabricates no result. Fails pre-fix.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_terminal_run_without_durable_rounds_does_not_fabricate_execution() -> None:
+    factory = await _make_database(
+        AttackRunModel.__table__,
+        MetricResultModel.__table__,
+        RedTeamRoundModel.__table__,
+    )
+    async with factory() as session:
+        repo = SqlAlchemyAttackRunRepository(session)
+        config = AttackConfiguration(
+            target_provider="recording",
+            target_model="m",
+        )
+        run = AttackRun.create(configuration=config)
+        run.queue()
+        run.start(total_items=2)
+        run.cancel()
+        await repo.save(run)
+        await session.commit()
+
+    provider = RecordingProvider()
+    _configure(factory, provider)
+
+    result = await red_team_campaign_activity(_input(str(run.id)))
+
+    # The truthful terminal outcome is reported; no provider call is made
+    # and no round/cost data is invented.
+    assert result.status == "cancelled"
+    assert result.total_rounds == 0
+    assert "refusing to re-execute provider calls" in result.error
+    assert provider.chat_calls == 0
+
+    loaded = await _load_run(factory, run.id)
+    assert loaded is not None
+    assert loaded.status == AttackStatus.CANCELLED
+    assert await _durable_rounds(factory, str(run.id)) == []
+    assert await _metric_rows(factory, str(run.id)) == []

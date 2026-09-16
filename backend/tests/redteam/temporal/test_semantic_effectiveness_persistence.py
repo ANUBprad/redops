@@ -464,7 +464,12 @@ class TestMultiRoundPersistenceAndIdempotency:
         campaign = _two_round_campaign()
         expected_round_ids = {str(r.round_id) for r in campaign.rounds}
 
-        async def _stub_run_campaign(_self: Any, _campaign: Any) -> CampaignResult:
+        async def _stub_run_campaign(
+            _self: Any,
+            _campaign: Any,
+            *,
+            terminal_state: Any = None,
+        ) -> CampaignResult:
             return campaign
 
         snapshot = [getattr(redteam_activities, n) for n in _REDTEAM_ACTIVITY_GLOBALS]

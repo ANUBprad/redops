@@ -139,11 +139,22 @@ class AdaptiveCampaignEngine:
         if self._is_cancelled():
             raise _CampaignCancelled()
 
-    async def run_campaign(self, campaign: AdaptiveCampaign) -> CampaignResult:
+    async def run_campaign(
+        self,
+        campaign: AdaptiveCampaign,
+        *,
+        terminal_state: CampaignState | None = None,
+    ) -> CampaignResult:
         """Execute the full adaptive campaign loop.
 
         This is the primary entry point. Runs the campaign from
         CREATED through to a terminal state.
+
+        When ``terminal_state`` is provided the round-execution loop is
+        skipped entirely: rounds durably completed by a previous attempt
+        are replayed into the campaign and the given terminal state is
+        applied directly. This is the post-terminal redelivery
+        reconstruction path (P6-C6): no provider is invoked.
         """
         campaign.start()
 
@@ -164,24 +175,27 @@ class AdaptiveCampaignEngine:
                 if phase_recommendation is not None:
                     campaign.set_mutation_phase(phase_recommendation)
 
-            while campaign.can_continue():
-                try:
-                    campaign_round = await self._execute_round(campaign)
-                except _CampaignCancelled:
-                    break
-                campaign.record_round(campaign_round)
+            if terminal_state is None:
+                while campaign.can_continue():
+                    try:
+                        campaign_round = await self._execute_round(campaign)
+                    except _CampaignCancelled:
+                        break
+                    campaign.record_round(campaign_round)
 
-                if self._should_stop_early(campaign, campaign_round):
-                    break
+                    if self._should_stop_early(campaign, campaign_round):
+                        break
 
-                phase_recommendation = self._selector.recommend_phase_transition(
-                    list(campaign.rounds),
-                    campaign.mutation_phase,
-                )
-                if phase_recommendation is not None:
-                    campaign.set_mutation_phase(phase_recommendation)
+                    phase_recommendation = self._selector.recommend_phase_transition(
+                        list(campaign.rounds),
+                        campaign.mutation_phase,
+                    )
+                    if phase_recommendation is not None:
+                        campaign.set_mutation_phase(phase_recommendation)
 
-            if self._is_cancelled():
+            if terminal_state is not None:
+                self._apply_terminal_state(campaign, terminal_state)
+            elif self._is_cancelled():
                 if campaign.state.is_active:
                     campaign.cancel("cancelled")
             elif campaign.state == CampaignState.RUNNING:
@@ -198,6 +212,26 @@ class AdaptiveCampaignEngine:
                 campaign.fail(str(exc))
 
         return campaign.build_result()
+
+    def _apply_terminal_state(
+        self,
+        campaign: AdaptiveCampaign,
+        state: CampaignState,
+    ) -> None:
+        """Apply a terminal campaign state after replaying durable rounds.
+
+        Terminates the in-memory campaign without calling the round loop,
+        so the reconstructed ``CampaignResult`` truthfully reports the
+        same state the durable run already reached.
+        """
+        if state == CampaignState.COMPLETED:
+            campaign.complete()
+        elif state == CampaignState.CANCELLED:
+            campaign.cancel("redelivery of cancelled run")
+        elif state == CampaignState.FAILED:
+            campaign.fail("redelivery of failed run")
+        else:
+            campaign.fail(f"terminal replay with unexpected state {state.value}")
 
     async def _execute_round(self, campaign: AdaptiveCampaign) -> CampaignRound:
         """Execute a single round of the campaign loop."""

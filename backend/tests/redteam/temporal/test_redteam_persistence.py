@@ -91,7 +91,12 @@ def _campaign_result() -> CampaignResult:
     )
 
 
-async def _fake_run_campaign(self, campaign: Any) -> CampaignResult:
+async def _fake_run_campaign(
+    self,
+    campaign: Any,
+    *,
+    terminal_state: Any = None,
+) -> CampaignResult:
     return _campaign_result()
 
 
