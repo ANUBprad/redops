@@ -1,3 +1,10 @@
+## [0.13.13](https://github.com/ANUBprad/redops/compare/v0.13.12...v0.13.13) (2026-09-16)
+
+
+### Bug Fixes
+
+* **redteam:** make post-COMPLETED redelivery idempotent ([fc54a79](https://github.com/ANUBprad/redops/commit/fc54a79bc36e92b351e3ca8b994ff34e3721b34f))
+
 ## [0.13.12](https://github.com/ANUBprad/redops/compare/v0.13.11...v0.13.12) (2026-09-16)
 
 
