@@ -384,19 +384,8 @@ class EvaluationRunWorkflow:
         }
 
         if items_failed == input.total_items:
-            await workflow.execute_activity(
-                fail_run_activity,
-                FailRunInput(
-                    run_id=input.run_id,
-                    error_code="ALL_ITEMS_FAILED",
-                    error_message="All items failed during execution",
-                ),
-                start_to_close_timeout=activity_start_to_close,
-                schedule_to_close_timeout=activity_schedule_to_close,
-                retry_policy=lifecycle_retry,
-            )
-
-            # Finalize integrity with error verdict
+            # Finalize integrity before the terminal transition: the run must
+            # never be durably FAILED while integrity records are missing.
             await workflow.execute_activity(
                 finalize_run_integrity_activity,
                 FinalizeRunIntegrityInput(
@@ -410,6 +399,18 @@ class EvaluationRunWorkflow:
                 retry_policy=persist_retry,
             )
 
+            await workflow.execute_activity(
+                fail_run_activity,
+                FailRunInput(
+                    run_id=input.run_id,
+                    error_code="ALL_ITEMS_FAILED",
+                    error_message="All items failed during execution",
+                ),
+                start_to_close_timeout=activity_start_to_close,
+                schedule_to_close_timeout=activity_schedule_to_close,
+                retry_policy=lifecycle_retry,
+            )
+
             return EvaluationRunWorkflowResult(
                 run_id=input.run_id,
                 status="failed",
@@ -421,15 +422,10 @@ class EvaluationRunWorkflow:
                 total_tokens_output=total_tokens_output,
             )
 
-        await workflow.execute_activity(
-            complete_run_activity,
-            RunIdInput(run_id=input.run_id),
-            start_to_close_timeout=activity_start_to_close,
-            schedule_to_close_timeout=activity_schedule_to_close,
-            retry_policy=lifecycle_retry,
-        )
-
-        # Finalize integrity: evaluate thresholds, capture provenance, persist
+        # Finalize integrity before the terminal transition: the run must
+        # never be durably COMPLETED while verdict/trace/provenance/fingerprint
+        # are still missing — if finalization exhausts its retries the run
+        # stays truthfully RUNNING instead of falsely COMPLETED.
         await workflow.execute_activity(
             finalize_run_integrity_activity,
             FinalizeRunIntegrityInput(
@@ -441,6 +437,14 @@ class EvaluationRunWorkflow:
             start_to_close_timeout=activity_start_to_close,
             schedule_to_close_timeout=activity_schedule_to_close,
             retry_policy=persist_retry,
+        )
+
+        await workflow.execute_activity(
+            complete_run_activity,
+            RunIdInput(run_id=input.run_id),
+            start_to_close_timeout=activity_start_to_close,
+            schedule_to_close_timeout=activity_schedule_to_close,
+            retry_policy=lifecycle_retry,
         )
 
         return EvaluationRunWorkflowResult(
