@@ -1,3 +1,10 @@
+## [0.13.14](https://github.com/ANUBprad/redops/compare/v0.13.13...v0.13.14) (2026-09-17)
+
+
+### Bug Fixes
+
+* **evaluation:** make finalization terminal-state integrity retry-safe ([3205f08](https://github.com/ANUBprad/redops/commit/3205f087c697fb919de444cd6a05a67c9d69a786))
+
 ## [0.13.13](https://github.com/ANUBprad/redops/compare/v0.13.12...v0.13.13) (2026-09-16)
 
 
