@@ -1,3 +1,10 @@
+## [0.13.19](https://github.com/ANUBprad/redops/compare/v0.13.18...v0.13.19) (2026-09-18)
+
+
+### Bug Fixes
+
+* **tenant:** enforce role choke point and last-owner safeguard on member mutations ([ca98730](https://github.com/ANUBprad/redops/commit/ca987306ca00a6d50467bbc3020313bdd6e1b9bc))
+
 ## [0.13.18](https://github.com/ANUBprad/redops/compare/v0.13.17...v0.13.18) (2026-09-18)
 
 
