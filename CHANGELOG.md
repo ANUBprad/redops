@@ -1,3 +1,10 @@
+## [0.13.17](https://github.com/ANUBprad/redops/compare/v0.13.16...v0.13.17) (2026-09-18)
+
+
+### Bug Fixes
+
+* **alembic:** repair migration chain into a single linear head ([6ec13ba](https://github.com/ANUBprad/redops/commit/6ec13ba18be897be9a7090350c429b3d481e006e))
+
 ## [0.13.16](https://github.com/ANUBprad/redops/compare/v0.13.15...v0.13.16) (2026-09-18)
 
 
