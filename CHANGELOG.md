@@ -1,3 +1,10 @@
+## [0.13.18](https://github.com/ANUBprad/redops/compare/v0.13.17...v0.13.18) (2026-09-18)
+
+
+### Bug Fixes
+
+* **progress:** apply cumulative progress as deltas to prevent counter inflation ([3d3bd37](https://github.com/ANUBprad/redops/commit/3d3bd37b4099e6dd766e05cfe8bc076e0f42948a))
+
 ## [0.13.17](https://github.com/ANUBprad/redops/compare/v0.13.16...v0.13.17) (2026-09-18)
 
 
