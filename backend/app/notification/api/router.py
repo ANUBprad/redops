@@ -5,7 +5,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session
+from app.core.dependencies import (
+    CurrentUser,
+    get_current_user,
+    get_db_session,
+    require_org_membership,
+)
 from app.infrastructure.database.repositories.notification_repository import (
     SqlAlchemyNotificationRepository,
 )
@@ -72,6 +77,7 @@ async def list_notifications(
     limit: int = Query(default=100, ge=1, le=500),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _: None = Depends(require_org_membership),
 ) -> NotificationListResponse:
     """List notifications for an organization."""
     service = _get_service(session)

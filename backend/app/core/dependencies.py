@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import jwt
-from fastapi import Request
+from fastapi import Depends, Request
 from redis import asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from temporalio.client import Client as TemporalClient
@@ -90,3 +90,34 @@ def get_temporal_client(request: Request) -> TemporalClient:
     """Return the application Temporal client from app state."""
     client: TemporalClient = request.app.state.temporal_client
     return client
+
+
+async def require_org_membership(
+    org_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Require that the current user is an active member of ``org_id``.
+
+    Single shared authorization choke point for org-scoped resource reads
+    (audit logs, notifications, …). Route handlers declare this as a
+    ``Depends`` and FastAPI resolves ``org_id`` from the path automatically,
+    so every org-scoped endpoint funnels through the same membership
+    assertion defined here.
+    """
+    from fastapi import HTTPException
+    from app.infrastructure.database.repositories.tenant_repository import (
+        SqlAlchemyMembershipRepository,
+        SqlAlchemyOrganizationRepository,
+    )
+    from app.kernel.exceptions.errors import UnauthorizedError
+    from app.tenant.services.tenant_service import OrganizationService
+
+    service = OrganizationService(
+        SqlAlchemyOrganizationRepository(session),
+        SqlAlchemyMembershipRepository(session),
+    )
+    try:
+        await service.check_membership(current_user.user_id, org_id)
+    except UnauthorizedError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
