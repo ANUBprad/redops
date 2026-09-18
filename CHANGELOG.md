@@ -1,3 +1,10 @@
+## [0.13.15](https://github.com/ANUBprad/redops/compare/v0.13.14...v0.13.15) (2026-09-18)
+
+
+### Bug Fixes
+
+* **evaluation:** enforce metric result identity and idempotency ([fef591d](https://github.com/ANUBprad/redops/commit/fef591d1badc3881ea6b3e15d45b3ff9ff8bf341))
+
 ## [0.13.14](https://github.com/ANUBprad/redops/compare/v0.13.13...v0.13.14) (2026-09-17)
 
 
