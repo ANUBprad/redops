@@ -108,6 +108,30 @@ class OrganizationService:
             )
         return membership
 
+    async def require_role(
+        self,
+        user_id: str,
+        org_id: str,
+        *roles: OrganizationRole,
+    ) -> Membership:
+        """Return the caller's membership if its role is among the allowed ones.
+
+        Shared authorization choke point for member-management mutations:
+        every mutating tenant endpoint routes its guard here instead of a bare
+        membership existence check.
+        """
+        membership = await self.check_membership(user_id, org_id)
+        if not roles or membership.role not in roles:
+            raise UnauthorizedError(
+                message="Insufficient permissions for this operation",
+                details={
+                    "user_id": user_id,
+                    "organization_id": org_id,
+                    "required_roles": [r.value for r in roles],
+                },
+            )
+        return membership
+
 
 class InvitationService:
     """Service for invitation operations."""
@@ -194,11 +218,40 @@ class InvitationService:
     async def list_members(self, org_id: str) -> list[Membership]:
         return await self._membership_repo.list_by_org(org_id)
 
+    async def _assert_not_last_owner(self, membership: Membership) -> None:
+        """Refuse to demote or remove the last OWNER of an organization.
+
+        Shared choke point guarding the org-lockout invariant: an organization
+        must keep at least one active owner.
+        """
+        if membership.role is not OrganizationRole.OWNER:
+            return
+        members = await self._membership_repo.list_by_org(membership.organization_id)
+        owner_count = sum(
+            1 for m in members if m.role is OrganizationRole.OWNER and m.is_active
+        )
+        if owner_count <= 1:
+            raise ConflictError(
+                message="Cannot demote or remove the last owner",
+                details={
+                    "user_id": membership.user_id,
+                    "organization_id": membership.organization_id,
+                },
+            )
+
     async def remove_member(
         self,
         user_id: str,
         org_id: str,
     ) -> bool:
+        membership = await self._membership_repo.find_by_user_and_org(user_id, org_id)
+        if membership is None:
+            raise NotFoundError(
+                message="Membership not found",
+                resource_type="Membership",
+                resource_id=f"{user_id}:{org_id}",
+            )
+        await self._assert_not_last_owner(membership)
         return await self._membership_repo.delete(user_id, org_id)
 
     async def change_member_role(
@@ -214,6 +267,8 @@ class InvitationService:
                 resource_type="Membership",
                 resource_id=f"{user_id}:{org_id}",
             )
+        if membership.role is OrganizationRole.OWNER and new_role is not OrganizationRole.OWNER:
+            await self._assert_not_last_owner(membership)
         membership.change_role(new_role)
         await self._membership_repo.save(membership)
         return membership
