@@ -1,3 +1,10 @@
+## [0.13.20](https://github.com/ANUBprad/redops/compare/v0.13.19...v0.13.20) (2026-09-18)
+
+
+### Bug Fixes
+
+* **audit,notification:** gate org-scoped read endpoints via shared require_org_membership ([b0bc170](https://github.com/ANUBprad/redops/commit/b0bc1704c23e012b3c30cd609126d9d8d1d488af))
+
 ## [0.13.19](https://github.com/ANUBprad/redops/compare/v0.13.18...v0.13.19) (2026-09-18)
 
 
