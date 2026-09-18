@@ -1,3 +1,10 @@
+## [0.13.16](https://github.com/ANUBprad/redops/compare/v0.13.15...v0.13.16) (2026-09-18)
+
+
+### Bug Fixes
+
+* **evaluation:** enforce item id contract ([df44888](https://github.com/ANUBprad/redops/commit/df448886c76b4d6f4de6be4315b116930149f190))
+
 ## [0.13.15](https://github.com/ANUBprad/redops/compare/v0.13.14...v0.13.15) (2026-09-18)
 
 
