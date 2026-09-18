@@ -319,3 +319,37 @@ class TestUpdateRunProgressHandler:
         assert result.token_output == 50
         assert result.cost == 0.01
         repo.persist_progress.assert_called_once()
+
+    async def test_update_progress_applies_cumulative_deltas(self) -> None:
+        """Repeated cumulative updates must not double-count items or tokens.
+
+        The workflow sends cumulative totals (FIND-01 regression): after three
+        failing items the run must show completed=3, failed=3 and the latest
+        cumulative token/cost totals, not the sums of every update.
+        """
+        run = _make_run(status=RunStatus.RUNNING)
+        repo = _mock_repo(
+            find_by_id=AsyncMock(return_value=run),
+            persist_progress=AsyncMock(),
+        )
+        handler = UpdateRunProgressHandler(repo)
+        update_id = str(run.id)
+        for tokens_in, tokens_out, cost in ((100, 50, 0.01), (200, 80, 0.03), (350, 110, 0.05)):
+            await handler.handle(
+                UpdateRunProgressCommand(
+                    run_id=update_id,
+                    items_completed=3,
+                    items_failed=3,
+                    token_input=tokens_in,
+                    token_output=tokens_out,
+                    cost_usd=cost,
+                )
+            )
+
+        final = run
+
+        assert final.items_completed == 3
+        assert final.items_failed == 3
+        assert final.token_input == 350
+        assert final.token_output == 110
+        assert final.cost == 0.05

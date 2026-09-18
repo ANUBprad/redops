@@ -195,15 +195,24 @@ class UpdateRunProgressHandler:
         """
         run = await self._get_run(command.run_id)
 
-        for _ in range(command.items_completed - (run.items_completed - run.items_failed)):
+        # Workflow sends cumulative totals; apply only the delta vs what is
+        # persisted so repeated updates (and activity retries) do not double-count.
+        processed_delta = max(command.items_completed - run.items_completed, 0)
+        failed_delta = max(command.items_failed - run.items_failed, 0)
+        success_delta = max(processed_delta - failed_delta, 0)
+        for _ in range(success_delta):
             run.record_item_success()
-        for _ in range(command.items_failed):
+        for _ in range(failed_delta):
             run.record_item_failure()
 
-        if command.token_input or command.token_output:
-            run.record_token_usage(command.token_input, command.token_output)
-        if command.cost_usd:
-            run.record_cost(command.cost_usd)
+        token_input_delta = max(command.token_input - run.token_input, 0)
+        token_output_delta = max(command.token_output - run.token_output, 0)
+        if token_input_delta or token_output_delta:
+            run.record_token_usage(token_input_delta, token_output_delta)
+
+        cost_delta = max(command.cost_usd - run.cost, 0.0)
+        if cost_delta:
+            run.record_cost(cost_delta)
         if command.latency_ms:
             run.record_latency(command.latency_ms)
 
