@@ -142,11 +142,17 @@ class MetricEngine:
 
         validation_error = metric.validate_input(input_data)
         if validation_error:
+            metadata: dict[str, Any] = {}
+            for key in ("run_id", "item_id"):
+                value = input_data.metadata.get(key)
+                if value is not None:
+                    metadata[key] = str(value)
             return MetricResult(
                 metric_name=metric_name,
                 score=0.0,
                 normalized_score=0.0,
                 error=validation_error,
+                metadata=metadata,
             )
 
         result = await metric.evaluate(input_data)

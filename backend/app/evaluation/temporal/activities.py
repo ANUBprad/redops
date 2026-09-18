@@ -875,29 +875,6 @@ async def persist_metric_results_activity(input: PersistMetricResultsInput) -> i
 
     async with _get_session() as session:
         repo = SqlAlchemyMetricResultRepository(session)
-
-        # Idempotency: delete any existing results for this (run_id, item_id)
-        # before inserting, so retries do not produce duplicate rows.
-        from app.kernel.entities.base import UUIDv7 as KernelUUIDv7
-
-        try:
-            run_uuid = KernelUUIDv7.from_string(input.run_id)
-            item_uuid = KernelUUIDv7.from_string(input.item_id)
-            existing = await repo.find_by_item_id(run_uuid, item_uuid)
-            if existing:
-                from app.infrastructure.database.models.metric_result import (
-                    MetricResultModel,
-                )
-
-                await session.execute(
-                    sa.delete(MetricResultModel).where(
-                        MetricResultModel.run_id == input.run_id,
-                        MetricResultModel.item_id == input.item_id,
-                    )
-                )
-        except Exception:
-            pass  # If ID parsing fails, proceed with insert (first execution)
-
         await repo.save_many([to_domain(p) for p in input.results])
         await session.commit()
     return len(input.results)

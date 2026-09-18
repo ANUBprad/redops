@@ -8,7 +8,7 @@ configured during worker startup.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -789,11 +789,7 @@ async def red_team_campaign_activity(
         if activity.in_activity():
             activity.heartbeat("running campaign loop")
 
-        if (
-            terminal_state is not None
-            and run_status is not None
-            and not resume_rounds
-        ):
+        if terminal_state is not None and run_status is not None and not resume_rounds:
             # Terminal run with no replayable durable rounds (e.g. cancelled
             # before the first checkpoint committed): never re-execute
             # providers and never fabricate a result from thin air.
@@ -959,19 +955,34 @@ async def _persist_metric_results(
             if r.effectiveness is None:
                 continue
             item_id = str(r.round_id)
+
+            def _stamp(metric: MetricResult, run_id: str, item_id: str) -> MetricResult:
+                # Fresh copy per round: the metric objects below are shared
+                # across rounds, mutating them in place would stamp round 2's
+                # identity onto round 1's rows and collapse identities.
+                return replace(
+                    metric,
+                    metadata={
+                        **metric.metadata,
+                        "run_id": run_id,
+                        "item_id": item_id,
+                    },
+                )
+
             # Persist the canonical semantic_effectiveness MetricResult
             if r.effectiveness.semantic_metric_result is not None:
-                metric = r.effectiveness.semantic_metric_result
-                metric.metadata["run_id"] = attack_run_id
-                metric.metadata["item_id"] = item_id
-                rows.append((metric, attack_run_id, item_id))
+                rows.append(
+                    (
+                        _stamp(r.effectiveness.semantic_metric_result, attack_run_id, item_id),
+                        attack_run_id,
+                        item_id,
+                    )
+                )
             # Persist every individual metric result (safety, prompt_injection,
             # jailbreak, toxicity, bias, etc.) so red-team scores are visible
             # through the canonical /metrics pipeline.
             for metric in r.effectiveness.individual_metric_results:
-                metric.metadata["run_id"] = attack_run_id
-                metric.metadata["item_id"] = item_id
-                rows.append((metric, attack_run_id, item_id))
+                rows.append((_stamp(metric, attack_run_id, item_id), attack_run_id, item_id))
 
         if not rows:
             return 0

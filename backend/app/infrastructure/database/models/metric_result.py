@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import JSON, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.models.base import Base
@@ -58,5 +58,11 @@ class MetricResultModel(Base):
             "ix_metric_results_run_item",
             "run_id",
             "item_id",
+        ),
+        UniqueConstraint(
+            "run_id",
+            "item_id",
+            "metric_name",
+            name="uq_metric_results_run_item_metric",
         ),
     )
