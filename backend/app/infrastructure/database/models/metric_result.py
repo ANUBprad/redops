@@ -22,7 +22,7 @@ class MetricResultModel(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     run_id: Mapped[str] = mapped_column(String(36), index=True)
-    item_id: Mapped[str] = mapped_column(String(36), index=True)
+    item_id: Mapped[str] = mapped_column(String(128), index=True)
     metric_name: Mapped[str] = mapped_column(String(100), index=True)
     metric_definition_id: Mapped[int | None] = mapped_column(
         Integer,
