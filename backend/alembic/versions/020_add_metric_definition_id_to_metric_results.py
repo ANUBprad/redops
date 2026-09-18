@@ -16,15 +16,22 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "metric_results",
-        sa.Column(
-            "metric_definition_id",
-            sa.Integer(),
-            sa.ForeignKey("metric_definitions.id"),
-            nullable=True,
-        ),
-    )
+    bind = op.get_bind()
+    if bind.dialect.name == "sqlite":
+        op.add_column(
+            "metric_results",
+            sa.Column("metric_definition_id", sa.Integer(), nullable=True),
+        )
+    else:
+        op.add_column(
+            "metric_results",
+            sa.Column(
+                "metric_definition_id",
+                sa.Integer(),
+                sa.ForeignKey("metric_definitions.id"),
+                nullable=True,
+            ),
+        )
     op.create_index(
         "ix_metric_results_metric_definition_id",
         "metric_results",

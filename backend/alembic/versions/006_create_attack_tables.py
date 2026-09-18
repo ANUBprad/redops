@@ -63,8 +63,8 @@ def upgrade() -> None:
     op.create_table(
         "attack_runs",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("evaluation_run_id", sa.String(36), nullable=True, index=True),
-        sa.Column("status", sa.String(20), nullable=False, index=True),
+        sa.Column("evaluation_run_id", sa.String(36), nullable=True),
+        sa.Column("status", sa.String(20), nullable=False),
         sa.Column("attack_definition_ids", sa.JSON, nullable=False, server_default="[]"),
         sa.Column("configuration", sa.JSON, nullable=False, server_default="{}"),
         sa.Column("items_total", sa.Integer, nullable=False, server_default="0"),

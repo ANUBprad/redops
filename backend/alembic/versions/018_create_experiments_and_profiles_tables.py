@@ -120,15 +120,22 @@ def upgrade() -> None:
     )
 
     # Add experiment_id nullable FK to evaluation_runs
-    op.add_column(
-        "evaluation_runs",
-        sa.Column(
-            "experiment_id",
-            sa.String(36),
-            sa.ForeignKey("experiments.id"),
-            nullable=True,
-        ),
-    )
+    bind = op.get_bind()
+    if bind.dialect.name == "sqlite":
+        op.add_column(
+            "evaluation_runs",
+            sa.Column("experiment_id", sa.String(36), nullable=True),
+        )
+    else:
+        op.add_column(
+            "evaluation_runs",
+            sa.Column(
+                "experiment_id",
+                sa.String(36),
+                sa.ForeignKey("experiments.id"),
+                nullable=True,
+            ),
+        )
     op.create_index(
         "ix_evaluation_runs_experiment_id",
         "evaluation_runs",
