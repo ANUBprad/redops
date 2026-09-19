@@ -5,7 +5,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session
+from app.core.dependencies import (
+    CurrentUser,
+    get_current_user,
+    get_db_session,
+    require_owned_evaluation,
+)
 from app.evaluation.application.commands import UpdateEvaluationCommand
 from app.evaluation.application.handlers import UpdateEvaluationHandler
 from app.evaluation.metrics.commands import (
@@ -320,6 +325,7 @@ async def configure_evaluation_metrics(
     body: ConfigureEvaluationMetricsRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_evaluation),
 ) -> EvaluationResponse:
     """Enable or disable metrics for an evaluation."""
     eval_repo = SqlAlchemyEvaluationRepository(session)

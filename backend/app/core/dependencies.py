@@ -92,6 +92,32 @@ def get_temporal_client(request: Request) -> TemporalClient:
     return client
 
 
+async def _assert_membership(
+    *,
+    user_id: str,
+    org_id: str,
+    session: AsyncSession,
+) -> None:
+    """Raise 403 unless ``user_id`` is an active member of ``org_id``."""
+    from fastapi import HTTPException
+
+    from app.infrastructure.database.repositories.tenant_repository import (
+        SqlAlchemyMembershipRepository,
+        SqlAlchemyOrganizationRepository,
+    )
+    from app.kernel.exceptions.errors import UnauthorizedError
+    from app.tenant.services.tenant_service import OrganizationService
+
+    service = OrganizationService(
+        SqlAlchemyOrganizationRepository(session),
+        SqlAlchemyMembershipRepository(session),
+    )
+    try:
+        await service.check_membership(user_id, org_id)
+    except UnauthorizedError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+
 async def require_org_membership(
     org_id: str,
     current_user: CurrentUser = Depends(get_current_user),
@@ -105,19 +131,65 @@ async def require_org_membership(
     so every org-scoped endpoint funnels through the same membership
     assertion defined here.
     """
-    from fastapi import HTTPException
-    from app.infrastructure.database.repositories.tenant_repository import (
-        SqlAlchemyMembershipRepository,
-        SqlAlchemyOrganizationRepository,
+    await _assert_membership(
+        user_id=current_user.user_id,
+        org_id=org_id,
+        session=session,
     )
-    from app.kernel.exceptions.errors import UnauthorizedError
-    from app.tenant.services.tenant_service import OrganizationService
 
-    service = OrganizationService(
-        SqlAlchemyOrganizationRepository(session),
-        SqlAlchemyMembershipRepository(session),
+
+async def require_current_org_membership(
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> str:
+    """Require the current user to be an active member of their JWT org.
+
+    Returns the caller's org id for resources without an ``{org_id}`` path
+    segment. Used to tenant-scope create/list/by-id operations on resources
+    that carry their tenant as ``project_id``/``organization_id``.
+    """
+    from fastapi import HTTPException
+
+    if not current_user.org_id:
+        raise HTTPException(status_code=403, detail="No organization context")
+    await _assert_membership(
+        user_id=current_user.user_id,
+        org_id=current_user.org_id,
+        session=session,
     )
-    try:
-        await service.check_membership(current_user.user_id, org_id)
-    except UnauthorizedError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    return current_user.org_id
+
+
+async def require_owned_evaluation(
+    evaluation_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Require the evaluation to belong to the caller's organization.
+
+    Loads the evaluation and asserts its ``project_id`` equals the caller's
+    JWT org, after revalidating membership. Denies cross-tenant access by
+    brute-forcing object ids.
+    """
+    from fastapi import HTTPException
+
+    from app.infrastructure.database.repositories.evaluation_repository import (
+        SqlAlchemyEvaluationRepository,
+    )
+    from app.kernel.entities.base import UUIDv7
+
+    if not current_user.org_id:
+        raise HTTPException(status_code=403, detail="No organization context")
+    await _assert_membership(
+        user_id=current_user.user_id,
+        org_id=current_user.org_id,
+        session=session,
+    )
+
+    evaluation = await SqlAlchemyEvaluationRepository(session).get_by_id(
+        UUIDv7.from_string(evaluation_id),
+    )
+    if evaluation is None:
+        raise HTTPException(status_code=404, detail=f"Evaluation not found: {evaluation_id}")
+    if evaluation.project_id != current_user.org_id:
+        raise HTTPException(status_code=403, detail="Access denied")
