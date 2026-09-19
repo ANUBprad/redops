@@ -7,7 +7,12 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session
+from app.core.dependencies import (
+    CurrentUser,
+    get_current_user,
+    get_db_session,
+    require_org_membership,
+)
 from app.infrastructure.database.repositories.project_repository import (
     SqlAlchemyProjectRepository,
 )
@@ -52,6 +57,7 @@ async def create_project(
     body: CreateProjectRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _org_member: None = Depends(require_org_membership),
 ) -> ProjectResponse:
     """Create a new project within an organization."""
     service = _get_service(session)
@@ -72,6 +78,7 @@ async def list_projects(
     org_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _org_member: None = Depends(require_org_membership),
 ) -> list[ProjectResponse]:
     """List projects in an organization."""
     service = _get_service(session)
@@ -85,6 +92,7 @@ async def get_project(
     project_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _org_member: None = Depends(require_org_membership),
 ) -> ProjectResponse:
     """Get a project by ID."""
     service = _get_service(session)
@@ -102,6 +110,7 @@ async def update_project(
     body: UpdateProjectRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _org_member: None = Depends(require_org_membership),
 ) -> ProjectResponse:
     """Update a project."""
     service = _get_service(session)
@@ -123,6 +132,7 @@ async def delete_project(
     project_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _org_member: None = Depends(require_org_membership),
 ) -> None:
     """Delete a project (soft delete)."""
     service = _get_service(session)
