@@ -1,3 +1,10 @@
+## [0.13.22](https://github.com/ANUBprad/redops/compare/v0.13.21...v0.13.22) (2026-09-19)
+
+
+### Bug Fixes
+
+* **evaluation:** enforce tenant isolation on evaluation routes ([b778593](https://github.com/ANUBprad/redops/commit/b778593595bcf92889cdf9220e95630843681af3))
+
 ## [0.13.21](https://github.com/ANUBprad/redops/compare/v0.13.20...v0.13.21) (2026-09-19)
 
 
