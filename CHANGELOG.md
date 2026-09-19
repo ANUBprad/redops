@@ -1,3 +1,10 @@
+## [0.13.21](https://github.com/ANUBprad/redops/compare/v0.13.20...v0.13.21) (2026-09-19)
+
+
+### Bug Fixes
+
+* **project:** gate org-scoped project endpoints via require_org_membership ([92ebdd1](https://github.com/ANUBprad/redops/commit/92ebdd14c1e12521eca456512b93f53dcb0f7afe))
+
 ## [0.13.20](https://github.com/ANUBprad/redops/compare/v0.13.19...v0.13.20) (2026-09-18)
 
 
