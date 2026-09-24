@@ -1,3 +1,10 @@
+## [0.13.23](https://github.com/ANUBprad/redops/compare/v0.13.22...v0.13.23) (2026-09-24)
+
+
+### Bug Fixes
+
+* **auth:** enforce tenant isolation on run-keyed raw LLM-I/O routes ([e1c363b](https://github.com/ANUBprad/redops/commit/e1c363bd8b9c2e11c9fb84a03d9249ed64bb9235))
+
 ## [0.13.22](https://github.com/ANUBprad/redops/compare/v0.13.21...v0.13.22) (2026-09-19)
 
 
