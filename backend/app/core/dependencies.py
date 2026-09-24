@@ -193,3 +193,48 @@ async def require_owned_evaluation(
         raise HTTPException(status_code=404, detail=f"Evaluation not found: {evaluation_id}")
     if evaluation.project_id != current_user.org_id:
         raise HTTPException(status_code=403, detail="Access denied")
+
+
+async def require_owned_run(
+    run_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Require the run to belong to the caller's organization.
+
+    Resolves the run, obtains its parent ``evaluation_id``, and delegates
+    to :func:`require_owned_evaluation` so every run-keyed raw LLM-I/O
+    surface funnels through the single existing tenant/ownership choke
+    point. Runs without a parent evaluation fall back to the run's
+    persisted ``metadata.project_id``. Unknown or malformed ids stay
+    truthful with 404; cross-tenant access gets 403.
+    """
+    from fastapi import HTTPException
+
+    from app.infrastructure.database.repositories.evaluation_run_repository import (
+        SqlAlchemyEvaluationRunRepository,
+    )
+    from app.kernel.entities.base import UUIDv7
+
+    try:
+        r_id = UUIDv7.from_string(run_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail=f"Evaluation run not found: {run_id}") from None
+
+    run = await SqlAlchemyEvaluationRunRepository(session).find_by_id(r_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail=f"Evaluation run not found: {run_id}")
+    if run.evaluation_id:
+        await require_owned_evaluation(run.evaluation_id, current_user, session)
+        return
+
+    if not current_user.org_id:
+        raise HTTPException(status_code=403, detail="No organization context")
+    await _assert_membership(
+        user_id=current_user.user_id,
+        org_id=current_user.org_id,
+        session=session,
+    )
+    project_id = run.metadata.project_id if run.metadata is not None else None
+    if project_id != current_user.org_id:
+        raise HTTPException(status_code=403, detail="Access denied")

@@ -16,7 +16,12 @@ from app.api.schemas.observability import (
     PaginatedTimelineResponse,
     TimelineEventResponse,
 )
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session
+from app.core.dependencies import (
+    CurrentUser,
+    get_current_user,
+    get_db_session,
+    require_owned_run,
+)
 from app.evaluation.observability.broadcaster import get_broadcaster
 from app.evaluation.observability.domain import RunLogEntry
 from app.infrastructure.database.repositories.run_event_repository import (
@@ -63,6 +68,7 @@ async def get_run_timeline(
     offset: int = Query(default=0, ge=0),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
 ) -> PaginatedTimelineResponse:
     r_id = _parse_run_id(run_id)
     repo = _get_timeline_repo(session)
@@ -89,6 +95,8 @@ async def stream_run_events(
     run_id: str,
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
 ) -> StreamingResponse:
     r_id = _parse_run_id(run_id)
     return StreamingResponse(
@@ -107,6 +115,8 @@ async def stream_run_progress(
     run_id: str,
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
 ) -> StreamingResponse:
     r_id = _parse_run_id(run_id)
     return StreamingResponse(
@@ -126,6 +136,7 @@ async def create_run_log(
     body: LogEntryCreateRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
 ) -> LogEntryResponse:
     r_id = _parse_run_id(run_id)
     repo = _get_log_repo(session)
@@ -171,6 +182,7 @@ async def get_run_logs(
     offset: int = Query(default=0, ge=0),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
 ) -> PaginatedLogsResponse:
     r_id = _parse_run_id(run_id)
     repo = _get_log_repo(session)

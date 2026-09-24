@@ -17,6 +17,8 @@ from app.core.dependencies import (
     get_current_user,
     get_db_session,
     get_temporal_client,
+    require_owned_evaluation,
+    require_owned_run,
 )
 from app.evaluation.application.run_commands import (
     CancelEvaluationRunCommand,
@@ -279,6 +281,7 @@ async def get_run(
     run_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
 ) -> RunResponse:
     """Get an evaluation run by ID."""
     repo = _get_repository(session)
@@ -297,6 +300,7 @@ async def cancel_run(
     body: CancelRunRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
     temporal_client: TemporalClient = Depends(get_temporal_client),
 ) -> RunResponse:
     """Cancel an evaluation run."""
@@ -325,6 +329,7 @@ async def retry_run(
     run_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
     temporal_client: TemporalClient = Depends(get_temporal_client),
     config: AppConfig = Depends(get_config_dependency),
 ) -> RunResponse:
@@ -386,6 +391,7 @@ async def list_runs_for_evaluation(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_evaluation),
 ) -> RunListResponse:
     """List all runs for a specific evaluation definition."""
     repo = _get_repository(session)
