@@ -14,6 +14,7 @@ from app.providers.runtime.circuit_breaker.runtime_circuit_breaker import (
 )
 from app.providers.runtime.errors.runtime_errors import (
     CircuitBreakerOpenError,
+    ExecutionTimeoutError,
 )
 from app.providers.runtime.fallback.fallback_chain import FallbackChain, FallbackEntry
 from app.providers.runtime.middleware.middleware_pipeline import MiddlewareContext
@@ -182,7 +183,7 @@ class RuntimeCoordinator:
         for attempt in range(retry_policy.max_attempts + 1):
             attempt_start = datetime.now(UTC)
 
-            timeout_result = timeout_evaluator.check(attempt_start)
+            timeout_result = timeout_evaluator.check(start_time)
             if timeout_result.is_expired:
                 last_error = Exception(
                     f"Timeout exceeded: {timeout_result.elapsed_seconds:.1f}s",
@@ -195,20 +196,33 @@ class RuntimeCoordinator:
                 )
                 break
 
-            try:
+            async def _invoke() -> Any:
                 if self._pipeline is not None:
                     ctx = MiddlewareContext(
                         provider_name=request.provider_name,
                         model_id=request.model_id,
                         request_id=request.request_id,
                     )
-                    response = await self._pipeline.execute(
+                    return await self._pipeline.execute(
                         request,
                         handler,
                         ctx,
                     )
+                return await handler(request)
+
+            try:
+                timeout_seconds = request.timeout_seconds or 0.0
+                if timeout_seconds > 0:
+                    try:
+                        async with asyncio.timeout(timeout_seconds):
+                            response = await _invoke()
+                    except TimeoutError as timeout_exc:
+                        raise ExecutionTimeoutError(
+                            f"Execution timed out after {timeout_seconds}s",
+                            timeout_seconds=timeout_seconds,
+                        ) from timeout_exc
                 else:
-                    response = await handler(request)
+                    response = await _invoke()
 
                 cb.record_success()
 
@@ -238,6 +252,13 @@ class RuntimeCoordinator:
                 cb.record_failure()
                 attempt_latency = (datetime.now(UTC) - attempt_start).total_seconds() * 1000
                 cumulative_latency += attempt_latency
+
+                # Honor the exception taxonomy: explicitly non-retryable
+                # errors (bad credentials, unknown model, over-limit
+                # context) must never be re-POSTed as paid calls.
+                # Unclassified errors keep the legacy retry behavior.
+                if getattr(exc, "retryable", True) is False:
+                    break
 
                 retry_ctx = RetryContext(
                     attempt=attempt,
