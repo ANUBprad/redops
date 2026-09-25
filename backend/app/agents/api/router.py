@@ -33,6 +33,9 @@ from app.core.dependencies import (
     get_current_user,
     get_db_session,
     get_temporal_client,
+    require_current_org_membership,
+    require_owned_agent_definition,
+    require_owned_agent_run,
 )
 from app.infrastructure.database.repositories.agent_run_repository import (
     SqlAlchemyAgentRunRepository,
@@ -121,10 +124,26 @@ async def create_agent_run(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
     temporal_client: TemporalClient = Depends(get_temporal_client),
     config: AppConfig = Depends(get_config_dependency),
 ) -> AgentRunResponse:
-    """Create a new agent run and schedule its execution."""
+    """Create a new agent run and schedule its execution.
+
+    Tenant-scoped: the run is always attributed to the caller's
+    organization, and a supplied parent ``agent_definition_id`` must
+    belong to the caller before anything is persisted or scheduled.
+    """
+    if body.agent_definition_id is not None:
+        try:
+            await require_owned_agent_definition(
+                body.agent_definition_id, current_user, session
+            )
+        except ValueError:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Agent not found: {body.agent_definition_id}",
+            ) from None
     repo = _get_repository(session)
     handler = CreateAgentRunHandler(repo)
     command = CreateAgentRunCommand(
@@ -135,7 +154,7 @@ async def create_agent_run(
         tools=tuple(body.tools),
         max_steps=body.max_steps,
         timeout_seconds=body.timeout_seconds,
-        project_id=body.project_id,
+        project_id=org_id,
         created_by=current_user.user_id,
         tags=tuple(body.tags),
         workflow_id=body.workflow_id,
@@ -179,8 +198,13 @@ async def list_agent_runs(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> AgentRunListResponse:
-    """List agent runs with filtering, sorting, and pagination."""
+    """List agent runs with filtering, sorting, and pagination.
+
+    Tenant-scoped: results are always limited to runs of the caller's
+    owned agent definitions plus the caller's own orphan runs.
+    """
     repo = _get_repository(session)
     handler = ListAgentRunsHandler(repo)
     query = ListAgentRunsQuery(
@@ -193,6 +217,7 @@ async def list_agent_runs(
         sort_order=sort_order,
         page=page,
         page_size=page_size,
+        owner_project_id=org_id,
     )
     result = await handler.handle(query)
     return _to_list_response(result)
@@ -203,6 +228,7 @@ async def get_agent_run(
     run_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_agent_run),
 ) -> AgentRunResponse:
     """Get an agent run by ID."""
     repo = _get_repository(session)
@@ -221,6 +247,7 @@ async def cancel_agent_run(
     body: CancelAgentRunRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_agent_run),
     temporal_client: TemporalClient = Depends(get_temporal_client),
 ) -> AgentRunResponse:
     """Cancel an agent run."""
@@ -249,6 +276,7 @@ async def retry_agent_run(
     run_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_agent_run),
 ) -> AgentRunResponse:
     """Retry a failed agent run."""
     repo = _get_repository(session)

@@ -316,3 +316,90 @@ async def require_owned_attack_run(
         raise HTTPException(status_code=404, detail=f"Attack run not found: {run_id}")
     if run.evaluation_run_id is not None:
         await require_owned_run(str(run.evaluation_run_id), current_user, session)
+
+
+async def require_owned_agent_definition(
+    agent_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Require the agent definition to belong to the caller's organization.
+
+    Loads the definition and asserts its ``project_id`` equals the
+    caller's JWT org, after revalidating membership. Unknown or malformed
+    ids stay truthful with 404; cross-tenant access gets 403.
+    """
+    from fastapi import HTTPException
+
+    from app.infrastructure.database.repositories.agent_repository import (
+        SqlAlchemyAgentDefinitionRepository,
+    )
+    from app.kernel.entities.base import UUIDv7
+
+    if not current_user.org_id:
+        raise HTTPException(status_code=403, detail="No organization context")
+    await _assert_membership(
+        user_id=current_user.user_id,
+        org_id=current_user.org_id,
+        session=session,
+    )
+
+    try:
+        a_id = UUIDv7.from_string(agent_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=404, detail=f"Agent not found: {agent_id}"
+        ) from None
+    agent = await SqlAlchemyAgentDefinitionRepository(session).get_by_id(a_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+    if agent.project_id != current_user.org_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+
+async def require_owned_agent_run(
+    run_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Require the agent run to belong to the caller's organization.
+
+    Resolves the run, obtains its parent ``agent_definition_id``, and
+    delegates to :func:`require_owned_agent_definition`, preserving the
+    single agent-ownership choke point. Runs without a parent definition
+    fall back to the run's persisted ``metadata.project_id``. Unknown or
+    malformed ids stay truthful with 404; cross-tenant access gets 403.
+    """
+    from fastapi import HTTPException
+
+    from app.infrastructure.database.repositories.agent_run_repository import (
+        SqlAlchemyAgentRunRepository,
+    )
+    from app.kernel.entities.base import UUIDv7
+
+    try:
+        r_id = UUIDv7.from_string(run_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=404, detail=f"Agent run not found: {run_id}"
+        ) from None
+
+    run = await SqlAlchemyAgentRunRepository(session).find_by_id(r_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail=f"Agent run not found: {run_id}")
+    if run.agent_definition_id:
+        await require_owned_agent_definition(
+            run.agent_definition_id, current_user, session
+        )
+        return
+
+    if not current_user.org_id:
+        raise HTTPException(status_code=403, detail="No organization context")
+    await _assert_membership(
+        user_id=current_user.user_id,
+        org_id=current_user.org_id,
+        session=session,
+    )
+    project_id = run.metadata.project_id if run.metadata is not None else None
+    if project_id != current_user.org_id:
+        raise HTTPException(status_code=403, detail="Access denied")

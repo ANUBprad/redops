@@ -314,5 +314,6 @@ class ListAgentRunsHandler:
             sort_order=query.sort_order,
             page=query.page,
             page_size=query.page_size,
+            owner_project_id=query.owner_project_id,
         )
         return await self._repository.list(repo_query)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.agents.domain.contracts.agent_contracts import (
@@ -19,6 +19,7 @@ from app.agents.domain.value_objects.agent_value_objects import (
     AgentProfile,
     AgentRunMetadata,
 )
+from app.infrastructure.database.models.agent_definition import AgentDefinitionModel
 from app.infrastructure.database.models.agent_run import AgentRunModel
 from app.kernel.entities.base import UUIDv7
 from app.kernel.exceptions.errors import ConflictError
@@ -76,6 +77,27 @@ class SqlAlchemyAgentRunRepository(AgentRunRepository):
     async def list(self, query: AgentRunQuery) -> PaginatedAgentRuns:
         stmt = select(AgentRunModel)
         count_stmt = select(func.count()).select_from(AgentRunModel)
+
+        if query.owner_project_id is not None:
+            # Same orphan-capable scope as evaluation runs: parent
+            # definition owned, or orphan attributed via metadata ``->>``
+            # (identical operator on PostgreSQL and SQLite >= 3.38).
+            scope = or_(
+                AgentDefinitionModel.project_id == query.owner_project_id,
+                and_(
+                    AgentRunModel.agent_definition_id.is_(None),
+                    AgentRunModel.metadata_.op("->>")("project_id")
+                    == query.owner_project_id,
+                ),
+            )
+            stmt = stmt.outerjoin(
+                AgentDefinitionModel,
+                AgentRunModel.agent_definition_id == AgentDefinitionModel.id,
+            ).where(scope)
+            count_stmt = count_stmt.outerjoin(
+                AgentDefinitionModel,
+                AgentRunModel.agent_definition_id == AgentDefinitionModel.id,
+            ).where(scope)
 
         if query.agent_name is not None:
             stmt = stmt.where(AgentRunModel.agent_name == query.agent_name)

@@ -26,6 +26,7 @@ class AgentRunQuery:
     sort_order: str = "desc"
     page: int = 1
     page_size: int = 20
+    owner_project_id: str | None = None
 
 
 @dataclass
