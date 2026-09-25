@@ -1,3 +1,10 @@
+## [0.13.27](https://github.com/ANUBprad/redops/compare/v0.13.26...v0.13.27) (2026-09-25)
+
+
+### Bug Fixes
+
+* **auth:** tenant-scope red-team AttackRun routes via established run ownership ([11ea6da](https://github.com/ANUBprad/redops/commit/11ea6da680758986e278f005c7c630b1221f46d9))
+
 ## [0.13.26](https://github.com/ANUBprad/redops/compare/v0.13.25...v0.13.26) (2026-09-25)
 
 
