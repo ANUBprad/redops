@@ -1,3 +1,10 @@
+## [0.13.30](https://github.com/ANUBprad/redops/compare/v0.13.29...v0.13.30) (2026-09-25)
+
+
+### Bug Fixes
+
+* **auth:** return raw refresh token on rotation so the chain survives ([c701e2f](https://github.com/ANUBprad/redops/commit/c701e2fbfd73bdc8a5c02f2dcf7c4508f2b4e148))
+
 ## [0.13.29](https://github.com/ANUBprad/redops/compare/v0.13.28...v0.13.29) (2026-09-25)
 
 
