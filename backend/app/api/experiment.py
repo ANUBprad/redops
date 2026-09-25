@@ -12,6 +12,9 @@ from app.core.dependencies import (
     CurrentUser,
     get_current_user,
     get_db_session,
+    require_current_org_membership,
+    require_owned_experiment,
+    require_owned_run,
 )
 from app.evaluation.domain.contracts.experiment_contracts import ExperimentQuery
 from app.evaluation.domain.enums.experiment_enums import ExperimentStatus
@@ -114,12 +117,13 @@ async def create_experiment(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> ExperimentResponse:
     """Create a new experiment."""
     service = _get_service(session)
     try:
         experiment = await service.create_experiment(
-            project_id=str(current_user.org_id) if current_user.org_id else "",
+            project_id=org_id,
             name=body.name,
             description=body.description,
             hypothesis=body.hypothesis,
@@ -141,11 +145,15 @@ async def list_experiments(
     search: str | None = Query(default=None, description="Search by name"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    org_id: str = Depends(require_current_org_membership),
 ) -> ExperimentListResponse:
-    """List experiments with filtering and pagination."""
+    """List experiments with filtering and pagination.
+
+    Tenant-scoped: results are always limited to the caller's organization.
+    """
     service = _get_service(session)
     query = ExperimentQuery(
-        project_id=str(current_user.org_id) if current_user.org_id else None,
+        project_id=org_id,
         status=ExperimentStatus(status) if status else None,
         search=search,
         page=page,
@@ -167,6 +175,7 @@ async def get_experiment(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_experiment),
 ) -> ExperimentResponse:
     """Get an experiment by ID."""
     service = _get_service(session)
@@ -184,6 +193,7 @@ async def update_experiment(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_experiment),
 ) -> ExperimentResponse:
     """Update experiment metadata."""
     service = _get_service(session)
@@ -208,6 +218,7 @@ async def delete_experiment(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_experiment),
 ) -> None:
     """Delete an experiment."""
     service = _get_service(session)
@@ -224,6 +235,7 @@ async def activate_experiment(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_experiment),
 ) -> ExperimentResponse:
     """Activate a draft experiment."""
     service = _get_service(session)
@@ -241,6 +253,7 @@ async def complete_experiment(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_experiment),
 ) -> ExperimentResponse:
     """Complete an active experiment."""
     service = _get_service(session)
@@ -258,6 +271,7 @@ async def archive_experiment(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_experiment),
 ) -> ExperimentResponse:
     """Archive an experiment."""
     service = _get_service(session)
@@ -276,8 +290,13 @@ async def set_baseline(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_experiment),
 ) -> ExperimentResponse:
-    """Set the baseline run for comparison."""
+    """Set the baseline run for comparison.
+
+    Both the experiment and the referenced run must belong to the caller.
+    """
+    await require_owned_run(body.run_id, current_user, session)
     service = _get_service(session)
     try:
         experiment = await service.set_baseline(UUIDv7.from_string(experiment_id), body.run_id)

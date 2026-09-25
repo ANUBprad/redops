@@ -238,3 +238,44 @@ async def require_owned_run(
     project_id = run.metadata.project_id if run.metadata is not None else None
     if project_id != current_user.org_id:
         raise HTTPException(status_code=403, detail="Access denied")
+
+
+async def require_owned_experiment(
+    experiment_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Require the experiment to belong to the caller's organization.
+
+    Loads the experiment and asserts its ``project_id`` equals the
+    caller's JWT org, after revalidating membership. Unknown or malformed
+    ids stay truthful with 404; cross-tenant access gets 403.
+    """
+    from fastapi import HTTPException
+
+    from app.infrastructure.database.repositories.experiment_repository import (
+        SqlAlchemyExperimentRepository,
+    )
+    from app.kernel.entities.base import UUIDv7
+
+    if not current_user.org_id:
+        raise HTTPException(status_code=403, detail="No organization context")
+    await _assert_membership(
+        user_id=current_user.user_id,
+        org_id=current_user.org_id,
+        session=session,
+    )
+
+    try:
+        exp_id = UUIDv7.from_string(experiment_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=404, detail=f"Experiment not found: {experiment_id}"
+        ) from None
+    experiment = await SqlAlchemyExperimentRepository(session).find_by_id(exp_id)
+    if experiment is None:
+        raise HTTPException(
+            status_code=404, detail=f"Experiment not found: {experiment_id}"
+        )
+    if experiment.project_id != current_user.org_id:
+        raise HTTPException(status_code=403, detail="Access denied")

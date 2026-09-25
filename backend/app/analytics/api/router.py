@@ -46,6 +46,7 @@ from app.core.dependencies import (
     get_temporal_client,
     require_current_org_membership,
     require_owned_evaluation,
+    require_owned_experiment,
     require_owned_run,
 )
 from app.infrastructure.database.repositories.attack_run_repository import (
@@ -606,6 +607,7 @@ async def get_experiment_comparison(
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
     org_id: str = Depends(require_current_org_membership),
+    _owned: None = Depends(require_owned_experiment),
 ) -> ComparisonResultResponse:
     """Compare all runs within an experiment against the baseline."""
     _, run_repo, metric_repo, _ = _get_repositories(session)
