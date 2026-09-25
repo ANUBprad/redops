@@ -18,6 +18,7 @@ character id re-paid the provider on every durable retry.
 from __future__ import annotations
 
 import importlib.util
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -68,6 +69,7 @@ from app.evaluation.temporal.activities import (
 from app.infrastructure.database.models.base import Base
 from app.infrastructure.database.models.item_execution import ItemExecutionModel
 from app.infrastructure.database.models.metric_result import MetricResultModel
+from app.infrastructure.database.models.tenant import MembershipModel
 from app.infrastructure.database.repositories.metric_result_repository import (
     SqlAlchemyMetricResultRepository,
 )
@@ -244,8 +246,31 @@ def _evaluation_app(
     session.merge = AsyncMock()
     session.flush = AsyncMock()
     session.rollback = AsyncMock()
+
+    async def _execute_side_effect(stmt: Any) -> MagicMock:
+        """Route membership checks to a real row (S-05 requires membership
+        on run creation); nothing else in this flow queries the database."""
+        sql = str(stmt.compile(compile_kwargs={"literal_binds": True})).lower()
+        result = MagicMock()
+        if "memberships" in sql:
+            result.scalar_one_or_none.return_value = MembershipModel(
+                id="00000000-0000-0000-0000-0000000000aa",
+                user_id="u",
+                organization_id="org-c11",
+                role="member",
+                invited_by="owner",
+                is_active=True,
+                joined_at=datetime.now(UTC),
+            )
+        else:
+            result.scalar_one_or_none.return_value = None
+        return result
+
+    session.execute = AsyncMock(side_effect=_execute_side_effect)
     app.dependency_overrides[get_db_session] = lambda: session
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="u")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        user_id="u", org_id="org-c11"
+    )
     app.dependency_overrides[get_temporal_client] = lambda: temporal_client
     return app
 

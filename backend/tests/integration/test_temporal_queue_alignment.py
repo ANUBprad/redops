@@ -8,6 +8,8 @@ same value so evaluation workflows are actually consumed.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -25,6 +27,43 @@ from app.core.dependencies import (
 )
 from app.infrastructure.composition.container import InfrastructureContainer
 from app.infrastructure.config.temporal import TemporalConfiguration
+from app.infrastructure.database.models.tenant import MembershipModel
+
+
+def _member_session() -> MagicMock:
+    """MagicMock session routing membership checks to a real row.
+
+    S-05 requires current-org membership on run creation; the tests'
+    other database interactions go through the faked repository.
+    """
+    session: MagicMock = MagicMock(spec=AsyncSession)
+    session.merge = AsyncMock()
+    session.flush = AsyncMock()
+    session.rollback = AsyncMock()
+
+    async def _execute_side_effect(stmt: Any) -> MagicMock:
+        sql = str(stmt.compile(compile_kwargs={"literal_binds": True})).lower()
+        result = MagicMock()
+        if "memberships" in sql:
+            result.scalar_one_or_none.return_value = MembershipModel(
+                id="00000000-0000-0000-0000-0000000000aa",
+                user_id="u",
+                organization_id="org-queue",
+                role="member",
+                invited_by="owner",
+                is_active=True,
+                joined_at=datetime.now(UTC),
+            )
+        else:
+            result.scalar_one_or_none.return_value = None
+        return result
+
+    session.execute = AsyncMock(side_effect=_execute_side_effect)
+    return session
+
+
+def _member_user() -> CurrentUser:
+    return CurrentUser(user_id="u", org_id="org-queue")
 
 
 class FakeTemporalClient:
@@ -84,12 +123,9 @@ def test_api_submits_run_to_configured_queue(
 
     app = FastAPI()
     app.include_router(api_router)
-    session: MagicMock = MagicMock(spec=AsyncSession)
-    session.merge = AsyncMock()
-    session.flush = AsyncMock()
-    session.rollback = AsyncMock()
+    session = _member_session()
     app.dependency_overrides[get_db_session] = lambda: session
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="u")
+    app.dependency_overrides[get_current_user] = lambda: _member_user()
     app.dependency_overrides[get_temporal_client] = lambda: fake_temporal_client
 
     with TestClient(app) as client:
@@ -130,12 +166,9 @@ def test_api_and_worker_share_configured_queue(
 
     app = FastAPI()
     app.include_router(api_router)
-    session: MagicMock = MagicMock(spec=AsyncSession)
-    session.merge = AsyncMock()
-    session.flush = AsyncMock()
-    session.rollback = AsyncMock()
+    session = _member_session()
     app.dependency_overrides[get_db_session] = lambda: session
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="u")
+    app.dependency_overrides[get_current_user] = lambda: _member_user()
     app.dependency_overrides[get_temporal_client] = lambda: fake_temporal_client
 
     with TestClient(app) as client:
