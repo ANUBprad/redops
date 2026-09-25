@@ -1,3 +1,10 @@
+## [0.13.24](https://github.com/ANUBprad/redops/compare/v0.13.23...v0.13.24) (2026-09-25)
+
+
+### Bug Fixes
+
+* **auth:** tenant-scope run collection list and create paths ([9fbbbe2](https://github.com/ANUBprad/redops/commit/9fbbbe2dcc59c220bd0ee90addc52341da46860f))
+
 ## [0.13.23](https://github.com/ANUBprad/redops/compare/v0.13.22...v0.13.23) (2026-09-24)
 
 
