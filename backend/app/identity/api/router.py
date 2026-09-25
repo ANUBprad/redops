@@ -148,7 +148,7 @@ async def refresh_tokens(
         new_access = service.create_access_token(user, org_id=org_id)
         return TokenPairResponse(
             access_token=new_access,
-            refresh_token=new_refresh.token_hash,
+            refresh_token=new_refresh,
             expires_in=3600,
             user=_user_to_response(user),
         )

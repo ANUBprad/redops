@@ -169,8 +169,8 @@ class AuthService:
     async def refresh_tokens(
         self,
         refresh_token_raw: str,
-    ) -> tuple[str, RefreshToken, User]:
-        """Refresh access and refresh tokens. Returns (new_access, new_refresh, user)."""
+    ) -> tuple[str, str, User]:
+        """Refresh access and refresh tokens. Returns (new_access, new_raw_refresh, user)."""
         token_hash_value = hash_token(refresh_token_raw)
         stored_token = await self._refresh_token_repo.find_by_token_hash(token_hash_value)
         if stored_token is None or not stored_token.is_valid:
@@ -186,9 +186,9 @@ class AuthService:
         await self._refresh_token_repo.revoke_by_token_hash(token_hash_value)
         # Create new tokens
         new_access = self.create_access_token(user)
-        _new_raw_refresh, new_refresh_entity = self.create_refresh_token(user)
+        new_raw_refresh, new_refresh_entity = self.create_refresh_token(user)
         await self._refresh_token_repo.save(new_refresh_entity)
-        return new_access, new_refresh_entity, user
+        return new_access, new_raw_refresh, user
 
     async def logout_all(self, user_id: str) -> int:
         """Revoke all refresh tokens for a user."""
