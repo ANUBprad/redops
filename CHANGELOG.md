@@ -1,3 +1,10 @@
+## [0.13.26](https://github.com/ANUBprad/redops/compare/v0.13.25...v0.13.26) (2026-09-25)
+
+
+### Bug Fixes
+
+* **auth:** tenant-scope experiment CRUD, baseline and comparison lookup ([34d1510](https://github.com/ANUBprad/redops/commit/34d1510d121485ba05703a8d5f1cad18543f5052))
+
 ## [0.13.25](https://github.com/ANUBprad/redops/compare/v0.13.24...v0.13.25) (2026-09-25)
 
 
