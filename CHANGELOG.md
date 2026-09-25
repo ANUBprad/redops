@@ -1,3 +1,10 @@
+## [0.13.31](https://github.com/ANUBprad/redops/compare/v0.13.30...v0.13.31) (2026-09-25)
+
+
+### Bug Fixes
+
+* **providers:** honor retry taxonomy and enforce request timeouts in coordinator ([7b3fdc5](https://github.com/ANUBprad/redops/commit/7b3fdc5a02359807828f12368aabf1e38b00d781))
+
 ## [0.13.30](https://github.com/ANUBprad/redops/compare/v0.13.29...v0.13.30) (2026-09-25)
 
 
