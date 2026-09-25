@@ -33,7 +33,7 @@ class LeaderboardService:
     async def get_leaderboard(
         self,
         ranking_by: str = "score",
-        project_id: str | None = None,
+        owner_project_id: str | None = None,
         provider: str | None = None,
         limit: int = 10,
         days: int = 30,
@@ -54,6 +54,7 @@ class LeaderboardService:
             since=since,
             until=now,
             provider=provider,
+            owner_project_id=owner_project_id,
         )
 
         model_data: dict[str, _ModelAccumulator] = defaultdict(_ModelAccumulator)

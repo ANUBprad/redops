@@ -54,6 +54,7 @@ class AttackRunQuery:
     sort_order: str = "desc"
     page: int = 1
     page_size: int = 20
+    owner_project_id: str | None = None
 
 
 @dataclass
@@ -117,6 +118,7 @@ class AttackRunRepository(ABC):
         self,
         since: datetime,
         until: datetime,
+        owner_project_id: str | None = None,
     ) -> Sequence[AttackRun]:
         """Find attack runs created within a date range."""
         ...

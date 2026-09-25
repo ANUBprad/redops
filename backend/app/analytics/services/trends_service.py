@@ -36,7 +36,7 @@ class TrendsService:
     async def get_metric_trend(
         self,
         metric_name: str = "score",
-        project_id: str | None = None,
+        owner_project_id: str | None = None,
         provider: str | None = None,
         model: str | None = None,
         days: int = 30,
@@ -46,7 +46,7 @@ class TrendsService:
 
         Args:
             metric_name: Name of the metric to trend.
-            project_id: Optional project filter.
+            owner_project_id: Owning organization scope.
             provider: Optional provider filter.
             model: Optional model filter.
             days: Number of days to look back.
@@ -65,6 +65,7 @@ class TrendsService:
             metric_name=metric_name,
             provider=provider,
             model=model,
+            owner_project_id=owner_project_id,
         )
 
         buckets: dict[str, list[float]] = defaultdict(list)
@@ -97,7 +98,7 @@ class TrendsService:
 
     async def get_cost_trend(
         self,
-        project_id: str | None = None,
+        owner_project_id: str | None = None,
         provider: str | None = None,
         model: str | None = None,
         days: int = 30,
@@ -112,6 +113,7 @@ class TrendsService:
             until=now,
             provider=provider,
             model=model,
+            owner_project_id=owner_project_id,
         )
 
         buckets: dict[str, list[float]] = defaultdict(list)
@@ -142,7 +144,7 @@ class TrendsService:
 
     async def get_latency_trend(
         self,
-        project_id: str | None = None,
+        owner_project_id: str | None = None,
         provider: str | None = None,
         model: str | None = None,
         days: int = 30,
@@ -157,6 +159,7 @@ class TrendsService:
             until=now,
             provider=provider,
             model=model,
+            owner_project_id=owner_project_id,
         )
 
         buckets: dict[str, list[int]] = defaultdict(list)

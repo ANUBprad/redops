@@ -39,7 +39,15 @@ from app.analytics.schemas.responses import (
     TrendPointResponse,
     TrendSeriesResponse,
 )
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session, get_temporal_client
+from app.core.dependencies import (
+    CurrentUser,
+    get_current_user,
+    get_db_session,
+    get_temporal_client,
+    require_current_org_membership,
+    require_owned_evaluation,
+    require_owned_run,
+)
 from app.infrastructure.database.repositories.attack_run_repository import (
     SqlAlchemyAttackRunRepository,
 )
@@ -294,8 +302,13 @@ async def get_dashboard_summary(
     days: int = Query(default=30, ge=1, le=365),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> DashboardSummaryResponse:
-    """Get the dashboard summary with aggregated statistics."""
+    """Get the dashboard summary with aggregated statistics.
+
+    Tenant-scoped to the caller's organization; the caller-supplied
+    ``project_id`` filter is ignored.
+    """
     eval_repo, run_repo, metric_repo, attack_run_repo = _get_repositories(session)
     from app.analytics.services.dashboard_service import DashboardService
 
@@ -306,7 +319,7 @@ async def get_dashboard_summary(
         attack_run_repo=attack_run_repo,
     )
     try:
-        summary = await service.get_summary(project_id=project_id, days=days)
+        summary = await service.get_summary(owner_project_id=org_id, days=days)
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
     return _dashboard_to_response(summary)
@@ -322,8 +335,13 @@ async def get_historical_trends(
     granularity: str = Query(default="day"),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> TrendSeriesResponse:
-    """Get historical metric trends."""
+    """Get historical metric trends.
+
+    Tenant-scoped to the caller's organization; the caller-supplied
+    ``project_id`` filter is ignored.
+    """
     _, run_repo, metric_repo, _ = _get_repositories(session)
     from app.analytics.services.trends_service import TrendsService
 
@@ -334,7 +352,7 @@ async def get_historical_trends(
     try:
         trend = await service.get_metric_trend(
             metric_name=metric_name,
-            project_id=project_id,
+            owner_project_id=org_id,
             provider=provider,
             model=model,
             days=days,
@@ -353,15 +371,20 @@ async def get_cost_analysis(
     days: int = Query(default=30, ge=1, le=365),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> CostAnalysisResponse:
-    """Get cost analysis."""
+    """Get cost analysis.
+
+    Tenant-scoped to the caller's organization; the caller-supplied
+    ``project_id`` filter is ignored.
+    """
     _, run_repo, _, _ = _get_repositories(session)
     from app.analytics.services.cost_service import CostService
 
     service = CostService(run_repo=run_repo)
     try:
         cost = await service.get_analysis(
-            project_id=project_id,
+            owner_project_id=org_id,
             provider=provider,
             model=model,
             days=days,
@@ -379,15 +402,20 @@ async def get_latency_analysis(
     days: int = Query(default=30, ge=1, le=365),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> LatencyAnalysisResponse:
-    """Get latency analysis."""
+    """Get latency analysis.
+
+    Tenant-scoped to the caller's organization; the caller-supplied
+    ``project_id`` filter is ignored.
+    """
     _, run_repo, _, _ = _get_repositories(session)
     from app.analytics.services.latency_service import LatencyService
 
     service = LatencyService(run_repo=run_repo)
     try:
         latency = await service.get_analysis(
-            project_id=project_id,
+            owner_project_id=org_id,
             provider=provider,
             model=model,
             days=days,
@@ -404,15 +432,20 @@ async def get_safety_trend(
     days: int = Query(default=30, ge=1, le=365),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> SafetyTrendResponse:
-    """Get safety trend analysis."""
+    """Get safety trend analysis.
+
+    Tenant-scoped to the caller's organization; the caller-supplied
+    ``project_id`` filter is ignored.
+    """
     _, _, _, attack_run_repo = _get_repositories(session)
     from app.analytics.services.safety_service import SafetyService
 
     service = SafetyService(attack_run_repo=attack_run_repo)
     try:
         safety = await service.get_safety_trend(
-            project_id=project_id,
+            owner_project_id=org_id,
             category=category,
             days=days,
         )
@@ -430,8 +463,13 @@ async def get_leaderboard(
     days: int = Query(default=30, ge=1, le=365),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> LeaderboardResponse:
-    """Get a leaderboard ranking."""
+    """Get a leaderboard ranking.
+
+    Tenant-scoped to the caller's organization; the caller-supplied
+    ``project_id`` filter is ignored.
+    """
     _, run_repo, _, _ = _get_repositories(session)
     from app.analytics.services.leaderboard_service import LeaderboardService
 
@@ -439,7 +477,7 @@ async def get_leaderboard(
     try:
         leaderboard = await service.get_leaderboard(
             ranking_by=ranking_by,
-            project_id=project_id,
+            owner_project_id=org_id,
             provider=provider,
             limit=limit,
             days=days,
@@ -457,8 +495,13 @@ async def get_model_comparison(
     days: int = Query(default=30, ge=1, le=365),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> ComparisonResultResponse:
-    """Compare models or providers."""
+    """Compare models or providers.
+
+    Tenant-scoped to the caller's organization; the caller-supplied
+    ``project_id`` filter is ignored.
+    """
     _, run_repo, metric_repo, _ = _get_repositories(session)
     from app.analytics.services.comparison_service import ComparisonService
 
@@ -471,7 +514,7 @@ async def get_model_comparison(
         comparison = await service.compare(
             entity_type=entity_type,
             entity_ids=ids,
-            project_id=project_id,
+            owner_project_id=org_id,
             days=days,
         )
     except BaseError as exc:
@@ -488,8 +531,25 @@ async def generate_report(
     days: int = Query(default=30, ge=1, le=365),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> GeneratedReportResponse:
-    """Generate an analytics report."""
+    """Generate an analytics report.
+
+    Tenant-scoped to the caller's organization; the caller-supplied
+    ``project_id`` filter is ignored. Supplied ``evaluation_id``/``run_id``
+    filters must belong to the caller.
+    """
+    if evaluation_id is not None:
+        try:
+            await require_owned_evaluation(evaluation_id, current_user, session)
+        except ValueError:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Evaluation not found: {evaluation_id}",
+            ) from None
+    if run_id is not None:
+        await require_owned_run(run_id, current_user, session)
+
     eval_repo, run_repo, metric_repo, attack_run_repo = _get_repositories(session)
     from app.analytics.services.comparison_service import ComparisonService
     from app.analytics.services.cost_service import CostService
@@ -529,7 +589,7 @@ async def generate_report(
     try:
         report = await report_svc.generate(
             report_type=report_type,
-            project_id=project_id,
+            owner_project_id=org_id,
             evaluation_id=evaluation_id,
             run_id=run_id,
             days=days,
@@ -545,6 +605,7 @@ async def get_experiment_comparison(
     experiment_id: str = Query(..., description="Experiment ID"),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> ComparisonResultResponse:
     """Compare all runs within an experiment against the baseline."""
     _, run_repo, metric_repo, _ = _get_repositories(session)
@@ -573,8 +634,14 @@ async def get_metric_distribution(
     bins: int = Query(default=10, ge=2, le=50, description="Number of histogram bins"),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> dict:
-    """Get metric score distribution as histogram bins."""
+    """Get metric score distribution as histogram bins.
+
+    Tenant-scoped: a supplied ``run_id`` must belong to the caller.
+    """
+    if run_id is not None:
+        await require_owned_run(run_id, current_user, session)
     _, _, metric_repo, _ = _get_repositories(session)
     from app.analytics.services.experiment_analytics import MetricDistributionService
 
@@ -594,8 +661,13 @@ async def get_pass_fail_summary(
     ),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
+    _owned: None = Depends(require_owned_run),
 ) -> dict:
-    """Get pass/fail summary for a run against thresholds."""
+    """Get pass/fail summary for a run against thresholds.
+
+    Tenant-scoped: ``run_id`` must belong to the caller.
+    """
     _, _, metric_repo, _ = _get_repositories(session)
     from app.analytics.services.experiment_analytics import PassFailSummaryService
 
@@ -626,13 +698,30 @@ async def start_export_workflow(
     days: int = Query(default=30, ge=1, le=365),
     export_format: str = Query(default="json", pattern="^(json|csv|pdf)$"),
     current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
     temporal_client: Any = Depends(get_temporal_client),
 ) -> dict:
     """Start an async export workflow via Temporal.
 
     For large reports that may exceed HTTP timeouts, this endpoint
     starts a Temporal workflow and returns the workflow ID for polling.
+
+    Tenant-scoped to the caller's organization; the caller-supplied
+    ``project_id`` filter is ignored. Supplied ``evaluation_id``/``run_id``
+    filters must belong to the caller — nothing is scheduled otherwise.
     """
+    if evaluation_id is not None:
+        try:
+            await require_owned_evaluation(evaluation_id, current_user, session)
+        except ValueError:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Evaluation not found: {evaluation_id}",
+            ) from None
+    if run_id is not None:
+        await require_owned_run(run_id, current_user, session)
+
     from uuid import uuid4
 
     from app.analytics.temporal.activities import GenerateExportInput
@@ -647,6 +736,7 @@ async def start_export_workflow(
         days=days,
         export_format=export_format,
         generated_by=current_user.user_id,
+        owner_project_id=org_id,
     )
 
     handle = await temporal_client.start_workflow(

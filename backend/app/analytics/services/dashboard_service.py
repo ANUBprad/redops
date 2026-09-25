@@ -41,16 +41,21 @@ class DashboardService:
 
     async def get_summary(
         self,
-        project_id: str | None = None,
+        owner_project_id: str | None = None,
         days: int = 30,
     ) -> DashboardSummary:
-        """Compute the dashboard summary."""
+        """Compute the dashboard summary scoped to the owning organization."""
+        from app.evaluation.domain.contracts.evaluation_contracts import EvaluationQuery
+
         now = datetime.now(UTC)
         since = now - timedelta(days=days)
 
-        total_evaluations = await self._evaluation_repo.count()
+        scoped_evaluations = await self._evaluation_repo.list(
+            EvaluationQuery(project_id=owner_project_id, page=1, page_size=1),
+        )
+        total_evaluations = scoped_evaluations.total
 
-        all_runs_query = RunQuery(page=1, page_size=1000)
+        all_runs_query = RunQuery(page=1, page_size=1000, owner_project_id=owner_project_id)
         all_runs_result = await self._run_repo.list(all_runs_query)
 
         completed_count = 0
@@ -77,7 +82,9 @@ class DashboardService:
         avg_cost = total_cost / len(recent_runs) if recent_runs else 0.0
         avg_latency = total_latency / latency_count if latency_count > 0 else 0.0
 
-        attack_query = AttackRunQuery(page=1, page_size=1000)
+        attack_query = AttackRunQuery(
+            page=1, page_size=1000, owner_project_id=owner_project_id
+        )
         attack_result = await self._attack_run_repo.list(attack_query)
 
         total_attacks = 0

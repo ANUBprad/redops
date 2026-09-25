@@ -43,7 +43,7 @@ class ReportService:
     async def generate(
         self,
         report_type: str = "executive_summary",
-        project_id: str | None = None,
+        owner_project_id: str | None = None,
         evaluation_id: str | None = None,
         run_id: str | None = None,
         days: int = 30,
@@ -68,17 +68,17 @@ class ReportService:
         )
 
         if rt == ReportType.EXECUTIVE_SUMMARY:
-            sections = await self._generate_executive_summary(project_id, days)
+            sections = await self._generate_executive_summary(owner_project_id, days)
         elif rt == ReportType.EVALUATION_REPORT:
             sections = await self._generate_evaluation_report(evaluation_id, days)
         elif rt == ReportType.RUN_REPORT:
             sections = await self._generate_run_report(run_id)
         elif rt == ReportType.SAFETY_REPORT:
-            sections = await self._generate_safety_report(project_id, days)
+            sections = await self._generate_safety_report(owner_project_id, days)
         elif rt == ReportType.RED_TEAM_REPORT:
-            sections = await self._generate_red_team_report(project_id, days)
+            sections = await self._generate_red_team_report(owner_project_id, days)
         elif rt == ReportType.COMPARISON_REPORT:
-            sections = await self._generate_comparison_report(project_id, days)
+            sections = await self._generate_comparison_report(owner_project_id, days)
         else:
             sections = ()
 
@@ -98,11 +98,13 @@ class ReportService:
 
     async def _generate_executive_summary(
         self,
-        project_id: str | None,
+        owner_project_id: str | None,
         days: int,
     ) -> tuple[ReportSection, ...]:
         """Generate executive summary sections."""
-        dashboard = await self._dashboard.get_summary(project_id=project_id, days=days)
+        dashboard = await self._dashboard.get_summary(
+            owner_project_id=owner_project_id, days=days
+        )
 
         overview_stats = {
             "total_evaluations": float(dashboard.total_evaluations),
@@ -122,7 +124,7 @@ class ReportService:
             statistics=overview_stats,
         )
 
-        cost = await self._cost.get_analysis(project_id=project_id, days=days)
+        cost = await self._cost.get_analysis(owner_project_id=owner_project_id, days=days)
         cost_section = ReportSection(
             title="Cost Analysis",
             content=(
@@ -135,7 +137,9 @@ class ReportService:
             },
         )
 
-        safety = await self._safety.get_safety_trend(project_id=project_id, days=days)
+        safety = await self._safety.get_safety_trend(
+            owner_project_id=owner_project_id, days=days
+        )
         safety_section = ReportSection(
             title="Safety Overview",
             content=(
@@ -178,11 +182,13 @@ class ReportService:
 
     async def _generate_safety_report(
         self,
-        project_id: str | None,
+        owner_project_id: str | None,
         days: int,
     ) -> tuple[ReportSection, ...]:
         """Generate safety-focused report."""
-        safety = await self._safety.get_safety_trend(project_id=project_id, days=days)
+        safety = await self._safety.get_safety_trend(
+            owner_project_id=owner_project_id, days=days
+        )
 
         dim_section = ReportSection(
             title="Safety Dimensions",
@@ -196,11 +202,13 @@ class ReportService:
 
     async def _generate_red_team_report(
         self,
-        project_id: str | None,
+        owner_project_id: str | None,
         days: int,
     ) -> tuple[ReportSection, ...]:
         """Generate red team focused report."""
-        safety = await self._safety.get_safety_trend(project_id=project_id, days=days)
+        safety = await self._safety.get_safety_trend(
+            owner_project_id=owner_project_id, days=days
+        )
 
         return (
             ReportSection(
@@ -220,7 +228,7 @@ class ReportService:
 
     async def _generate_comparison_report(
         self,
-        project_id: str | None,
+        owner_project_id: str | None,
         days: int,
     ) -> tuple[ReportSection, ...]:
         """Generate comparison report."""

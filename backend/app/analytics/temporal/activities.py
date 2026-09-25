@@ -49,12 +49,13 @@ class GenerateExportInput:
 
     Attributes:
         report_type: Type of report to generate (executive_summary, etc.).
-        project_id: Optional project ID filter.
+        project_id: Legacy caller filter (ignored; tenancy comes from owner).
         evaluation_id: Optional evaluation ID filter.
         run_id: Optional run ID filter.
         days: Lookback window in days.
         export_format: Export format (json, csv, pdf).
         generated_by: User ID who requested the export.
+        owner_project_id: Requesting organization; scopes all queries.
 
     """
 
@@ -65,6 +66,7 @@ class GenerateExportInput:
     days: int = 30
     export_format: str = "json"
     generated_by: str = ""
+    owner_project_id: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,7 +147,7 @@ async def generate_export_activity(input: GenerateExportInput) -> ExportResult:
 
         report = await report_svc.generate(
             report_type=input.report_type,
-            project_id=input.project_id or None,
+            owner_project_id=input.owner_project_id or None,
             evaluation_id=input.evaluation_id or None,
             run_id=input.run_id or None,
             days=input.days,

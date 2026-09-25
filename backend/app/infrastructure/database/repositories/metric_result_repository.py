@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any, cast
 
-from sqlalchemy import Table, func, select
+from sqlalchemy import Table, and_, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +17,7 @@ from app.evaluation.domain.contracts.evaluation_contracts import (
     PaginatedMetricResults,
 )
 from app.evaluation.metrics.domain import MetricAggregation, MetricResult
+from app.infrastructure.database.models.evaluation import EvaluationModel
 from app.infrastructure.database.models.evaluation_run import EvaluationRunModel
 from app.infrastructure.database.models.metric_result import MetricResultModel
 from app.kernel.entities.base import UUIDv7
@@ -192,12 +193,34 @@ class SqlAlchemyMetricResultRepository(MetricResultRepository):
         metric_name: str | None = None,
         provider: str | None = None,
         model: str | None = None,
+        owner_project_id: str | None = None,
     ) -> Sequence[MetricResult]:
         """Find metric results created within a date range."""
         stmt = select(MetricResultModel).where(
             MetricResultModel.created_at >= since,
             MetricResultModel.created_at <= until,
         )
+        if owner_project_id is not None:
+            stmt = (
+                stmt.join(
+                    EvaluationRunModel,
+                    MetricResultModel.run_id == EvaluationRunModel.id,
+                )
+                .outerjoin(
+                    EvaluationModel,
+                    EvaluationRunModel.evaluation_id == EvaluationModel.id,
+                )
+                .where(
+                    or_(
+                        EvaluationModel.project_id == owner_project_id,
+                        and_(
+                            EvaluationRunModel.evaluation_id.is_(None),
+                            EvaluationRunModel.metadata_.op("->>")("project_id")
+                            == owner_project_id,
+                        ),
+                    )
+                )
+            )
         if metric_name is not None:
             stmt = stmt.where(MetricResultModel.metric_name == metric_name)
         if provider is not None or model is not None:

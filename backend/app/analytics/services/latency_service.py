@@ -26,12 +26,12 @@ class LatencyService:
 
     async def get_analysis(
         self,
-        project_id: str | None = None,
+        owner_project_id: str | None = None,
         provider: str | None = None,
         model: str | None = None,
         days: int = 30,
     ) -> LatencyAnalysis:
-        """Compute latency analysis."""
+        """Compute latency analysis scoped to the owning organization."""
         now = __import__("datetime").datetime.now(UTC)
         since = now - timedelta(days=days)
 
@@ -40,6 +40,7 @@ class LatencyService:
             until=now,
             provider=provider,
             model=model,
+            owner_project_id=owner_project_id,
         )
 
         latencies = [r.average_latency_ms for r in runs if r.average_latency_ms > 0]

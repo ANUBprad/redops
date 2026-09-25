@@ -7,10 +7,12 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.infrastructure.database.models.attack_run import AttackRunModel
+from app.infrastructure.database.models.evaluation import EvaluationModel
+from app.infrastructure.database.models.evaluation_run import EvaluationRunModel
 from app.kernel.entities.base import UUIDv7
 from app.kernel.exceptions.errors import ConflictError
 from app.redteam.contracts.repositories import (
@@ -38,6 +40,22 @@ def _get_sort_column(sort_by: str) -> str:
     return _SORT_MAP.get(sort_by, "created_at")
 
 
+def _owner_scope_condition(owner_project_id: str) -> Any:
+    """Match attack runs linked to an owned evaluation run or own orphan.
+
+    Reuses the S-04/S-05 run-ownership semantics: the parent evaluation is
+    owned, or the run is an orphan attributed to the caller's project.
+    Unlinked attack runs carry no attribution and are excluded when scoped.
+    """
+    return or_(
+        EvaluationModel.project_id == owner_project_id,
+        and_(
+            EvaluationRunModel.evaluation_id.is_(None),
+            EvaluationRunModel.metadata_.op("->>")("project_id") == owner_project_id,
+        ),
+    )
+
+
 class SqlAlchemyAttackRunRepository(AttackRunRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -57,6 +75,17 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
 
     async def list(self, query: AttackRunQuery) -> PaginatedAttackRuns:
         stmt = select(AttackRunModel)
+
+        if query.owner_project_id is not None:
+            stmt = stmt.join(
+                EvaluationRunModel,
+                AttackRunModel.evaluation_run_id == EvaluationRunModel.id,
+            ).outerjoin(
+                EvaluationModel,
+                EvaluationRunModel.evaluation_id == EvaluationModel.id,
+            ).where(
+                _owner_scope_condition(query.owner_project_id),
+            )
 
         if query.status:
             stmt = stmt.where(AttackRunModel.status == query.status.value)
@@ -129,12 +158,23 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
         self,
         since: datetime,
         until: datetime,
+        owner_project_id: str | None = None,
     ) -> Sequence[AttackRun]:
         """Find attack runs created within a date range."""
         stmt = select(AttackRunModel).where(
             AttackRunModel.created_at >= since,
             AttackRunModel.created_at <= until,
         )
+        if owner_project_id is not None:
+            stmt = stmt.join(
+                EvaluationRunModel,
+                AttackRunModel.evaluation_run_id == EvaluationRunModel.id,
+            ).outerjoin(
+                EvaluationModel,
+                EvaluationRunModel.evaluation_id == EvaluationModel.id,
+            ).where(
+                _owner_scope_condition(owner_project_id),
+            )
         result = await self._session.execute(stmt)
         return [self._to_domain(m) for m in result.scalars().all()]
 

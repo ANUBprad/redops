@@ -25,17 +25,18 @@ class SafetyService:
 
     async def get_safety_trend(
         self,
-        project_id: str | None = None,
+        owner_project_id: str | None = None,
         category: str | None = None,
         days: int = 30,
     ) -> SafetyTrend:
-        """Compute safety trend analysis."""
+        """Compute safety trend analysis scoped to the owning organization."""
         now = datetime.now(UTC)
         since = now - timedelta(days=days)
 
         attack_runs = await self._attack_run_repo.find_by_date_range(
             since=since,
             until=now,
+            owner_project_id=owner_project_id,
         )
 
         total_attacks = sum(r.items_total for r in attack_runs)

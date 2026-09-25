@@ -192,6 +192,7 @@ class RunRepository(ABC):
         until: datetime,
         provider: str | None = None,
         model: str | None = None,
+        owner_project_id: str | None = None,
     ) -> Sequence[EvaluationRun]:
         """Find runs created within a date range, optionally filtered."""
         ...
@@ -339,6 +340,7 @@ class MetricResultRepository(ABC):
         metric_name: str | None = None,
         provider: str | None = None,
         model: str | None = None,
+        owner_project_id: str | None = None,
     ) -> Sequence[MetricResult]:
         """Find metric results created within a date range."""
         ...

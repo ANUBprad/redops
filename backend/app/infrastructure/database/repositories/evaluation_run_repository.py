@@ -128,18 +128,7 @@ class SqlAlchemyEvaluationRunRepository(RunRepository):
         count_stmt = select(func.count()).select_from(EvaluationRunModel)
 
         if query.owner_project_id is not None:
-            # ``->>`` extracts the orphan run's project as text. The generic
-            # JSON comparator has no ``astext`` and ``->``/``CAST`` variants
-            # compare quoted JSON on at least one backend; ``->>`` compiles
-            # identically on PostgreSQL and SQLite (>= 3.38).
-            scope = or_(
-                EvaluationModel.project_id == query.owner_project_id,
-                and_(
-                    EvaluationRunModel.evaluation_id.is_(None),
-                    EvaluationRunModel.metadata_.op("->>")("project_id")
-                    == query.owner_project_id,
-                ),
-            )
+            scope = _owner_scope_condition(query.owner_project_id)
             stmt = stmt.outerjoin(
                 EvaluationModel,
                 EvaluationRunModel.evaluation_id == EvaluationModel.id,
@@ -272,12 +261,18 @@ class SqlAlchemyEvaluationRunRepository(RunRepository):
         until: datetime,
         provider: str | None = None,
         model: str | None = None,
+        owner_project_id: str | None = None,
     ) -> Sequence[EvaluationRun]:
         """Find runs created within a date range, optionally filtered."""
         stmt = select(EvaluationRunModel).where(
             EvaluationRunModel.created_at >= since,
             EvaluationRunModel.created_at <= until,
         )
+        if owner_project_id is not None:
+            stmt = stmt.outerjoin(
+                EvaluationModel,
+                EvaluationRunModel.evaluation_id == EvaluationModel.id,
+            ).where(_owner_scope_condition(owner_project_id))
         if provider is not None:
             stmt = stmt.where(EvaluationRunModel.provider == provider)
         if model is not None:
@@ -393,6 +388,23 @@ def _as_utc(value: datetime | None) -> datetime | None:
     if value is None or value.tzinfo is not None:
         return value
     return value.replace(tzinfo=UTC)
+
+
+def _owner_scope_condition(owner_project_id: str) -> Any:
+    """Match runs owned by ``owner_project_id``: parent-evaluation owned or orphan attributed.
+
+    ``->>`` extracts the orphan run's project as text. The generic JSON
+    comparator has no ``astext`` and ``->``/``CAST`` variants compare
+    quoted JSON on at least one backend; ``->>`` compiles identically on
+    PostgreSQL and SQLite (>= 3.38).
+    """
+    return or_(
+        EvaluationModel.project_id == owner_project_id,
+        and_(
+            EvaluationRunModel.evaluation_id.is_(None),
+            EvaluationRunModel.metadata_.op("->>")("project_id") == owner_project_id,
+        ),
+    )
 
 
 def _get_sort_column(sort_by: str) -> Any:
