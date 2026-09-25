@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any, overload
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.evaluation.domain.contracts.evaluation_contracts import (
@@ -25,6 +25,7 @@ from app.evaluation.domain.value_objects.evaluation_value_objects import (
     ExecutionLimits,
     ExecutionPolicy,
 )
+from app.infrastructure.database.models.evaluation import EvaluationModel
 from app.infrastructure.database.models.evaluation_run import EvaluationRunModel
 from app.kernel.entities.base import UUIDv7
 from app.kernel.exceptions.errors import ConflictError
@@ -125,6 +126,28 @@ class SqlAlchemyEvaluationRunRepository(RunRepository):
         """
         stmt = select(EvaluationRunModel)
         count_stmt = select(func.count()).select_from(EvaluationRunModel)
+
+        if query.owner_project_id is not None:
+            # ``->>`` extracts the orphan run's project as text. The generic
+            # JSON comparator has no ``astext`` and ``->``/``CAST`` variants
+            # compare quoted JSON on at least one backend; ``->>`` compiles
+            # identically on PostgreSQL and SQLite (>= 3.38).
+            scope = or_(
+                EvaluationModel.project_id == query.owner_project_id,
+                and_(
+                    EvaluationRunModel.evaluation_id.is_(None),
+                    EvaluationRunModel.metadata_.op("->>")("project_id")
+                    == query.owner_project_id,
+                ),
+            )
+            stmt = stmt.outerjoin(
+                EvaluationModel,
+                EvaluationRunModel.evaluation_id == EvaluationModel.id,
+            ).where(scope)
+            count_stmt = count_stmt.outerjoin(
+                EvaluationModel,
+                EvaluationRunModel.evaluation_id == EvaluationModel.id,
+            ).where(scope)
 
         if query.evaluation_id is not None:
             stmt = stmt.where(

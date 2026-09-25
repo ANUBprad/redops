@@ -17,6 +17,7 @@ from app.core.dependencies import (
     get_current_user,
     get_db_session,
     get_temporal_client,
+    require_current_org_membership,
     require_owned_evaluation,
     require_owned_run,
 )
@@ -169,6 +170,7 @@ async def create_run(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
     temporal_client: TemporalClient = Depends(get_temporal_client),
     config: AppConfig = Depends(get_config_dependency),
 ) -> RunResponse:
@@ -177,13 +179,28 @@ async def create_run(
     The endpoint is idempotent when an ``Idempotency-Key`` header is
     supplied: a repeated key returns the previously created run instead of
     scheduling a duplicate, enabling safe CI/CD retries.
+
+    Tenant-scoped: the run is always attributed to the caller's
+    organization (a spoofed body ``project_id`` is ignored), and a
+    supplied parent ``evaluation_id`` must belong to the caller before
+    anything is persisted or scheduled.
     """
+    if body.evaluation_id is not None:
+        try:
+            await require_owned_evaluation(body.evaluation_id, current_user, session)
+        except ValueError:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Evaluation not found: {body.evaluation_id}",
+            ) from None
+
     repo = _get_repository(session)
 
     idempotency_key = request.headers.get("Idempotency-Key")
     if idempotency_key:
         existing = await repo.find_by_workflow_id(_idempotent_workflow_id(idempotency_key))
         if existing is not None:
+            await require_owned_run(str(existing.id), current_user, session)
             return _run_to_response(existing)
 
     handler = CreateEvaluationRunHandler(repo)
@@ -193,7 +210,7 @@ async def create_run(
         provider=body.provider,
         model=body.model,
         metrics=tuple(body.metrics),
-        project_id=body.project_id,
+        project_id=org_id,
         created_by=current_user.user_id,
         tags=tuple(body.tags),
         workflow_id=body.workflow_id,
@@ -257,8 +274,14 @@ async def list_runs(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> RunListResponse:
-    """List evaluation runs with filtering, sorting, and pagination."""
+    """List evaluation runs with filtering, sorting, and pagination.
+
+    Tenant-scoped: results are always limited to runs of the caller's
+    owned evaluations plus the caller's own orphan runs; a foreign
+    ``evaluation_id`` filter simply matches nothing.
+    """
     repo = _get_repository(session)
     handler = ListEvaluationRunsHandler(repo)
     query = ListEvaluationRunsQuery(
@@ -271,6 +294,7 @@ async def list_runs(
         sort_order=sort_order,
         page=page,
         page_size=page_size,
+        owner_project_id=org_id,
     )
     result = await handler.handle(query)
     return _to_list_response(result)
