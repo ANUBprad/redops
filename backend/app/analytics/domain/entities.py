@@ -141,6 +141,7 @@ class LatencyAnalysis:
 
     average_latency_ms: float = 0.0
     median_latency_ms: float = 0.0
+    p50_latency_ms: float = 0.0
     p95_latency_ms: float = 0.0
     p99_latency_ms: float = 0.0
     min_latency_ms: float = 0.0

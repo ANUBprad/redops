@@ -93,6 +93,13 @@ class InMemoryRunRepository(RunRepository):
         """Persist progress-only updates."""
         self._runs[str(run.id)] = run
 
+    async def find_by_workflow_id(self, workflow_id: str) -> EvaluationRun | None:
+        """Find a run by its Temporal workflow ID (used for idempotency)."""
+        for run in self._runs.values():
+            if run.workflow_id == workflow_id:
+                return run
+        return None
+
     async def find_by_date_range(
         self,
         since: datetime,

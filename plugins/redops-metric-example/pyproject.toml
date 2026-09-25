@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "redops-metric-example"
+version = "1.0.0"
+description = "Example RedOps metric plugin"
+requires-python = ">=3.12"
+dependencies = [
+    "redops-eval>=0.1.0",
+]
+
+[project.entry-points."redops.metrics"]
+custom_accuracy = "my_metric.metrics:CustomAccuracyMetric"

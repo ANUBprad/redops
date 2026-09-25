@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "011_create_projects"
-down_revision = "010_create_schedules"
+down_revision = "010"
 branch_labels = None
 depends_on = None
 

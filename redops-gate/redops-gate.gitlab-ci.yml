@@ -1,0 +1,33 @@
+# RedOps Eval gate — GitLab CI template
+#
+# Usage (in your .gitlab-ci.yml):
+#   include:
+#     - remote: "<url-to-this-file>/redops-gate.gitlab-ci.yml"
+#
+#   evaluation-gate:
+#     extends: .redops-gate
+#     variables:
+#       REDOPS_API_URL: "https://eval.example.com"
+#       REDOPS_API_KEY: "$REDOPS_API_KEY"      # define in CI/CD variables
+#       REDOPS_EVALUATION_ID: "eval_123"
+#       REDOPS_PROVIDER: "openai"
+#       REDOPS_MODEL: "gpt-4o"
+#       REDOPS_THRESHOLDS: "accuracy>=0.9,toxicity<0.1"
+
+.redops-gate:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - python -c "import urllib.request; urllib.request.urlretrieve('https://raw.githubusercontent.com/ANUBprad/redops/develop/redops-gate/redops_gate.py', 'redops_gate.py')"
+    - |
+      python redops_gate.py run \
+        --api-url "${REDOPS_API_URL:-http://localhost:8000}" \
+        --api-key "${REDOPS_API_KEY:-}" \
+        --evaluation-id "${REDOPS_EVALUATION_ID:-}" \
+        --evaluation-name "${REDOPS_EVALUATION_NAME:-}" \
+        --provider "${REDOPS_PROVIDER}" \
+        --model "${REDOPS_MODEL}" \
+        --threshold ${REDOPS_THRESHOLDS} \
+        --idempotency-key "${CI_PIPELINE_ID}-${CI_JOB_ID}"
+  rules:
+    - if: '$REDOPS_API_KEY && $REDOPS_THRESHOLDS'

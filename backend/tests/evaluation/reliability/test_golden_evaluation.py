@@ -248,19 +248,24 @@ class TestGoldenEmbeddingMetrics:
             GroundednessMetric,
         )
 
-        provider = DeterministicEmbeddingProvider()
+        provider = ScriptedJudgeProvider(
+            score=0.9,
+            confidence=0.85,
+            reasoning="context supports response",
+        )
         metric = GroundednessMetric()
         item = get_item("context_grounded")
         result = _evaluate_sync(
             metric,
             MetricInput(
+                prompt=item.prompt,
                 response=item.response,
                 context=item.context,
-                metadata={"_embedding_provider": provider},
+                metadata={"_judge_provider": provider},
             ),
         )
         assert result.is_success
-        assert result.normalized_score > 0.0
+        assert result.normalized_score == pytest.approx(0.9)
 
 
 class TestGoldenJudgeMetrics:

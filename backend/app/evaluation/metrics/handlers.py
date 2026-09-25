@@ -76,8 +76,6 @@ class ScoreItemHandler:
 
         enriched: list[MetricResult] = []
         for r in results:
-            if not r.is_success:
-                continue
             enriched.append(
                 MetricResult(
                     metric_name=r.metric_name,
@@ -92,6 +90,9 @@ class ScoreItemHandler:
                     },
                     execution_time_ms=r.execution_time_ms,
                     error=r.error,
+                    confidence=r.confidence,
+                    version=r.version,
+                    cost_usd=r.cost_usd,
                 ),
             )
 

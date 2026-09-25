@@ -7,10 +7,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.schemas.responses import AuditLogListResponse, AuditLogResponse
 from app.audit.services.audit_service import AuditService
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session
+from app.core.dependencies import (
+    CurrentUser,
+    get_current_user,
+    get_db_session,
+    require_org_membership,
+)
 from app.infrastructure.database.repositories.audit_repository import (
     SqlAlchemyAuditLogRepository,
 )
+from app.infrastructure.database.repositories.tenant_repository import (
+    SqlAlchemyMembershipRepository,
+    SqlAlchemyOrganizationRepository,
+)
+from app.kernel.exceptions.errors import BaseError
+from app.tenant.services.tenant_service import OrganizationService
 
 audit_router = APIRouter(prefix="/audit", tags=["audit"])
 
@@ -49,6 +60,7 @@ async def list_audit_logs(
     limit: int = Query(default=100, ge=1, le=500),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _org_member: None = Depends(require_org_membership),
 ) -> AuditLogListResponse:
     """List audit logs for an organization."""
     service = _get_service(session)

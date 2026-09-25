@@ -29,7 +29,7 @@ class AppConfig(BaseSettings):
     app_env: AppEnv = Field(default="development", alias="APP_ENV")
     app_name: str = Field(default="redops-eval", alias="APP_NAME")
     app_version: str = Field(default="0.1.0", alias="APP_VERSION")
-    debug: bool = Field(default=True, alias="APP_DEBUG")
+    debug: bool = Field(default=False, alias="APP_DEBUG")
     app_log_level: str = Field(default="DEBUG", alias="APP_LOG_LEVEL")
 
     # SERVER
@@ -94,6 +94,7 @@ class AppConfig(BaseSettings):
     # PROVIDER CREDENTIALS (optional; a provider is only registered when its key is set)
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
+    groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
 
     # SECURITY
     app_secret_key: str = Field(default="", alias="APP_SECRET_KEY")
@@ -103,10 +104,15 @@ class AppConfig(BaseSettings):
     def validate_secret_key(cls, v: str) -> str:
         if not v:
             import os
+            import secrets
 
-            if os.getenv("APP_ENV", "development") == "production":
+            # Production must always have an explicit secret
+            env = os.getenv("APP_ENV", "development")
+            if env == "production":
                 msg = "APP_SECRET_KEY must be set in production"
                 raise ValueError(msg)
+            # Dev/test: auto-generate a random key so JWT signing works
+            return secrets.token_hex(32)
         return v
 
     # JWT

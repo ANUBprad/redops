@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Any, cast
 
-from sqlalchemy import func, select
+from sqlalchemy import Table, and_, func, or_, select
+from sqlalchemy.dialects.postgresql import insert as postgres_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.evaluation.domain.contracts.evaluation_contracts import (
@@ -14,6 +17,7 @@ from app.evaluation.domain.contracts.evaluation_contracts import (
     PaginatedMetricResults,
 )
 from app.evaluation.metrics.domain import MetricAggregation, MetricResult
+from app.infrastructure.database.models.evaluation import EvaluationModel
 from app.infrastructure.database.models.evaluation_run import EvaluationRunModel
 from app.infrastructure.database.models.metric_result import MetricResultModel
 from app.kernel.entities.base import UUIDv7
@@ -44,43 +48,70 @@ class SqlAlchemyMetricResultRepository(MetricResultRepository):
             cost_usd=model.cost_usd,
         )
 
-    @staticmethod
-    def _to_model(result: MetricResult, run_id: str, item_id: str) -> MetricResultModel:
-        """Convert a domain MetricResult to an ORM model."""
-        return MetricResultModel(
-            run_id=run_id,
-            item_id=item_id,
-            metric_name=result.metric_name,
-            score=result.score,
-            normalized_score=result.normalized_score,
-            raw_output=result.raw_output,
-            reasoning=result.reasoning,
-            metadata_json=result.metadata,
-            execution_time_ms=result.execution_time_ms,
-            error=result.error,
-            confidence=result.confidence,
-            version=result.version,
-            cost_usd=result.cost_usd,
-        )
-
     async def save_many(self, results: Sequence[MetricResult]) -> None:
-        """Save multiple metric results in batch."""
+        """Persist metric results idempotently via a database upsert.
+
+        Identity is (run_id, item_id, metric_name), taken from each result's
+        metadata; one row per identity is enforced by the unique index
+        uq_metric_results_run_item_metric. A retry or a duplicate score
+        request updates the existing row instead of inserting a second one.
+        """
         if not results:
             return
 
-        run_id = ""
-        item_id = ""
+        now = datetime.now(UTC)
+        values = []
         for r in results:
             meta = r.metadata or {}
-            rid = meta.get("run_id", "")
-            iid = meta.get("item_id", "")
-            if rid:
-                run_id = str(rid)
-            if iid:
-                item_id = str(iid)
+            values.append(
+                {
+                    "run_id": str(meta.get("run_id", "") or ""),
+                    "item_id": str(meta.get("item_id", "") or ""),
+                    "metric_name": r.metric_name,
+                    "score": r.score,
+                    "normalized_score": r.normalized_score,
+                    "raw_output": r.raw_output,
+                    "reasoning": r.reasoning,
+                    "metadata": r.metadata,
+                    "execution_time_ms": r.execution_time_ms,
+                    "error": r.error,
+                    "created_at": now,
+                    "confidence": r.confidence,
+                    "version": r.version,
+                    "cost_usd": r.cost_usd,
+                }
+            )
 
-        models = [self._to_model(r, run_id, item_id) for r in results]
-        self._session.add_all(models)
+        # ponytail: stmt is Any because each dialect's Insert subclass carries
+        # its own on_conflict_do_update/excluded API; the dialect-typed version
+        # would need two near-identical code paths.
+        table: Table = cast("Table", MetricResultModel.__table__)
+        bind = getattr(self._session, "bind", None)
+        stmt: Any = (
+            postgres_insert(table)
+            if bind is not None and bind.dialect.name == "postgresql"
+            else sqlite_insert(table)
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["run_id", "item_id", "metric_name"],
+            set_={
+                column: stmt.excluded[column]
+                for column in (
+                    "score",
+                    "normalized_score",
+                    "raw_output",
+                    "reasoning",
+                    "metadata",
+                    "execution_time_ms",
+                    "error",
+                    "created_at",
+                    "confidence",
+                    "version",
+                    "cost_usd",
+                )
+            },
+        )
+        await self._session.execute(stmt, values)
 
     async def find_by_run_id(
         self,
@@ -162,12 +193,34 @@ class SqlAlchemyMetricResultRepository(MetricResultRepository):
         metric_name: str | None = None,
         provider: str | None = None,
         model: str | None = None,
+        owner_project_id: str | None = None,
     ) -> Sequence[MetricResult]:
         """Find metric results created within a date range."""
         stmt = select(MetricResultModel).where(
             MetricResultModel.created_at >= since,
             MetricResultModel.created_at <= until,
         )
+        if owner_project_id is not None:
+            stmt = (
+                stmt.join(
+                    EvaluationRunModel,
+                    MetricResultModel.run_id == EvaluationRunModel.id,
+                )
+                .outerjoin(
+                    EvaluationModel,
+                    EvaluationRunModel.evaluation_id == EvaluationModel.id,
+                )
+                .where(
+                    or_(
+                        EvaluationModel.project_id == owner_project_id,
+                        and_(
+                            EvaluationRunModel.evaluation_id.is_(None),
+                            EvaluationRunModel.metadata_.op("->>")("project_id")
+                            == owner_project_id,
+                        ),
+                    )
+                )
+            )
         if metric_name is not None:
             stmt = stmt.where(MetricResultModel.metric_name == metric_name)
         if provider is not None or model is not None:

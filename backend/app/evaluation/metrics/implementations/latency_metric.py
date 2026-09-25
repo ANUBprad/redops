@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 
 from app.evaluation.metrics.domain import (
+    EvaluatorType,
     Metric,
     MetricCategory,
     MetricDefinition,
@@ -32,6 +33,8 @@ class LatencyMetric(Metric):
             description="Measures response time (lower is better)",
             category=MetricCategory.PERFORMANCE,
             scale=MetricScale.CONTINUOUS,
+            evaluator_type=EvaluatorType.HEURISTIC,
+            required_inputs=("metadata",),
             tags=("performance", "speed"),
         )
 

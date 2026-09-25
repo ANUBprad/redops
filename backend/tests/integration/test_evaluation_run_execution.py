@@ -21,6 +21,14 @@ from temporalio.worker import Worker
 
 from app.evaluation.application.run_commands import CreateEvaluationRunCommand
 from app.evaluation.application.run_handlers import CreateEvaluationRunHandler
+from app.evaluation.metrics.domain import (
+    Metric,
+    MetricCategory,
+    MetricDefinition,
+    MetricInput,
+    MetricResult,
+    MetricScale,
+)
 from app.evaluation.metrics.engine import MetricEngine
 from app.evaluation.metrics.implementations import ALL_METRICS
 from app.evaluation.temporal.activities import (
@@ -39,6 +47,7 @@ from app.infrastructure.database.models.metric_result import MetricResultModel
 from app.infrastructure.database.repositories.evaluation_run_repository import (
     SqlAlchemyEvaluationRunRepository,
 )
+from app.kernel.entities.base import UUIDv7
 from app.providers.capabilities.capability import Capability
 from app.providers.capabilities.capability_set import CapabilitySet
 from app.providers.cost.defaults import build_default_cost_calculator
@@ -142,6 +151,47 @@ class DeterministicChatProvider:
             provider=self.provider_name,
             usage=Usage(input_tokens=10, output_tokens=5, total_tokens=15),
             finish_reason=FinishReason.STOP,
+        )
+
+
+class BoomMetric(Metric):
+    """Metric that raises on every evaluation (deterministic)."""
+
+    def definition(self) -> MetricDefinition:
+        return MetricDefinition(
+            name="boom",
+            display_name="Boom",
+            description="Raises always",
+            category=MetricCategory.QUALITY,
+            scale=MetricScale.BINARY,
+            version="9.9.9",
+        )
+
+    async def evaluate(self, input_data: MetricInput) -> MetricResult:
+        raise RuntimeError("boom-message")
+
+
+class FlakyMetric(Metric):
+    """Metric that raises for one specific item and succeeds otherwise."""
+
+    def definition(self) -> MetricDefinition:
+        return MetricDefinition(
+            name="flaky",
+            display_name="Flaky",
+            description="Raises for item-bad only",
+            category=MetricCategory.QUALITY,
+            scale=MetricScale.BINARY,
+            version="1.2.3",
+        )
+
+    async def evaluate(self, input_data: MetricInput) -> MetricResult:
+        if input_data.metadata.get("item_id") == "item-bad":
+            raise ValueError("flaky-boom")
+        return MetricResult(
+            metric_name="flaky",
+            score=0.8,
+            normalized_score=0.8,
+            version="1.2.3",
         )
 
 
@@ -251,12 +301,16 @@ async def _run_workflow(
 def _configure_pipeline(
     factory: async_sessionmaker[Any],
     registry: ProviderRegistry,
+    extra_metrics: list[Metric] | None = None,
 ) -> None:
     """Wire the real activity dependencies to the given infrastructure."""
     configure_session_factory(factory)
     configure_provider_registry(registry)
     metric_engine = MetricEngine()
     metric_engine.register_many([metric_cls() for metric_cls in ALL_METRICS])
+    if extra_metrics:
+        for metric in extra_metrics:
+            metric_engine.register(metric)
     configure_metric_engine(metric_engine)
     configure_cost_calculator(build_default_cost_calculator())
 
@@ -438,3 +492,107 @@ async def test_unknown_provider_fails_every_item_and_fails_the_run(
 
     rows = await _fetch_metric_rows(factory, run_id)
     assert rows == []
+
+
+@pytest.mark.asyncio
+async def test_metric_that_raises_everywhere_persists_errors_and_run_error_verdict(
+    time_skipping_env,
+):
+    """A metric raising on every item flags the run instead of passing silently."""
+    metric_names = ("boom",)
+    factory = await _build_database()
+
+    registry = ProviderRegistry()
+    provider = DeterministicChatProvider()
+    registry.register(provider)
+    _configure_pipeline(factory, registry, extra_metrics=[BoomMetric()])
+
+    run_id = await _create_run(factory, metric_names)
+
+    result = await _run_workflow(
+        time_skipping_env,
+        run_id=run_id,
+        total_items=1,
+        metric_names=metric_names,
+        dataset_items=({"item_id": "item-1", "prompt": "What is 2+2?"},),
+    )
+
+    assert result.status == "completed"
+    assert result.items_completed == 1
+    assert result.items_failed == 0
+
+    rows = await _fetch_metric_rows(factory, run_id)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.metric_name == "boom"
+    assert row.error is not None
+    assert "RuntimeError" in row.error
+    assert "boom-message" in row.error
+    assert row.version == "9.9.9"
+
+    async with factory() as session:
+        repo = SqlAlchemyEvaluationRunRepository(session)
+        run = await repo.find_by_id(UUIDv7.from_string(run_id))
+        assert run.verdict == "error"
+
+
+@pytest.mark.asyncio
+async def test_partial_metric_failure_persists_errors_and_preserves_siblings(
+    time_skipping_env,
+):
+    """A metric failing on some items is per-item evidence, siblings stay real."""
+    metric_names = ("flaky", "json_validity")
+    factory = await _build_database()
+
+    registry = ProviderRegistry()
+    provider = DeterministicChatProvider()
+    registry.register(provider)
+    _configure_pipeline(factory, registry, extra_metrics=[FlakyMetric()])
+
+    run_id = await _create_run(factory, metric_names)
+
+    result = await _run_workflow(
+        time_skipping_env,
+        run_id=run_id,
+        total_items=2,
+        metric_names=metric_names,
+        dataset_items=(
+            {"item_id": "item-good", "prompt": "What is the capital of France?"},
+            {"item_id": "item-bad", "prompt": "What is the capital of France?"},
+        ),
+    )
+
+    assert result.status == "completed"
+    assert result.items_completed == 2
+    assert result.items_failed == 0
+
+    rows = await _fetch_metric_rows(factory, run_id)
+    assert len(rows) == 4
+
+    by_item: dict[str, dict[str, MetricResultModel]] = {}
+    for row in rows:
+        by_item.setdefault(row.item_id, {})[row.metric_name] = row
+
+    flaky_bad = by_item["item-bad"]["flaky"]
+    assert flaky_bad.error is not None
+    assert "ValueError" in flaky_bad.error
+    assert "flaky-boom" in flaky_bad.error
+    assert flaky_bad.version == "1.2.3"
+
+    json_bad = by_item["item-bad"]["json_validity"]
+    assert json_bad.error is None
+    assert json_bad.score == 1.0
+
+    flaky_good = by_item["item-good"]["flaky"]
+    assert flaky_good.error is None
+    assert flaky_good.score == 0.8
+    assert flaky_good.version == "1.2.3"
+
+    json_good = by_item["item-good"]["json_validity"]
+    assert json_good.error is None
+    assert json_good.score == 1.0
+
+    async with factory() as session:
+        repo = SqlAlchemyEvaluationRunRepository(session)
+        run = await repo.find_by_id(UUIDv7.from_string(run_id))
+        assert run.verdict == "pass"

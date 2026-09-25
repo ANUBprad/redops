@@ -7,7 +7,13 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session
+from app.core.dependencies import (
+    CurrentUser,
+    get_current_user,
+    get_db_session,
+    require_current_org_membership,
+    require_owned_evaluation,
+)
 from app.evaluation.application.commands import (
     ArchiveEvaluationCommand,
     CreateEvaluationCommand,
@@ -106,12 +112,13 @@ async def create_evaluation(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _org: str = Depends(require_current_org_membership),
 ) -> EvaluationResponse:
     """Create a new evaluation definition."""
     repo = _get_repository(session)
     handler = CreateEvaluationHandler(repo)
     command = CreateEvaluationCommand(
-        project_id=body.project_id,
+        project_id=_org,
         dataset_id=body.dataset_id,
         name=body.name,
         description=body.description,
@@ -120,7 +127,7 @@ async def create_evaluation(
         metrics=tuple(body.metrics),
         tags=tuple(body.tags),
         configuration=body.configuration,
-        created_by=body.created_by,
+        created_by=current_user.user_id,
     )
     try:
         evaluation = await handler.handle(command)
@@ -131,7 +138,6 @@ async def create_evaluation(
 
 @evaluation_router.get("", response_model=EvaluationListResponse)
 async def list_evaluations(
-    project_id: str | None = Query(default=None),
     provider: str | None = Query(default=None),
     model: str | None = Query(default=None),
     status: str | None = Query(default=None),
@@ -142,12 +148,17 @@ async def list_evaluations(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _org: str = Depends(require_current_org_membership),
 ) -> EvaluationListResponse:
-    """List evaluations with filtering, sorting, and pagination."""
+    """List evaluations with filtering, sorting, and pagination.
+
+    Tenant-scoped: results are always limited to the caller's organization;
+    the legacy client-supplied ``project_id`` filter is ignored.
+    """
     repo = _get_repository(session)
     handler = ListEvaluationsHandler(repo)
     query = ListEvaluationsQuery(
-        project_id=project_id,
+        project_id=_org,
         provider=provider,
         model=model,
         status=status,
@@ -166,6 +177,7 @@ async def get_evaluation(
     evaluation_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_evaluation),
 ) -> EvaluationResponse:
     """Get an evaluation by ID."""
     repo = _get_repository(session)
@@ -184,6 +196,7 @@ async def update_evaluation(
     body: UpdateEvaluationRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_evaluation),
 ) -> EvaluationResponse:
     """Update an evaluation definition."""
     repo = _get_repository(session)
@@ -211,6 +224,7 @@ async def delete_evaluation(
     evaluation_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_evaluation),
 ) -> None:
     """Delete an evaluation definition."""
     repo = _get_repository(session)
@@ -232,6 +246,7 @@ async def duplicate_evaluation(
     body: DuplicateEvaluationRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_evaluation),
 ) -> EvaluationResponse:
     """Duplicate an evaluation definition."""
     repo = _get_repository(session)
@@ -252,6 +267,7 @@ async def archive_evaluation(
     evaluation_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_evaluation),
 ) -> EvaluationResponse:
     """Archive an evaluation definition."""
     repo = _get_repository(session)
@@ -269,6 +285,7 @@ async def mark_ready_evaluation(
     evaluation_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_evaluation),
 ) -> EvaluationResponse:
     """Mark an evaluation as ready."""
     repo = _get_repository(session)

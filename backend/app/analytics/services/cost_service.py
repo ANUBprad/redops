@@ -25,12 +25,12 @@ class CostService:
 
     async def get_analysis(
         self,
-        project_id: str | None = None,
+        owner_project_id: str | None = None,
         provider: str | None = None,
         model: str | None = None,
         days: int = 30,
     ) -> CostAnalysis:
-        """Compute cost analysis."""
+        """Compute cost analysis scoped to the owning organization."""
         now = datetime.now(UTC)
         since = now - timedelta(days=days)
 
@@ -41,6 +41,7 @@ class CostService:
             model=model,
             page=1,
             page_size=10000,
+            owner_project_id=owner_project_id,
         )
         result = await self._run_repo.list(query)
 

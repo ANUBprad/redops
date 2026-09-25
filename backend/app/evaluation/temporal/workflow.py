@@ -64,6 +64,8 @@ class EvaluationRunWorkflowInput:
     dataset_items: tuple[dict[str, str], ...] = ()
     prompt_template: str | None = None
     system_prompt: str | None = None
+    temperature: float | None = None
+    max_tokens: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +89,8 @@ def _compute_workflow_fingerprint(
     provider: str,
     model: str,
     metrics: tuple[str, ...],
+    temperature: float | None = None,
+    max_tokens: int | None = None,
 ) -> str:
     """Compute a deterministic fingerprint for the evaluation configuration.
 
@@ -107,6 +111,10 @@ def _compute_workflow_fingerprint(
     components["provider"] = provider
     components["model"] = model
     components["metrics"] = json.dumps(sorted(metrics), sort_keys=True)
+    if temperature is not None:
+        components["temperature"] = repr(temperature)
+    if max_tokens is not None:
+        components["max_tokens"] = str(max_tokens)
 
     canonical = json.dumps(components, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()[:32]
@@ -132,7 +140,7 @@ def _build_item_trace(item_result: ExecuteItemResult) -> dict[str, Any]:
 
     return {
         "item_index": item_result.item_index,
-        "prompt_trace": {"prompt": ""},
+        "prompt_trace": {"prompt": item_result.prompt},
         "provider_trace": {
             "response_content": item_result.response,
             "tokens_input": item_result.tokens_input,
@@ -220,6 +228,8 @@ class EvaluationRunWorkflow:
             provider=input.provider_name,
             model=input.model_id,
             metrics=input.metric_names,
+            temperature=input.temperature,
+            max_tokens=input.max_tokens,
         )
 
         await workflow.execute_activity(
@@ -283,6 +293,8 @@ class EvaluationRunWorkflow:
                         item_id=item_data.get("item_id", ""),
                         prompt_template=input.prompt_template,
                         system_prompt=input.system_prompt,
+                        temperature=input.temperature,
+                        max_tokens=input.max_tokens,
                     ),
                     start_to_close_timeout=timedelta(seconds=120),
                     schedule_to_close_timeout=timedelta(minutes=5),
@@ -372,19 +384,8 @@ class EvaluationRunWorkflow:
         }
 
         if items_failed == input.total_items:
-            await workflow.execute_activity(
-                fail_run_activity,
-                FailRunInput(
-                    run_id=input.run_id,
-                    error_code="ALL_ITEMS_FAILED",
-                    error_message="All items failed during execution",
-                ),
-                start_to_close_timeout=activity_start_to_close,
-                schedule_to_close_timeout=activity_schedule_to_close,
-                retry_policy=lifecycle_retry,
-            )
-
-            # Finalize integrity with error verdict
+            # Finalize integrity before the terminal transition: the run must
+            # never be durably FAILED while integrity records are missing.
             await workflow.execute_activity(
                 finalize_run_integrity_activity,
                 FinalizeRunIntegrityInput(
@@ -398,6 +399,18 @@ class EvaluationRunWorkflow:
                 retry_policy=persist_retry,
             )
 
+            await workflow.execute_activity(
+                fail_run_activity,
+                FailRunInput(
+                    run_id=input.run_id,
+                    error_code="ALL_ITEMS_FAILED",
+                    error_message="All items failed during execution",
+                ),
+                start_to_close_timeout=activity_start_to_close,
+                schedule_to_close_timeout=activity_schedule_to_close,
+                retry_policy=lifecycle_retry,
+            )
+
             return EvaluationRunWorkflowResult(
                 run_id=input.run_id,
                 status="failed",
@@ -409,15 +422,10 @@ class EvaluationRunWorkflow:
                 total_tokens_output=total_tokens_output,
             )
 
-        await workflow.execute_activity(
-            complete_run_activity,
-            RunIdInput(run_id=input.run_id),
-            start_to_close_timeout=activity_start_to_close,
-            schedule_to_close_timeout=activity_schedule_to_close,
-            retry_policy=lifecycle_retry,
-        )
-
-        # Finalize integrity: evaluate thresholds, capture provenance, persist
+        # Finalize integrity before the terminal transition: the run must
+        # never be durably COMPLETED while verdict/trace/provenance/fingerprint
+        # are still missing — if finalization exhausts its retries the run
+        # stays truthfully RUNNING instead of falsely COMPLETED.
         await workflow.execute_activity(
             finalize_run_integrity_activity,
             FinalizeRunIntegrityInput(
@@ -429,6 +437,14 @@ class EvaluationRunWorkflow:
             start_to_close_timeout=activity_start_to_close,
             schedule_to_close_timeout=activity_schedule_to_close,
             retry_policy=persist_retry,
+        )
+
+        await workflow.execute_activity(
+            complete_run_activity,
+            RunIdInput(run_id=input.run_id),
+            start_to_close_timeout=activity_start_to_close,
+            schedule_to_close_timeout=activity_schedule_to_close,
+            retry_policy=lifecycle_retry,
         )
 
         return EvaluationRunWorkflowResult(

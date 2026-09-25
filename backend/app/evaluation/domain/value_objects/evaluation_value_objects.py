@@ -100,6 +100,7 @@ class EvaluationConfiguration:
     policy: ExecutionPolicy = field(default_factory=ExecutionPolicy)
     priority: Priority = Priority.NORMAL
     prompt_template: str | None = None
+    dataset_items: tuple[dict[str, str], ...] = ()
 
     def __post_init__(self) -> None:
         """Validate configuration invariants."""

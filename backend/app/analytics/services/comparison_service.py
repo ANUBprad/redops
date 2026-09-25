@@ -36,17 +36,18 @@ class ComparisonService:
         self,
         entity_type: str = "model",
         entity_ids: tuple[str, ...] = (),
-        project_id: str | None = None,
+        owner_project_id: str | None = None,
         metrics: tuple[str, ...] = (),
         days: int = 30,
     ) -> ComparisonResult:
-        """Compare models or providers."""
+        """Compare models or providers within the owning organization."""
         now = datetime.now(UTC)
         since = now - timedelta(days=days)
 
         runs = await self._run_repo.find_by_date_range(
             since=since,
             until=now,
+            owner_project_id=owner_project_id,
         )
 
         filtered_runs = [

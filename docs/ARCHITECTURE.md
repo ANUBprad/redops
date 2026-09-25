@@ -153,6 +153,15 @@ RedOps Eval follows an **event-driven, workflow-orchestrated** monorepo architec
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
+> **Accuracy note (current implementation):** The adapter classes above
+> (`HeuristicAdapter`, `EmbeddingAdapter`, `LLMJudgeAdapter`, `RAGASAdapter`,
+> `CustomAdapter`) are defined in `app/evaluation/evaluators/adapters.py` but
+> **none is registered into a running `MetricEngine`**. Built-in metrics
+> (`ALL_METRICS`) run directly. There is **no `DeepEvalAdapter`**, and `ragas` /
+> `deepeval` are **not runtime dependencies** — the `RAGASAdapter` is an optional,
+> currently-unwired facade. The diagram above is the intended design, not the
+> wired runtime path.
+
 ## Layered Architecture
 
 ```
@@ -240,7 +249,8 @@ User Triggers Run via API (or CI/CD, or Schedule)
 5. Activity: Compute Metrics
    └─ For each (evaluation_task, metric) configured:
        ├─ Look up metric in MetricRegistry → get MetricDefinition
-       ├─ Resolve evaluator (DeepEvalAdapter / RAGASAdapter / Custom)
+       ├─ Resolve metric from registry → run via MetricEngine
+       ├─ (External evaluator adapters such as RAGAS are defined but not wired)
        ├─ Call evaluator.evaluate(metric, inputs)
        ├─ Persist MetricResult (immutable)
        └─ Publish MetricComputed event
@@ -287,7 +297,7 @@ User Triggers Run via API (or CI/CD, or Schedule)
 6. **Workflow Definitions** — Write new Temporal Workflows for custom evaluation scenarios. Existing Activities (provider calls, metric computation) are reusable.
 7. **Evaluation Profiles** — Define new profiles in configuration (Quick, Safety, RAG, Regression, Production Gate). Each profile is a data-driven template.
 8. **Dataset Importers** — Implement `DatasetImporter` for custom formats.
-9. **Authentication Backends** — Replace JWT/auth with OAuth2, SAML, or LDAP via the auth provider interface.
+9. **Authentication Backends** — Extend the auth provider interface with additional providers. OAuth2/SSO (GitHub, Google) is already implemented via `identity/api/router.py` (`/auth/oauth/*`) backed by `oauth_service.py`; SAML or LDAP can be added the same way.
 10. **Interaction Model Extensions** — Add new interaction types (agent, multi-turn, tool-calling) by extending the Interaction model without changing the evaluation pipeline.
 
 ## Design Principles
@@ -346,7 +356,14 @@ Profiles are stored in the database and can be customized per project. Users can
 
 ## Future-Proofing Architecture
 
-The initial architecture assumes a simple `prompt → response` interaction model. The following extensions are designed to slot in without architectural redesign:
+The initial architecture assumes a simple `prompt → response` interaction model. The following extensions are designed to slot in without architectural redesign.
+
+> **Status:** These Interaction types and integrations below are **planned / designed future
+> extensions**, not yet implemented in code. `Interaction` is an abstract concept in this
+> document; there is currently no `Interaction` type or `multi_modal`/`multi_agent` workflow in
+> the repository. Agent evaluation (`agents/`) and tool-calling contracts exist, but MCP,
+> multi-agent topology, long-context segmentation, and multi-modal evaluation remain roadmap
+> Phase 11 work (see `docs/ROADMAP.md`).
 
 ### Interaction Model (Abstract)
 
@@ -360,7 +377,7 @@ class Interaction:
 ```
 
 - **Agent Evaluation**: Interaction type `agent`. Inputs include available tools and max turns. Outputs include the full agent trace and final response. Metrics evaluate tool selection correctness, task completion rate, and efficiency.
-- **MCP Servers**: Model Context Protocol servers are registered as tool providers. The `tool_call` Interaction type routes tool calls through MCP adapters.
+- **MCP Servers**: Model Context Protocol servers would be registered as tool providers. The `tool_call` Interaction type would route tool calls through MCP adapters. (Planned — no MCP adapter exists yet.)
 - **Multi-Agent Systems**: Interaction type `multi_agent`. Inputs include agent topology (supervisor, workers, routers). Evaluation includes communication efficiency, conflict resolution, and overall task success.
 - **Multi-Modal**: Interaction type `multi_modal`. Inputs include image URLs or base64-encoded images and optional audio. Provider adapters check `Capabilities.vision` and `Capabilities.audio` before routing.
 - **Long Context**: Provider adapters report `Model.context_window`. The evaluation pipeline can segment inputs exceeding the context window and measure recall degradation across segments.

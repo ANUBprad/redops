@@ -214,6 +214,8 @@ class StartAttackRunHandler:
         run = await self._repository.find_by_id(run_id)
         if run is None:
             raise NotFoundError(f"Attack run {command.run_id} not found")
+        if run.status == AttackStatus.CREATED:
+            run.queue()
         run.start(total_items=command.total_items)
         await self._repository.save(run)
         return run
@@ -256,8 +258,9 @@ class CancelAttackRunHandler:
         run = await self._repository.find_by_id(run_id)
         if run is None:
             raise NotFoundError(f"Attack run {command.run_id} not found")
-        run.cancel()
-        await self._repository.save(run)
+        if run.status != AttackStatus.CANCELLED:
+            run.cancel()
+            await self._repository.save(run)
         return run
 
 
@@ -298,6 +301,9 @@ def _dict_to_config(data: dict[str, Any] | None) -> AttackConfiguration | None:
         target_model=data.get("target_model", ""),
         temperature=data.get("temperature", 0.0),
         max_tokens=data.get("max_tokens", 2048),
+        mutation_provider=data.get("mutation_provider", ""),
+        mutation_model=data.get("mutation_model", ""),
+        mutation_strategy=data.get("mutation_strategy", ""),
         timeout_seconds=data.get("timeout_seconds", 60),
         system_prompt=data.get("system_prompt", ""),
         attack_definitions=tuple(
@@ -306,6 +312,9 @@ def _dict_to_config(data: dict[str, Any] | None) -> AttackConfiguration | None:
         categories=tuple(AttackCategory(c) for c in data.get("categories", [])),
         severities=tuple(AttackSeverity(s) for s in data.get("severities", [])),
         max_scenarios=data.get("max_scenarios", 0),
+        max_rounds=data.get("max_rounds", 10),
+        max_cost_usd=data.get("max_cost_usd", 50.0),
+        max_duration_seconds=data.get("max_duration_seconds", 3600),
         continue_on_violation=data.get("continue_on_violation", True),
         metadata=dict(data.get("metadata", {})),
     )

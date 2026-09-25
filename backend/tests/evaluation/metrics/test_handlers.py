@@ -13,6 +13,8 @@ from app.evaluation.metrics.commands import (
     ScoreItemCommand,
 )
 from app.evaluation.metrics.domain import (
+    Metric,
+    MetricInput,
     MetricResult,
 )
 from app.evaluation.metrics.engine import MetricEngine
@@ -135,6 +137,64 @@ class TestScoreItemHandler:
         for r in saved_results:
             assert r.metadata.get("run_id") == "00000000-0000-0000-0000-000000000001"
             assert r.metadata.get("item_id") == "00000000-0000-0000-0000-000000000002"
+
+    @pytest.mark.asyncio
+    async def test_enrichment_preserves_confidence_cost_and_version(
+        self,
+        engine: MetricEngine,
+        mock_repo: MetricResultRepository,
+    ) -> None:
+        """Reconstructed results keep confidence, cost_usd, and version.
+
+        The handler reconstructs each result to stamp run/item identity
+        before persisting. It must not silently reset confidence,
+        cost_usd, or version to their dataclass defaults.
+        """
+        from app.evaluation.metrics.domain import (
+            MetricCategory,
+            MetricDefinition,
+            MetricScale,
+        )
+
+        class StubMetric(Metric):
+            """Purely deterministic metric for asserting preservation."""
+
+            def definition(self) -> MetricDefinition:
+                return MetricDefinition(
+                    name="stub",
+                    display_name="Stub",
+                    description="test",
+                    category=MetricCategory.QUALITY,
+                    scale=MetricScale.CONTINUOUS,
+                    version="3.2.1",
+                )
+
+            async def evaluate(self, input_data: MetricInput) -> MetricResult:
+                return MetricResult(
+                    metric_name="stub",
+                    score=0.5,
+                    normalized_score=0.5,
+                    confidence=0.9,
+                    cost_usd=0.0123,
+                    version="3.2.1",
+                )
+
+        engine.register(StubMetric())
+        handler = ScoreItemHandler(engine, mock_repo)
+        command = ScoreItemCommand(
+            run_id="00000000-0000-0000-0000-000000000001",
+            item_id="00000000-0000-0000-0000-000000000002",
+            metric_names=("stub",),
+        )
+        await handler.handle(command)
+
+        call_args = mock_repo.save_many.call_args
+        assert call_args is not None
+        saved_results = call_args[0][0]
+        assert len(saved_results) == 1
+        assert saved_results[0].confidence == pytest.approx(0.9)
+        assert saved_results[0].cost_usd == pytest.approx(0.0123)
+        assert saved_results[0].version == "3.2.1"
 
 
 class TestGetAggregatedScoresHandler:

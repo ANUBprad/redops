@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any, overload
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.evaluation.domain.contracts.evaluation_contracts import (
@@ -25,6 +25,7 @@ from app.evaluation.domain.value_objects.evaluation_value_objects import (
     ExecutionLimits,
     ExecutionPolicy,
 )
+from app.infrastructure.database.models.evaluation import EvaluationModel
 from app.infrastructure.database.models.evaluation_run import EvaluationRunModel
 from app.kernel.entities.base import UUIDv7
 from app.kernel.exceptions.errors import ConflictError
@@ -126,6 +127,17 @@ class SqlAlchemyEvaluationRunRepository(RunRepository):
         stmt = select(EvaluationRunModel)
         count_stmt = select(func.count()).select_from(EvaluationRunModel)
 
+        if query.owner_project_id is not None:
+            scope = _owner_scope_condition(query.owner_project_id)
+            stmt = stmt.outerjoin(
+                EvaluationModel,
+                EvaluationRunModel.evaluation_id == EvaluationModel.id,
+            ).where(scope)
+            count_stmt = count_stmt.outerjoin(
+                EvaluationModel,
+                EvaluationRunModel.evaluation_id == EvaluationModel.id,
+            ).where(scope)
+
         if query.evaluation_id is not None:
             stmt = stmt.where(
                 EvaluationRunModel.evaluation_id == query.evaluation_id,
@@ -224,18 +236,43 @@ class SqlAlchemyEvaluationRunRepository(RunRepository):
         model = self._to_model(run)
         await self._session.merge(model)
 
+    async def find_by_workflow_id(self, workflow_id: str) -> EvaluationRun | None:
+        """Find a run by its Temporal workflow ID (used for idempotency).
+
+        Args:
+            workflow_id: The Temporal workflow ID assigned to the run.
+
+        Returns:
+            The EvaluationRun aggregate if found, None otherwise.
+
+        """
+        stmt = select(EvaluationRunModel).where(
+            EvaluationRunModel.workflow_id == workflow_id,
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model is None:
+            return None
+        return self._to_domain(model)
+
     async def find_by_date_range(
         self,
         since: datetime,
         until: datetime,
         provider: str | None = None,
         model: str | None = None,
+        owner_project_id: str | None = None,
     ) -> Sequence[EvaluationRun]:
         """Find runs created within a date range, optionally filtered."""
         stmt = select(EvaluationRunModel).where(
             EvaluationRunModel.created_at >= since,
             EvaluationRunModel.created_at <= until,
         )
+        if owner_project_id is not None:
+            stmt = stmt.outerjoin(
+                EvaluationModel,
+                EvaluationRunModel.evaluation_id == EvaluationModel.id,
+            ).where(_owner_scope_condition(owner_project_id))
         if provider is not None:
             stmt = stmt.where(EvaluationRunModel.provider == provider)
         if model is not None:
@@ -353,6 +390,23 @@ def _as_utc(value: datetime | None) -> datetime | None:
     return value.replace(tzinfo=UTC)
 
 
+def _owner_scope_condition(owner_project_id: str) -> Any:
+    """Match runs owned by ``owner_project_id``: parent-evaluation owned or orphan attributed.
+
+    ``->>`` extracts the orphan run's project as text. The generic JSON
+    comparator has no ``astext`` and ``->``/``CAST`` variants compare
+    quoted JSON on at least one backend; ``->>`` compiles identically on
+    PostgreSQL and SQLite (>= 3.38).
+    """
+    return or_(
+        EvaluationModel.project_id == owner_project_id,
+        and_(
+            EvaluationRunModel.evaluation_id.is_(None),
+            EvaluationRunModel.metadata_.op("->>")("project_id") == owner_project_id,
+        ),
+    )
+
+
 def _get_sort_column(sort_by: str) -> Any:
     """Map a sort field name to the corresponding ORM column.
 
@@ -400,6 +454,8 @@ def _serialize_config(config: EvaluationConfiguration) -> dict[str, Any]:
             "timeout_per_item_seconds": config.policy.timeout_per_item_seconds,
         },
         "priority": config.priority.value,
+        "prompt_template": config.prompt_template,
+        "dataset_items": list(config.dataset_items),
     }
 
 
@@ -445,8 +501,8 @@ def _deserialize_config(data: dict[str, Any]) -> EvaluationConfiguration:
         profile=EvaluationProfile(
             provider_name=profile_data.get("provider_name", ""),
             model_id=profile_data.get("model_id", ""),
-            temperature=profile_data.get("temperature", 0.0),
-            max_tokens=profile_data.get("max_tokens", 4096),
+            temperature=profile_data.get("temperature"),
+            max_tokens=profile_data.get("max_tokens"),
             timeout_seconds=profile_data.get("timeout_seconds", 60),
             system_prompt=profile_data.get("system_prompt"),
         ),
@@ -475,6 +531,12 @@ def _deserialize_config(data: dict[str, Any]) -> EvaluationConfiguration:
             timeout_per_item_seconds=policy_data.get("timeout_per_item_seconds"),
         ),
         priority=Priority(data.get("priority", "normal")),
+        prompt_template=data.get("prompt_template"),
+        dataset_items=tuple(
+            {str(k): str(v) for k, v in item.items()}
+            for item in (data.get("dataset_items") or ())
+            if isinstance(item, dict)
+        ),
     )
 
 
@@ -483,8 +545,8 @@ def _deserialize_profile(data: dict[str, Any]) -> EvaluationProfile:
     return EvaluationProfile(
         provider_name=data.get("provider_name", ""),
         model_id=data.get("model_id", ""),
-        temperature=data.get("temperature", 0.0),
-        max_tokens=data.get("max_tokens", 4096),
+        temperature=data.get("temperature"),
+        max_tokens=data.get("max_tokens"),
         timeout_seconds=data.get("timeout_seconds", 60),
         system_prompt=data.get("system_prompt"),
     )

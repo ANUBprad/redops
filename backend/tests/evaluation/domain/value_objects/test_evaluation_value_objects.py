@@ -189,8 +189,8 @@ class TestEvaluationProfile:
         profile = EvaluationProfile(provider_name="openai", model_id="gpt-4")
         assert profile.provider_name == "openai"
         assert profile.model_id == "gpt-4"
-        assert profile.temperature == 0.0
-        assert profile.max_tokens == 4096
+        assert profile.temperature is None
+        assert profile.max_tokens is None
         assert profile.timeout_seconds == 60
 
     def test_empty_provider_allowed(self) -> None:

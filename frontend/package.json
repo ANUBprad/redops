@@ -23,6 +23,7 @@
     "lucide-react": "^0.441.0",
     "react-hook-form": "^7.54.0",
     "recharts": "^3.10.1",
+    "sonner": "^2.0.8",
     "tailwind-merge": "^2.5.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.23.0"

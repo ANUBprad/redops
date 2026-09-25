@@ -9,6 +9,7 @@ from __future__ import annotations
 import time
 
 from app.evaluation.metrics.domain import (
+    EvaluatorType,
     Metric,
     MetricCategory,
     MetricDefinition,
@@ -40,6 +41,8 @@ class TrajectoryErrorRecoveryMetric(Metric):
             direction=ScoreDirection.HIGHER_IS_BETTER,
             default_threshold=0.3,
             tags=("trajectory", "agent", "deterministic", "robustness"),
+            evaluator_type=EvaluatorType.HEURISTIC,
+            required_inputs=("response",),
         )
 
     async def evaluate(self, input_data: MetricInput) -> MetricResult:

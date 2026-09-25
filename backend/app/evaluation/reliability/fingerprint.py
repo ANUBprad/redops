@@ -105,3 +105,41 @@ def compute_input_hash(
     parts = [prompt, response, reference, context]
     canonical = _canonical_json(parts)
     return _hash_content(canonical)
+
+
+def compute_validation_fingerprint(
+    *,
+    dataset_hash: str = "",
+    metric_name: str = "",
+    metric_version: str = "",
+    scorer_factory: str = "",
+    parameters: dict[str, object] | None = None,
+    example_fingerprints: tuple[str, ...] = (),
+) -> EvaluationFingerprint:
+    """Compute a deterministic fingerprint for a ground-truth validation run.
+
+    The fingerprint binds the exact dataset content (via ``dataset_hash`` and,
+    optionally, per-example hashes) to the exact metric configuration
+    (``metric_name`` / ``metric_version`` / ``scorer_factory`` / ``parameters``).
+
+    This makes it impossible to confuse "the metric implementation changed"
+    with "the dataset changed": a change to either produces a different
+    fingerprint. Timestamps and other transient data are intentionally
+    excluded so an identical logical run reproduces the same fingerprint.
+    """
+    components: dict[str, str] = {
+        "dataset_hash": dataset_hash,
+        "metric_name": metric_name,
+        "metric_version": metric_version,
+        "scorer_factory": scorer_factory,
+    }
+    if parameters:
+        components["parameters"] = _canonical_json(parameters)
+    if example_fingerprints:
+        components["example_fingerprints"] = _canonical_json(sorted(example_fingerprints))
+
+    canonical = _canonical_json(components)
+    return EvaluationFingerprint(
+        fingerprint=_hash_content(canonical),
+        components=components,
+    )

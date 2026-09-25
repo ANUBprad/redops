@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.evaluation.metrics.domain import (
+    EvaluatorType,
     MetricCategory,
     MetricDefinition,
     MetricInput,
@@ -27,6 +28,8 @@ class FaithfulnessMetric(LLMJudgeMetric):
             scale=MetricScale.CONTINUOUS,
             requires_context=True,
             tags=("quality", "rag", "consistency", "llm_judge"),
+            evaluator_type=EvaluatorType.LLM_JUDGE,
+            required_inputs=("prompt", "response", "context"),
         )
 
     def validate_input(self, input_data: MetricInput) -> str | None:

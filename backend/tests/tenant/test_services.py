@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.kernel.exceptions.errors import ConflictError, UnauthorizedError
+from app.tenant.domain.entities import Membership
 from app.tenant.domain.enums import OrganizationRole
 from app.tenant.services.tenant_service import InvitationService, OrganizationService
 
@@ -125,4 +126,79 @@ async def test_invite_member_duplicate(
             organization_id="org-1",
             role=OrganizationRole.MEMBER,
             invited_by="user-1",
+        )
+
+
+@pytest.mark.asyncio
+async def test_require_role_denies_plain_member(
+    org_service: OrganizationService,
+    mock_membership_repo: AsyncMock,
+) -> None:
+    """A plain MEMBER must not pass the role choke point.
+
+    Regression: pre-fix the mutating router endpoints only called
+    check_membership, so any member (even MEMBER) could invite or change
+    roles. This asserts the shared require_role guard rejects them.
+    """
+    member = Membership(
+        user_id="user-2",
+        organization_id="org-1",
+        role=OrganizationRole.MEMBER,
+        invited_by="user-1",
+    )
+    mock_membership_repo.find_by_user_and_org.return_value = member
+    with pytest.raises(UnauthorizedError):
+        await org_service.require_role(
+            "user-2",
+            "org-1",
+            OrganizationRole.OWNER,
+            OrganizationRole.ADMIN,
+        )
+
+
+@pytest.mark.asyncio
+async def test_remove_member_rejects_last_owner(
+    invitation_service: InvitationService,
+    mock_membership_repo: AsyncMock,
+) -> None:
+    """Removing the last OWNER must be refused.
+
+    Regression: pre-fix remove_member would blindly delete any member,
+    leaving an organization with no owner.
+    """
+    owner = Membership(
+        user_id="user-1",
+        organization_id="org-1",
+        role=OrganizationRole.OWNER,
+        invited_by="user-0",
+    )
+    mock_membership_repo.find_by_user_and_org.return_value = owner
+    mock_membership_repo.list_by_org.return_value = [owner]
+    with pytest.raises(ConflictError):
+        await invitation_service.remove_member("user-1", "org-1")
+
+
+@pytest.mark.asyncio
+async def test_change_member_role_rejects_last_owner(
+    invitation_service: InvitationService,
+    mock_membership_repo: AsyncMock,
+) -> None:
+    """Demoting the last OWNER must be refused.
+
+    Regression: pre-fix change_member_role let a role become MEMBER while
+    no other OWNER remained.
+    """
+    owner = Membership(
+        user_id="user-1",
+        organization_id="org-1",
+        role=OrganizationRole.OWNER,
+        invited_by="user-0",
+    )
+    mock_membership_repo.find_by_user_and_org.return_value = owner
+    mock_membership_repo.list_by_org.return_value = [owner]
+    with pytest.raises(ConflictError):
+        await invitation_service.change_member_role(
+            "user-1",
+            "org-1",
+            OrganizationRole.MEMBER,
         )

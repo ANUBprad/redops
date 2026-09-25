@@ -167,41 +167,48 @@ class TestPromptResponseEmbeddingMetrics:
 
 
 class TestGroundednessKnownAnswers:
-    """Groundedness is cosine(response, context)."""
+    """Groundedness via LLM judge propagates scripted verdicts."""
 
     @pytest.mark.asyncio
-    async def test_identical_text_scores_one(self) -> None:
+    async def test_grounded_verdict_scores_high(self) -> None:
         from app.evaluation.metrics.implementations.groundedness_metric import (
             GroundednessMetric,
         )
 
-        provider = ScriptedEmbeddingProvider()
+        provider = ScriptedJudgeProvider(
+            {"score": 0.95, "confidence": 0.9, "reasoning": "fully grounded"},
+        )
         result = await GroundednessMetric().evaluate(
             MetricInput(
-                response=GAMMA,
-                context=GAMMA,
-                metadata={"_embedding_provider": provider},
+                prompt="What is the capital of France?",
+                response="Paris is the capital of France.",
+                context="Paris is the capital of France.",
+                metadata={"_judge_provider": provider},
             ),
         )
         assert result.is_success
-        assert result.normalized_score == pytest.approx(1.0)
+        assert result.normalized_score == pytest.approx(0.95)
+        assert result.confidence == pytest.approx(0.9)
 
     @pytest.mark.asyncio
-    async def test_unrelated_text_scores_zero(self) -> None:
+    async def test_ungrounded_verdict_scores_low(self) -> None:
         from app.evaluation.metrics.implementations.groundedness_metric import (
             GroundednessMetric,
         )
 
-        provider = ScriptedEmbeddingProvider()
+        provider = ScriptedJudgeProvider(
+            {"score": 0.1, "confidence": 0.85, "reasoning": "not supported"},
+        )
         result = await GroundednessMetric().evaluate(
             MetricInput(
-                response=ALPHA,
-                context=BETA,
-                metadata={"_embedding_provider": provider},
+                prompt="What is the capital of France?",
+                response="Berlin is the capital of France.",
+                context="Paris is the capital of France.",
+                metadata={"_judge_provider": provider},
             ),
         )
         assert result.is_success
-        assert result.normalized_score == pytest.approx(0.0)
+        assert result.normalized_score == pytest.approx(0.1)
 
     @pytest.mark.asyncio
     async def test_missing_context_is_error(self) -> None:
@@ -209,7 +216,9 @@ class TestGroundednessKnownAnswers:
             GroundednessMetric,
         )
 
-        result = await GroundednessMetric().evaluate(MetricInput(response=GAMMA))
+        result = await GroundednessMetric().evaluate(
+            MetricInput(response=GAMMA),
+        )
         assert not result.is_success
 
 
@@ -271,7 +280,7 @@ def _judge_input(metric_name: str, provider: Any) -> MetricInput:
     }
     if metric_name == "correctness":
         kwargs["reference"] = "Paris"
-    if metric_name in {"faithfulness", "hallucination"}:
+    if metric_name in {"faithfulness", "hallucination", "groundedness"}:
         kwargs["context"] = "Paris is the capital of France."
     return MetricInput(**kwargs)
 

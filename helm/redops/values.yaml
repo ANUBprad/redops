@@ -61,7 +61,7 @@ autoscaling:
 
 livenessProbe:
   httpGet:
-    path: /health
+    path: /api/v1/health
     port: 8000
   initialDelaySeconds: 15
   periodSeconds: 20
@@ -70,7 +70,7 @@ livenessProbe:
 
 readinessProbe:
   httpGet:
-    path: /ready
+    path: /api/v1/ready
     port: 8000
   initialDelaySeconds: 10
   periodSeconds: 10
@@ -87,6 +87,20 @@ env:
   APP_ENV: "production"
   APP_DEBUG: "false"
   APP_LOG_LEVEL: "INFO"
+
+# Non-secret environment delivered via a ConfigMap (rendered into a
+# configmap.yaml resource and injected with envFrom). DB_HOST and
+# REDIS_HOST are supplied via the secrets secret (db-host / redis-host).
+config:
+  DB_PORT: "5432"
+  DB_USER: "redops"
+  DB_NAME: "redops"
+  REDIS_PORT: "6379"
+  TEMPORAL_HOST: "temporal-frontend.redops.svc.cluster.local"
+  TEMPORAL_PORT: "7233"
+  TEMPORAL_NAMESPACE: "default"
+  TEMPORAL_TASK_QUEUE: "redops-eval"
+  SERVER_CORS_ORIGINS: "http://localhost:5173,http://localhost:3000"
 
 secrets:
   dbHost: "postgres.redops.svc.cluster.local"

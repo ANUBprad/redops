@@ -89,17 +89,14 @@ redops_eval/
 │   │   ├── worker.py
 │   │   └── converters/       # Custom data converters
 │   ├── providers/             # Provider adapter implementations
-│   │   ├── openai.py
-│   │   ├── anthropic.py
-│   │   ├── gemini.py
-│   │   ├── ollama.py
-│   │   ├── groq.py
-│   │   └── openrouter.py
+│   │   ├── openai/
+│   │   ├── anthropic/
+│   │   ├── groq/              # OpenAI-compatible; reuses OpenAI wire-format client/adapters
+│   │   └── (gemini, ollama, openrouter — planned, Phase 11)
 │   ├── evaluators/            # Evaluator adapter implementations
 │   │   ├── base.py            # BaseEvaluatorAdapter
-│   │   ├── deepeval_adapter.py
-│   │   ├── ragas_adapter.py
-│   │   └── custom_adapter.py
+│   │   └── adapters.py        # Heuristic/Embedding/LLMJudge/RAGAS/Custom adapters
+│   │                          # (RAGAS adapter optional; not wired to any engine)
 │   ├── event_bus/             # Event bus implementations
 │   │   ├── redis_streams.py   # Redis Streams implementation
 │   │   └── in_memory.py       # For testing
@@ -133,7 +130,8 @@ redops_eval/
 
 **Dependencies:** `core/security.py`, `core/database.py`.
 
-**Future extensions:** OAuth2 / SSO provider integrations, SCIM provisioning, 2FA/TOTP.
+**Future extensions:** SAML / LDAP provider integrations, SCIM provisioning, 2FA/TOTP.
+(OAuth2/SSO with GitHub and Google is implemented in `identity/services/oauth_service.py`.)
 
 ---
 
@@ -460,9 +458,13 @@ redops_eval/
       def evaluator_type(self) -> EvaluatorType: ...
   ```
 - Maintain `EvaluatorRegistry` — maps metric names to evaluator adapters.
-- Provide built-in adapters:
-  - `DeepEvalAdapter` — wraps DeepEval metrics.
-  - `RAGASAdapter` — wraps RAGAS metrics (for RAG-specific evaluations).
+- Provide built-in adapters (see `adapters.py`):
+  - `HeuristicAdapter` — deterministic checks.
+  - `EmbeddingAdapter` — embedding/similarity checks.
+  - `LLMJudgeAdapter` — LLM-as-judge checks.
+  - `RAGASAdapter` — optional RAGAS wrapper (RAG metrics); `ragas` is NOT a
+    runtime dependency and no adapter is currently registered into a
+    `MetricEngine`, so RAGAS/DeepEval are not used by the built-in metrics.
   - `CustomAdapter` — executes user-provided evaluation code.
 - Handle adapter-specific error translation and timeout wrapping.
 - Support evaluator model configuration (which LLM acts as the judge).
@@ -652,17 +654,21 @@ Every Activity is **idempotent**. Temporal may retry an Activity on worker failu
 
 Temporal Server runs as a separate process (or Docker container) with its own PostgreSQL database for workflow state persistence. In development, Temporal's dev server is used (single binary, no dependencies).
 
-### Provider Adapters (`infrastructure/providers/`)
+### Provider Adapters (`app/providers/`)
 
-Concrete implementations of `BaseProviderAdapter`:
-- `openai.py` — Uses `openai` Python SDK.
-- `anthropic.py` — Uses `anthropic` Python SDK.
-- `gemini.py` — Uses `google-generativeai` Python SDK.
-- `ollama.py` — Direct HTTP or LangChain's `ChatOllama`.
-- `groq.py` — OpenAI-compatible API endpoint.
-- `openrouter.py` — OpenAI-compatible API endpoint.
+Concrete implementations of the provider adapter contract currently shipped:
+- `openai/` — OpenAI-compatible SDK adapter (client, mappers, streaming, token usage, health).
+- `anthropic/` — Anthropic SDK adapter (client, mappers, streaming, token usage, health).
+- `groq/` — OpenAI-compatible; reuses the OpenAI wire-format client/adapters at Groq's endpoint (no embedding API).
 
-Each provider adapter declares its available models via the Model Catalog (data, not code). Models can be added/updated without changing the adapter.
+Each provider adapter declares its available models via the Model Catalog (data, not code);
+models can be added/updated without changing the adapter.
+
+> **Planned (not yet implemented):** Additional providers (Gemini, Ollama, OpenRouter,
+> Cohere, Mistral, Together AI) are roadmap Phase 11 work. Adding a provider requires a new
+> adapter module registered with the provider registry, not just catalog entries — see
+> `docs/ROADMAP.md` (Phase 11) and the provider extension point in
+> `docs/evaluation/EVALUATION_ENGINE.md`.
 
 ### Evaluator Adapters (`infrastructure/evaluators/`)
 

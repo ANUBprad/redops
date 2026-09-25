@@ -5,8 +5,11 @@ from app.infrastructure.database.models.attack_definition import AttackDefinitio
 from app.infrastructure.database.models.attack_run import AttackRunModel
 from app.infrastructure.database.models.evaluation import EvaluationModel
 from app.infrastructure.database.models.evaluation_run import EvaluationRunModel
+from app.infrastructure.database.models.item_execution import ItemExecutionModel
+from app.infrastructure.database.models.metric_definition import MetricDefinitionModel
 from app.infrastructure.database.models.metric_result import MetricResultModel
 from app.infrastructure.database.models.project import ProjectModel
+from app.infrastructure.database.models.red_team_round import RedTeamRoundModel
 from app.infrastructure.database.models.run_event import RunEventModel
 from app.infrastructure.database.models.run_log import RunLogModel
 
@@ -16,8 +19,11 @@ __all__ = [
     "AttackRunModel",
     "EvaluationModel",
     "EvaluationRunModel",
+    "ItemExecutionModel",
+    "MetricDefinitionModel",
     "MetricResultModel",
     "ProjectModel",
+    "RedTeamRoundModel",
     "RunEventModel",
     "RunLogModel",
 ]

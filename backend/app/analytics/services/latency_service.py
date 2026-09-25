@@ -26,12 +26,12 @@ class LatencyService:
 
     async def get_analysis(
         self,
-        project_id: str | None = None,
+        owner_project_id: str | None = None,
         provider: str | None = None,
         model: str | None = None,
         days: int = 30,
     ) -> LatencyAnalysis:
-        """Compute latency analysis."""
+        """Compute latency analysis scoped to the owning organization."""
         now = __import__("datetime").datetime.now(UTC)
         since = now - timedelta(days=days)
 
@@ -40,6 +40,7 @@ class LatencyService:
             until=now,
             provider=provider,
             model=model,
+            owner_project_id=owner_project_id,
         )
 
         latencies = [r.average_latency_ms for r in runs if r.average_latency_ms > 0]
@@ -52,6 +53,7 @@ class LatencyService:
 
         avg_latency = sum(sorted_lat) / count
         median_latency = sorted_lat[count // 2]
+        p50_idx = min(int(count * 0.50), count - 1)
         p95_idx = min(int(count * 0.95), count - 1)
         p99_idx = min(int(count * 0.99), count - 1)
 
@@ -61,6 +63,7 @@ class LatencyService:
         return LatencyAnalysis(
             average_latency_ms=round(avg_latency, 1),
             median_latency_ms=round(median_latency, 1),
+            p50_latency_ms=round(sorted_lat[p50_idx], 1),
             p95_latency_ms=round(sorted_lat[p95_idx], 1),
             p99_latency_ms=round(sorted_lat[p99_idx], 1),
             min_latency_ms=round(sorted_lat[0], 1),

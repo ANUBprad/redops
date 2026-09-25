@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from temporalio.service import RPCError, RPCStatusCode
 
-from app.core.dependencies import get_current_user, get_db_session
+from app.core.config import AppConfig
+from app.core.dependencies import (
+    get_config_dependency,
+    get_current_user,
+    get_db_session,
+    get_temporal_client,
+)
 from app.infrastructure.database.repositories.attack_definition_repository import (
     SqlAlchemyAttackDefinitionRepository,
 )
@@ -48,6 +55,8 @@ from app.redteam.application.handlers import (
     UpdateAttackDefinitionHandler,
 )
 from app.redteam.domain.entities import AttackDefinition, AttackRun
+from app.redteam.temporal.activities import RedTeamWorkflowInput
+from app.redteam.temporal.workflow import RedTeamWorkflow
 from app.schemas.redteam import (
     AttackDefinitionListResponse,
     AttackDefinitionResponse,
@@ -64,6 +73,7 @@ from app.schemas.redteam import (
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+    from temporalio.client import Client as TemporalClient
 
     from app.core.dependencies import CurrentUser
     from app.redteam.contracts.repositories import PaginatedAttackDefinitions, PaginatedAttackRuns
@@ -136,6 +146,7 @@ def _run_to_response(r: AttackRun) -> AttackRunResponse:
         items_violated=r.items_violated,
         items_failed=r.items_failed,
         progress=r.progress,
+        campaign_results=r.campaign_results,
         version=r.version,
         started_at=_dt_str(r.started_at) if r.started_at else None,
         completed_at=_dt_str(r.completed_at) if r.completed_at else None,
@@ -398,12 +409,58 @@ async def start_attack_run(
     body: StartAttackRunRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    temporal_client: TemporalClient = Depends(get_temporal_client),
+    app_config: AppConfig = Depends(get_config_dependency),
 ) -> AttackRunResponse:
     repo = _get_run_repo(session)
     handler = StartAttackRunHandler(repo)
     command = StartAttackRunCommand(run_id=run_id, total_items=body.total_items)
     try:
         run = await handler.handle(command)
+        await session.commit()
+
+        workflow_id = f"red-team-run-{run_id}"
+        config = run.configuration
+        try:
+            await temporal_client.start_workflow(
+                RedTeamWorkflow.run,
+                RedTeamWorkflowInput(
+                    attack_run_id=run_id,
+                    target_provider=config.target_provider,
+                    target_model=config.target_model,
+                    target_temperature=config.temperature,
+                    target_max_tokens=config.max_tokens,
+                    system_prompt=config.system_prompt,
+                    mutation_provider=config.mutation_provider,
+                    mutation_model=config.mutation_model,
+                    mutation_strategy=config.mutation_strategy,
+                    max_rounds=config.max_rounds,
+                    max_cost_usd=config.max_cost_usd,
+                    max_duration_seconds=config.max_duration_seconds,
+                    attack_categories=tuple(c.value for c in config.categories),
+                ),
+                id=workflow_id,
+                task_queue=app_config.temporal_task_queue,
+                execution_timeout=timedelta(hours=3),
+            )
+        except Exception as exc:
+            # Workflow scheduling failed. Never report success, do not leave
+            # the run in a misleading RUNNING state, and re-surface the error.
+            try:
+                fail_handler = FailAttackRunHandler(repo)
+                await fail_handler.handle(
+                    FailAttackRunCommand(
+                        run_id=run_id,
+                        error_message=f"workflow start failed: {exc}",
+                    )
+                )
+                await session.commit()
+            except BaseError:
+                pass  # Run already reached a terminal state concurrently.
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to schedule red team workflow for run {run_id}: {exc}",
+            ) from exc
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
     return _run_to_response(run)
@@ -447,12 +504,29 @@ async def cancel_attack_run(
     run_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    temporal_client: TemporalClient = Depends(get_temporal_client),
 ) -> AttackRunResponse:
     repo = _get_run_repo(session)
     handler = CancelAttackRunHandler(repo)
     command = CancelAttackRunCommand(run_id=run_id)
     try:
         run = await handler.handle(command)
+        await session.commit()
+
+        workflow_id = f"red-team-run-{run_id}"
+        try:
+            await temporal_client.get_workflow_handle(workflow_id).signal("cancel")
+        except RPCError as exc:
+            if exc.status != RPCStatusCode.NOT_FOUND:
+                raise HTTPException(
+                    status_code=502,
+                    detail=(f"Failed to notify Temporal of cancellation for run {run_id}: {exc}"),
+                ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=(f"Failed to notify Temporal of cancellation for run {run_id}: {exc}"),
+            ) from exc
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
     return _run_to_response(run)

@@ -274,5 +274,5 @@ class TestContainerActivityRegistration:
         container._register_configurations()
         container._register_temporal()
         registry = container.container.resolve(ActivityRegistry)
-        # 10 eval activities + 8 agent activities = 18
-        assert registry.count == 18
+        # 10 eval activities + 8 agent activities + 1 redteam activity = 19
+        assert registry.count == 20

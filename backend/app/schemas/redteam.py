@@ -81,6 +81,7 @@ class AttackRunResponse(BaseModel):
     items_violated: int = 0
     items_failed: int = 0
     progress: float = 0.0
+    campaign_results: dict[str, Any] | None = None
     version: int = 1
     started_at: str | None = None
     completed_at: str | None = None

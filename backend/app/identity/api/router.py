@@ -5,9 +5,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from redis import asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session
+from app.core.dependencies import (
+    CurrentUser,
+    get_current_user,
+    get_db_session,
+    get_redis_client,
+)
 from app.identity.schemas.responses import (
     ChangePasswordRequest,
     LoginRequest,
@@ -41,6 +47,20 @@ def _get_auth_service(session: AsyncSession) -> AuthService:
     return AuthService(user_repo, refresh_repo)
 
 
+async def _resolve_org_id(session: AsyncSession, user_id: str) -> str | None:
+    """Find the user's first active organization membership, if any."""
+    from app.infrastructure.database.repositories.tenant_repository import (
+        SqlAlchemyMembershipRepository,
+    )
+
+    membership_repo = SqlAlchemyMembershipRepository(session)
+    memberships = await membership_repo.list_by_user(user_id)
+    for m in memberships:
+        if m.is_active:
+            return m.organization_id
+    return None
+
+
 def _user_to_response(user: User) -> UserResponse:
     return UserResponse(
         id=str(user.id),
@@ -69,7 +89,8 @@ async def register(
             display_name=body.display_name,
             password=body.password,
         )
-        access_token = service.create_access_token(user)
+        org_id = await _resolve_org_id(session, str(user.id))
+        access_token = service.create_access_token(user, org_id=org_id)
         raw_refresh, refresh_entity = service.create_refresh_token(user)
         from app.infrastructure.database.repositories.identity_repository import (
             SqlAlchemyRefreshTokenRepository,
@@ -95,7 +116,8 @@ async def login(
     service = _get_auth_service(session)
     try:
         user = await service.authenticate(email=body.email, password=body.password)
-        access_token = service.create_access_token(user)
+        org_id = await _resolve_org_id(session, str(user.id))
+        access_token = service.create_access_token(user, org_id=org_id)
         raw_refresh, refresh_entity = service.create_refresh_token(user)
         from app.infrastructure.database.repositories.identity_repository import (
             SqlAlchemyRefreshTokenRepository,
@@ -121,6 +143,9 @@ async def refresh_tokens(
     service = _get_auth_service(session)
     try:
         new_access, new_refresh, user = await service.refresh_tokens(body.refresh_token)
+        org_id = await _resolve_org_id(session, str(user.id))
+        # Re-create access token with org_id (refresh_tokens creates one without it)
+        new_access = service.create_access_token(user, org_id=org_id)
         return TokenPairResponse(
             access_token=new_access,
             refresh_token=new_refresh.token_hash,
@@ -190,10 +215,18 @@ async def change_password(
 
 # ─── OAuth Endpoints ─────────────────────────────────────────────
 
+_OAUTH_STATE_TTL_SECONDS = 600  # 10 minutes
+
 
 @identity_router.get("/oauth/github/authorize")
-async def github_authorize(state: str = Query(...)) -> dict[str, str]:
-    """Get GitHub OAuth authorize URL."""
+async def github_authorize(
+    state: str = Query(...),
+    redis_client: aioredis.Redis = Depends(get_redis_client),
+) -> dict[str, str]:
+    """Get GitHub OAuth authorize URL.
+
+    Stores the state parameter server-side for CSRF validation on callback.
+    """
     from app.identity.services.oauth_service import OAuthService
 
     user_repo = SqlAlchemyUserRepository(session=None)  # type: ignore[arg-type]
@@ -201,12 +234,19 @@ async def github_authorize(state: str = Query(...)) -> dict[str, str]:
     auth_svc = AuthService(user_repo, refresh_repo)
     svc = OAuthService(user_repo, refresh_repo, auth_svc)
     url = svc.get_github_authorize_url(state)
-    return {"authorize_url": url}
+    await redis_client.setex(f"oauth:state:{state}", _OAUTH_STATE_TTL_SECONDS, "1")
+    return {"authorize_url": url, "state": state}
 
 
 @identity_router.get("/oauth/google/authorize")
-async def google_authorize(state: str = Query(...)) -> dict[str, str]:
-    """Get Google OAuth authorize URL."""
+async def google_authorize(
+    state: str = Query(...),
+    redis_client: aioredis.Redis = Depends(get_redis_client),
+) -> dict[str, str]:
+    """Get Google OAuth authorize URL.
+
+    Stores the state parameter server-side for CSRF validation on callback.
+    """
     from app.identity.services.oauth_service import OAuthService
 
     user_repo = SqlAlchemyUserRepository(session=None)  # type: ignore[arg-type]
@@ -214,16 +254,30 @@ async def google_authorize(state: str = Query(...)) -> dict[str, str]:
     auth_svc = AuthService(user_repo, refresh_repo)
     svc = OAuthService(user_repo, refresh_repo, auth_svc)
     url = svc.get_google_authorize_url(state)
-    return {"authorize_url": url}
+    await redis_client.setex(f"oauth:state:{state}", _OAUTH_STATE_TTL_SECONDS, "1")
+    return {"authorize_url": url, "state": state}
 
 
 @identity_router.post("/oauth/github/callback", response_model=TokenResponse)
 async def github_callback(
     body: OAuthCallbackRequest,
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis_client),
 ) -> TokenResponse:
-    """Handle GitHub OAuth callback."""
+    """Handle GitHub OAuth callback.
+
+    Validates the OAuth state parameter against the server-side store
+    to prevent CSRF attacks. State is single-use and expires after 10 minutes.
+    """
+    from fastapi import HTTPException as _HTTPException
+
     from app.identity.services.oauth_service import OAuthService
+
+    state_key = f"oauth:state:{body.state}"
+    stored = await redis_client.get(state_key)
+    if not stored:
+        raise _HTTPException(status_code=400, detail="Invalid or expired OAuth state")
+    await redis_client.delete(state_key)
 
     user_repo = SqlAlchemyUserRepository(session)
     refresh_repo = SqlAlchemyRefreshTokenRepository(session)
@@ -234,6 +288,8 @@ async def github_callback(
             code=body.code,
             state=body.state,
         )
+        org_id = await _resolve_org_id(session, str(_user.id))
+        access_token = auth_svc.create_access_token(_user, org_id=org_id)
         return TokenResponse(
             access_token=access_token,
             refresh_token=raw_refresh,
@@ -247,9 +303,22 @@ async def github_callback(
 async def google_callback(
     body: OAuthCallbackRequest,
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis_client),
 ) -> TokenResponse:
-    """Handle Google OAuth callback."""
+    """Handle Google OAuth callback.
+
+    Validates the OAuth state parameter against the server-side store
+    to prevent CSRF attacks. State is single-use and expires after 10 minutes.
+    """
+    from fastapi import HTTPException as _HTTPException
+
     from app.identity.services.oauth_service import OAuthService
+
+    state_key = f"oauth:state:{body.state}"
+    stored = await redis_client.get(state_key)
+    if not stored:
+        raise _HTTPException(status_code=400, detail="Invalid or expired OAuth state")
+    await redis_client.delete(state_key)
 
     user_repo = SqlAlchemyUserRepository(session)
     refresh_repo = SqlAlchemyRefreshTokenRepository(session)
@@ -260,6 +329,8 @@ async def google_callback(
             code=body.code,
             state=body.state,
         )
+        org_id = await _resolve_org_id(session, str(_user.id))
+        access_token = auth_svc.create_access_token(_user, org_id=org_id)
         return TokenResponse(
             access_token=access_token,
             refresh_token=raw_refresh,

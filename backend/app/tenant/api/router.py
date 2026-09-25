@@ -187,7 +187,12 @@ async def invite_member(
     service = _get_invitation_service(session)
     try:
         org_svc = _get_org_service(session)
-        await org_svc.check_membership(current_user.user_id, org_id)
+        await org_svc.require_role(
+            current_user.user_id,
+            org_id,
+            OrganizationRole.OWNER,
+            OrganizationRole.ADMIN,
+        )
         role = OrganizationRole(body.role)
         invitation = await service.invite_member(
             email=body.email,
@@ -212,7 +217,12 @@ async def change_member_role(
     service = _get_invitation_service(session)
     try:
         org_svc = _get_org_service(session)
-        await org_svc.check_membership(current_user.user_id, org_id)
+        await org_svc.require_role(
+            current_user.user_id,
+            org_id,
+            OrganizationRole.OWNER,
+            OrganizationRole.ADMIN,
+        )
         role = OrganizationRole(body.role)
         membership = await service.change_member_role(user_id, org_id, role)
         return _membership_to_response(membership)
@@ -231,7 +241,12 @@ async def remove_member(
     service = _get_invitation_service(session)
     try:
         org_svc = _get_org_service(session)
-        await org_svc.check_membership(current_user.user_id, org_id)
+        await org_svc.require_role(
+            current_user.user_id,
+            org_id,
+            OrganizationRole.OWNER,
+            OrganizationRole.ADMIN,
+        )
         await service.remove_member(user_id, org_id)
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc

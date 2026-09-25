@@ -29,8 +29,16 @@ class MutationStrategySelector:
     - ADAPTIVE: Balance exploration and exploitation based on feedback
     """
 
-    def __init__(self, mutation_engine: MutationEngine | None = None) -> None:
-        self._mutation_engine = mutation_engine or MutationEngine()
+    def __init__(
+        self,
+        mutation_engine: MutationEngine | None = None,
+        llm_provider: Any | None = None,
+        llm_model: str = "",
+    ) -> None:
+        self._mutation_engine = mutation_engine or MutationEngine(
+            llm_provider=llm_provider,
+            llm_model=llm_model,
+        )
         self._refiner = AdaptiveRefiner()
         self._strategy_history: list[tuple[str, float]] = []
 

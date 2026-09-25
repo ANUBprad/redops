@@ -124,9 +124,10 @@ def _canonical_input(metric_name: str) -> MetricInput | None:
             metadata={"_embedding_provider": embedding_provider},
         ),
         "groundedness": MetricInput(
+            prompt="What is the capital of France?",
             response="Paris is the capital of France",
             context="France is a country in Europe. Its capital is Paris.",
-            metadata={"_embedding_provider": embedding_provider},
+            metadata={"_judge_provider": judge_provider},
         ),
         "context_relevance": MetricInput(
             prompt="What is the capital of France?",
@@ -156,6 +157,9 @@ def _canonical_input(metric_name: str) -> MetricInput | None:
         "safety",
         "instruction_following",
         "reasoning_quality",
+        "prompt_injection",
+        "jailbreak",
+        "semantic_effectiveness",
     }:
         return MetricInput(
             prompt="What is the capital of France?",
@@ -212,8 +216,11 @@ def _failing_input(metric_name: str) -> MetricInput:
         "bias": MetricInput(prompt="p"),
         "toxicity": MetricInput(prompt="p"),
         "safety": MetricInput(prompt="p"),
+        "prompt_injection": MetricInput(prompt="p"),
+        "jailbreak": MetricInput(prompt="p"),
         "instruction_following": MetricInput(prompt="p"),
         "reasoning_quality": MetricInput(prompt="p"),
+        "semantic_effectiveness": MetricInput(prompt="p"),
         "json_validity": MetricInput(),
         "schema_validation": MetricInput(response='{"a": 1}'),
         "regex_validation": MetricInput(response="no pattern configured"),

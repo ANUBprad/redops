@@ -7,7 +7,7 @@ Provides a unified interface for scoring model outputs.
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from structlog import get_logger
 
@@ -142,11 +142,17 @@ class MetricEngine:
 
         validation_error = metric.validate_input(input_data)
         if validation_error:
+            metadata: dict[str, Any] = {}
+            for key in ("run_id", "item_id"):
+                value = input_data.metadata.get(key)
+                if value is not None:
+                    metadata[key] = str(value)
             return MetricResult(
                 metric_name=metric_name,
                 score=0.0,
                 normalized_score=0.0,
                 error=validation_error,
+                metadata=metadata,
             )
 
         result = await metric.evaluate(input_data)
@@ -181,18 +187,39 @@ class MetricEngine:
         output: list[MetricResult] = []
         for name, result in zip(metric_names, results, strict=True):
             if isinstance(result, BaseException):
-                output.append(
-                    MetricResult(
-                        metric_name=name,
-                        score=0.0,
-                        normalized_score=0.0,
-                        error=str(result),
-                    ),
-                )
+                output.append(self._error_result(name, input_data, result))
             else:
                 output.append(result)
 
         return tuple(output)
+
+    def _error_result(
+        self,
+        metric_name: str,
+        input_data: MetricInput,
+        exc: BaseException,
+    ) -> MetricResult:
+        """Build an explicit error MetricResult from a raised exception.
+
+        Preserves whatever truthfully becomes available without
+        fabricating scores, confidence, cost, or token counts: the
+        metric version from its definition, and run/item identity plus
+        judge provider/model identifiers already carried in the input.
+        """
+        definition = self._definitions.get(metric_name)
+        metadata: dict[str, Any] = {}
+        for key in ("run_id", "item_id", "_judge_provider_name", "_judge_model"):
+            value = input_data.metadata.get(key)
+            if value is not None:
+                metadata[key] = str(value)
+        return MetricResult(
+            metric_name=metric_name,
+            score=0.0,
+            normalized_score=0.0,
+            metadata=metadata,
+            error=f"{type(exc).__name__}: {exc}",
+            version=definition.version if definition is not None else "1.0.0",
+        )
 
     def aggregate(
         self,

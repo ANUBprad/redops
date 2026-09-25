@@ -8,7 +8,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session
+from app.core.dependencies import (
+    CurrentUser,
+    get_current_user,
+    get_db_session,
+    require_owned_run,
+)
 from app.evaluation.replay.composite_repository import CompositeTraceRepository
 from app.evaluation.replay.database_repository import DatabaseTraceRepository
 from app.evaluation.replay.service import ItemReport, ReplayService, ReplaySummary
@@ -67,11 +72,28 @@ def get_replay_service(
     return ReplayService(CompositeTraceRepository(primary, fallback))
 
 
+async def _require_owned_trace_pair(
+    first_run_id: str,
+    second_run_id: str,
+    current_user: CurrentUser,
+    session: AsyncSession,
+) -> None:
+    """Require both trace runs to belong to the caller's organization.
+
+    Thin composition over :func:`require_owned_run` (single choke point);
+    called first inside pair routes whose path params cannot bind to the
+    single-``run_id`` dependency directly.
+    """
+    await require_owned_run(first_run_id, current_user, session)
+    await require_owned_run(second_run_id, current_user, session)
+
+
 @router.get("/traces/{run_id}", response_model=dict[str, Any])
 async def get_trace(
     run_id: str,
-    service: ReplayService = Depends(get_replay_service),
     _user: CurrentUser = Depends(get_current_user),
+    service: ReplayService = Depends(get_replay_service),
+    _owned: None = Depends(require_owned_run),
 ) -> dict[str, Any]:
     """Get the execution trace for a run."""
     trace = await service.load_trace(run_id)
@@ -83,8 +105,9 @@ async def get_trace(
 @router.get("/traces/{run_id}/report", response_model=ReplayReportResponse)
 async def get_replay_report(
     run_id: str,
-    service: ReplayService = Depends(get_replay_service),
     _user: CurrentUser = Depends(get_current_user),
+    service: ReplayService = Depends(get_replay_service),
+    _owned: None = Depends(require_owned_run),
 ) -> ReplayReportResponse:
     """Get a detailed replay report for a run.
 
@@ -121,14 +144,16 @@ async def get_replay_report(
 async def compare_runs(
     baseline_run_id: str,
     comparison_run_id: str,
-    service: ReplayService = Depends(get_replay_service),
     _user: CurrentUser = Depends(get_current_user),
+    service: ReplayService = Depends(get_replay_service),
+    session: AsyncSession = Depends(get_db_session),
 ) -> TraceComparisonResponse:
     """Compare two evaluation runs.
 
     Shows metric deltas, cost differences, latency differences,
     and determines a winner with confidence score.
     """
+    await _require_owned_trace_pair(baseline_run_id, comparison_run_id, _user, session)
     baseline = await service.load_trace(baseline_run_id)
     if baseline is None:
         raise HTTPException(status_code=404, detail=f"Baseline trace not found: {baseline_run_id}")
@@ -168,8 +193,9 @@ async def compare_runs(
 @router.delete("/traces/{run_id}")
 async def delete_trace(
     run_id: str,
-    service: ReplayService = Depends(get_replay_service),
     _user: CurrentUser = Depends(get_current_user),
+    service: ReplayService = Depends(get_replay_service),
+    _owned: None = Depends(require_owned_run),
 ) -> dict[str, str]:
     """Delete an execution trace."""
     if service._trace_repository is not None:
@@ -186,14 +212,16 @@ async def delete_trace(
 async def analyze_regression_endpoint(
     baseline_run_id: str,
     current_run_id: str,
-    service: ReplayService = Depends(get_replay_service),
     _user: CurrentUser = Depends(get_current_user),
+    service: ReplayService = Depends(get_replay_service),
+    session: AsyncSession = Depends(get_db_session),
 ) -> RegressionResultResponse:
     """Analyze regression between a baseline and current run.
 
     Compares metric results, checks fingerprint compatibility,
     and produces a per-metric regression analysis with an overall verdict.
     """
+    await _require_owned_trace_pair(baseline_run_id, current_run_id, _user, session)
     from app.evaluation.regression import RegressionConfig, analyze_regression
     from app.evaluation.reliability.fingerprint import compute_fingerprint
 

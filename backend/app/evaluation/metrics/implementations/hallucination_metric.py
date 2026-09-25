@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.evaluation.metrics.domain import (
+    EvaluatorType,
     MetricCategory,
     MetricDefinition,
     MetricScale,
@@ -26,4 +27,6 @@ class HallucinationMetric(LLMJudgeMetric):
             scale=MetricScale.CONTINUOUS,
             requires_context=True,
             tags=("quality", "safety", "rag", "llm_judge"),
+            evaluator_type=EvaluatorType.LLM_JUDGE,
+            required_inputs=("prompt", "response", "context"),
         )

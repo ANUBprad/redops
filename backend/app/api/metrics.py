@@ -5,7 +5,13 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session
+from app.core.dependencies import (
+    CurrentUser,
+    get_current_user,
+    get_db_session,
+    require_owned_evaluation,
+    require_owned_run,
+)
 from app.evaluation.application.commands import UpdateEvaluationCommand
 from app.evaluation.application.handlers import UpdateEvaluationHandler
 from app.evaluation.metrics.commands import (
@@ -131,6 +137,9 @@ async def score_item(
             metadata=r.metadata,
             execution_time_ms=r.execution_time_ms,
             error=r.error,
+            confidence=r.confidence,
+            version=r.version,
+            cost_usd=r.cost_usd,
         )
         for r in results
     ]
@@ -178,6 +187,9 @@ async def score_batch(
             metadata=r.metadata,
             execution_time_ms=r.execution_time_ms,
             error=r.error,
+            confidence=r.confidence,
+            version=r.version,
+            cost_usd=r.cost_usd,
         )
         for r in results
     ]
@@ -192,6 +204,7 @@ async def get_metric_results(
     metric_name: str | None = None,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
 ) -> MetricResultsListResponse:
     """Retrieve metric results for a run."""
     repo = _get_repository(session)
@@ -215,6 +228,9 @@ async def get_metric_results(
                 metadata=r.metadata,
                 execution_time_ms=r.execution_time_ms,
                 error=r.error,
+                confidence=r.confidence,
+                version=r.version,
+                cost_usd=r.cost_usd,
             )
             for r in results
         ],
@@ -234,6 +250,7 @@ async def get_aggregated_scores(
     metric_name: str | None = None,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
 ) -> AggregatedScoresResponse:
     """Retrieve aggregated metric scores for a run."""
     repo = _get_repository(session)
@@ -275,6 +292,7 @@ async def get_item_metric_results(
     item_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
 ) -> list[MetricResultResponse]:
     """Retrieve metric results for a specific item."""
     repo = _get_repository(session)
@@ -294,6 +312,9 @@ async def get_item_metric_results(
             metadata=r.metadata,
             execution_time_ms=r.execution_time_ms,
             error=r.error,
+            confidence=r.confidence,
+            version=r.version,
+            cost_usd=r.cost_usd,
         )
         for r in results
     ]
@@ -308,6 +329,7 @@ async def configure_evaluation_metrics(
     body: ConfigureEvaluationMetricsRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_evaluation),
 ) -> EvaluationResponse:
     """Enable or disable metrics for an evaluation."""
     eval_repo = SqlAlchemyEvaluationRepository(session)

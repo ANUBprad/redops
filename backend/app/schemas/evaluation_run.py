@@ -12,14 +12,19 @@ class DatasetItemRequest(BaseModel):
         prompt: The prompt sent to the provider.
         reference: Optional reference answer for reference-based metrics.
         context: Optional context provided to the model.
-        id: Optional stable item identifier.
+        id: Optional stable item identifier (arbitrary string, max 128).
 
     """
 
     prompt: str = Field(..., min_length=1, description="Prompt sent to the provider")
     reference: str | None = Field(default=None, description="Reference answer")
     context: str | None = Field(default=None, description="Item context")
-    id: str | None = Field(default=None, description="Stable item identifier")
+    id: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=128,
+        description="Stable item identifier; arbitrary string up to 128 characters",
+    )
 
 
 class CreateEvaluationRunRequest(BaseModel):
@@ -50,6 +55,17 @@ class CreateEvaluationRunRequest(BaseModel):
     prompt_template: str | None = Field(
         default=None,
         description="Prompt template with {variable} placeholders",
+    )
+    temperature: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=2.0,
+        description="Sampling temperature forwarded to the provider; omitted means provider default",
+    )
+    max_tokens: int | None = Field(
+        default=None,
+        ge=1,
+        description="Maximum tokens the provider may generate; omitted means provider default",
     )
     dataset_items: list[DatasetItemRequest] = Field(
         default_factory=list,

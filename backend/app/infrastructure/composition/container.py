@@ -22,6 +22,8 @@ from app.agents.temporal.activities import (
     update_agent_run_progress_activity,
 )
 from app.agents.temporal.workflow import AgentRunWorkflow
+from app.analytics.temporal.activities import generate_export_activity
+from app.analytics.temporal.workflow import ExportReportWorkflow
 from app.evaluation.metrics.engine import MetricEngine
 from app.evaluation.metrics.implementations import ALL_METRICS
 from app.evaluation.temporal.activities import (
@@ -65,8 +67,11 @@ from app.kernel.registry.plugin import Plugin, PluginRegistry
 from app.providers.anthropic.provider import AnthropicProvider
 from app.providers.cost.calculator import CostCalculator
 from app.providers.cost.defaults import build_default_cost_calculator
+from app.providers.groq.provider import GroqProvider
 from app.providers.openai.provider import OpenAIProvider
 from app.providers.registry.registry import ProviderRegistry
+from app.redteam.temporal.activities import red_team_campaign_activity
+from app.redteam.temporal.workflow import RedTeamWorkflow
 
 if TYPE_CHECKING:
     from app.core.config import AppConfig
@@ -223,9 +228,15 @@ class InfrastructureContainer:
         activity_registry.register(cancel_agent_run_activity)
         activity_registry.register(execute_agent_loop_activity)
 
+        activity_registry.register(red_team_campaign_activity)
+
+        activity_registry.register(generate_export_activity)
+
         workflow_registry = WorkflowRegistry()
         workflow_registry.register(EvaluationRunWorkflow)
         workflow_registry.register(AgentRunWorkflow)
+        workflow_registry.register(RedTeamWorkflow)
+        workflow_registry.register(ExportReportWorkflow)
 
         self._container.register_singleton(
             ActivityRegistry,
@@ -274,10 +285,32 @@ class InfrastructureContainer:
         )
 
         metric_engine = MetricEngine()
-        metric_engine.register_many([metric_cls() for metric_cls in ALL_METRICS])
+
+        # Use MetricRegistry for discovery + registration
+        from app.evaluation.metrics.registry import MetricRegistry
+
+        metric_registry = MetricRegistry()
+        metric_registry.register_builtin([metric_cls() for metric_cls in ALL_METRICS])
+        discovered = metric_registry.discover_external()
+        if discovered:
+            from structlog import get_logger
+
+            get_logger("redops_eval.metrics").info(
+                "external_metrics_discovered",
+                count=len(discovered),
+                metrics=discovered,
+            )  # type: ignore[call-arg]
+
+        # Register all metrics (built-in + discovered) into the engine
+        metric_engine.register_many(metric_registry.get_all())
+
         self._container.register_singleton(
             MetricEngine,
             lambda _c: metric_engine,
+        )
+        self._container.register_singleton(
+            MetricRegistry,
+            lambda _c: metric_registry,
         )
         self._container.register_singleton(
             CostCalculator,
@@ -287,17 +320,19 @@ class InfrastructureContainer:
     def _register_providers(self, registry: ProviderRegistry) -> None:
         """Register configured providers into the shared registry.
 
-        Only providers whose API key is present are registered. OpenAI and
-        Anthropic read their keys from configuration (which loads the
-        OPENAI_API_KEY / ANTHROPIC_API_KEY environment variables), so an
-        absent optional key simply omits that provider rather than failing
-        startup.
+        Only providers whose API key is present are registered. OpenAI,
+        Anthropic, and Groq read their keys from configuration (which loads the
+        OPENAI_API_KEY / ANTHROPIC_API_KEY / GROQ_API_KEY environment
+        variables), so an absent optional key simply omits that provider rather
+        than failing startup.
         """
         cfg = self._app_config
         if cfg.openai_api_key:
             registry.register(OpenAIProvider(api_key=cfg.openai_api_key))
         if cfg.anthropic_api_key:
             registry.register(AnthropicProvider(api_key=cfg.anthropic_api_key))
+        if cfg.groq_api_key:
+            registry.register(GroqProvider(api_key=cfg.groq_api_key))
 
     def _register_plugins(self) -> None:
         """Register plugin infrastructure components."""

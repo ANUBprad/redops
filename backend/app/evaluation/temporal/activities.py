@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
 from temporalio import activity
+from temporalio.exceptions import CancelledError
 
 from app.evaluation.application.run_commands import (
     CancelEvaluationRunCommand,
@@ -38,6 +39,8 @@ from app.infrastructure.database.repositories.evaluation_run_repository import (
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+    from app.evaluation.execution.item_executor import ItemExecutionResult
 
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 _provider_registry: Any = None
@@ -87,6 +90,120 @@ def _get_session() -> AsyncSession:
         msg = "Session factory not configured. Call configure_session_factory first."
         raise RuntimeError(msg)
     return _session_factory()
+
+
+class _DurablePersistenceError(Exception):
+    """Raised when durable execution I/O fails, forcing a Temporal retry.
+
+    A provider result must never be reported as complete without a
+    durable record. When the durable store fails, the activity raises
+    so Temporal retries the attempt; the retry then reuses the record
+    when it was in fact persisted, and otherwise restarts the item.
+    """
+
+
+async def _durable_execution_schema_present() -> bool:
+    """Return True when the item_executions table exists.
+
+    When the table is absent (schema not migrated into this database)
+    the durable boundary is skipped entirely and item execution
+    behaves exactly as before. Real database errors propagate so a
+    database outage fails the item instead of silently re-calling the
+    provider without any durable boundary.
+    """
+    from app.infrastructure.database.models.item_execution import (
+        ItemExecutionModel,
+    )
+
+    try:
+        async with _get_session() as session:
+            conn = await session.connection()
+            has_table = await conn.run_sync(
+                lambda sync_conn: sa.inspect(sync_conn).has_table(
+                    ItemExecutionModel.__tablename__,
+                )
+            )
+            return bool(has_table)
+    except CancelledError:
+        raise
+    except Exception as exc:
+        raise _DurablePersistenceError(
+            f"Failed to inspect durable execution schema: {exc}",
+        ) from exc
+
+
+async def _load_durable_execution(
+    run_id: str,
+    item_id: str,
+    *,
+    reference: str | None,
+    context: str | None,
+) -> ItemExecutionResult | None:
+    """Load the durably recorded provider execution for (run_id, item_id).
+
+    Returns None when no durable record exists (first execution of the
+    logical item). Returns an ItemExecutionResult reconstructed from
+    the record otherwise, so the retry can recompute metrics against
+    the real provider evidence without re-calling the provider.
+    """
+    from app.evaluation.execution.item_executor import ItemExecutionResult
+    from app.infrastructure.database.repositories.item_execution_repository import (
+        SqlAlchemyItemExecutionRepository,
+    )
+
+    try:
+        async with _get_session() as session:
+            repo = SqlAlchemyItemExecutionRepository(session)
+            row = await repo.find(run_id, item_id)
+    except CancelledError:
+        raise
+    except Exception as exc:
+        raise _DurablePersistenceError(
+            f"Failed to read durable execution for {run_id}/{item_id}: {exc}",
+        ) from exc
+
+    if row is None:
+        return None
+    return ItemExecutionResult(
+        item_index=row.item_index,
+        prompt=row.prompt,
+        provider_name=row.provider_name,
+        model_id=row.model_id,
+        response=row.response,
+        reference=reference,
+        context=context,
+        tokens_input=row.tokens_input,
+        tokens_output=row.tokens_output,
+        tokens_cached=row.tokens_cached,
+        cost_usd=row.cost_usd,
+        cost_estimated=row.cost_estimated,
+        latency_ms=row.latency_ms,
+        finish_reason=row.finish_reason or "unknown",
+        request_id=row.request_id,
+    )
+
+
+async def _write_durable_execution(
+    run_id: str,
+    item_id: str,
+    result: ItemExecutionResult,
+) -> None:
+    """Durably record a successful provider execution before metrics run."""
+    from app.infrastructure.database.repositories.item_execution_repository import (
+        SqlAlchemyItemExecutionRepository,
+    )
+
+    try:
+        async with _get_session() as session:
+            repo = SqlAlchemyItemExecutionRepository(session)
+            await repo.upsert(run_id, item_id, result)
+            await session.commit()
+    except CancelledError:
+        raise
+    except Exception as exc:
+        raise _DurablePersistenceError(
+            f"Failed to persist durable execution for {run_id}/{item_id}: {exc}",
+        ) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +288,8 @@ class ExecuteItemInput:
         item_id: Optional stable item identifier.
         prompt_template: Optional template with ``{variable}`` placeholders.
         system_prompt: Optional system prompt for the provider call.
+        temperature: Optional sampling temperature forwarded as a chat option.
+        max_tokens: Optional maximum generated tokens forwarded as a chat option.
 
     """
 
@@ -185,6 +304,8 @@ class ExecuteItemInput:
     item_id: str = ""
     prompt_template: str | None = None
     system_prompt: str | None = None
+    temperature: float | None = None
+    max_tokens: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -213,6 +334,7 @@ class ExecuteItemResult:
     """Result returned by execute_item activity."""
 
     item_index: int
+    prompt: str = ""
     response: str = ""
     cost_usd: float = 0.0
     tokens_input: int = 0
@@ -430,10 +552,33 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
         if activity.in_activity():
             activity.heartbeat(f"preparing item {input.item_index}")
 
-        # Idempotency check: if metric results already exist for this
-        # (run_id, item_id), the previous execution succeeded.  Return
-        # the cached result instead of re-calling the provider.
         item_id = input.item_id or str(input.item_index)
+
+        # Durable idempotency boundary: if a provider execution is
+        # already recorded for this (run_id, item_id), reuse it instead
+        # of re-calling the provider. This is the retry-idempotent path
+        # for general evaluation items (string or fallback item ids).
+        durable_active = False
+        if _session_factory is not None:
+            durable_active = await _durable_execution_schema_present()
+        if durable_active:
+            durable = await _load_durable_execution(
+                input.run_id,
+                item_id,
+                reference=input.reference or None,
+                context=input.context or None,
+            )
+            if durable is not None:
+                activity.logger.info(
+                    "Reusing durable execution for item run_id=%s item_index=%d (idempotent)",
+                    input.run_id,
+                    input.item_index,
+                )
+                return await _result_for_durable_execution(input, item_id, durable)
+
+        # Legacy idempotency path: metric results already persisted for
+        # a (run_id, item_id) with UUID identifiers.  Return the cached
+        # result instead of re-calling the provider.
         existing_metrics = await _load_existing_metrics(input.run_id, item_id)
         if existing_metrics is not None:
             activity.logger.info(
@@ -446,6 +591,7 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
         from app.evaluation.data.dataset import DatasetItem
         from app.evaluation.execution.item_executor import ItemExecutor
         from app.evaluation.execution.prompt_builder import PromptTemplate
+        from app.providers.models.options import ChatOptions
         from app.providers.registry.registry import ProviderRegistry
 
         registry: Any = _provider_registry if _provider_registry is not None else ProviderRegistry()
@@ -473,11 +619,20 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
             model_id=input.model_id,
             item=item,
             item_index=input.item_index,
+            options=ChatOptions(
+                temperature=input.temperature,
+                max_tokens=input.max_tokens,
+            ),
         )
 
         elapsed_ms = int((time.monotonic() - start) * 1000)
         metrics: tuple[MetricResultPayload, ...] = ()
         if result.is_success:
+            # Durable boundary: record the provider result before metric
+            # evaluation so an activity retry after a crash, timeout, or
+            # metric failure never re-calls the provider.
+            if durable_active:
+                await _write_durable_execution(input.run_id, item_id, result)
             if activity.in_activity():
                 activity.heartbeat(f"evaluating metrics for item {input.item_index}")
             metrics = await _evaluate_metrics(
@@ -491,6 +646,7 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
 
         return ExecuteItemResult(
             item_index=input.item_index,
+            prompt=result.prompt,
             response=result.response,
             cost_usd=result.cost_usd,
             tokens_input=result.tokens_input,
@@ -501,6 +657,8 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
             item_id=item_id,
             metrics=metrics,
         )
+    except _DurablePersistenceError:
+        raise
     except Exception as exc:
         elapsed_ms = int((time.monotonic() - start) * 1000)
         return ExecuteItemResult(
@@ -509,6 +667,53 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
             error=str(exc),
             latency_ms=elapsed_ms,
         )
+
+
+async def _result_for_durable_execution(
+    input: ExecuteItemInput,
+    item_id: str,
+    durable: ItemExecutionResult,
+) -> ExecuteItemResult:
+    """Build the activity result from a durably recorded execution.
+
+    Persisted metric rows are reused when they exist (UUID runs);
+    otherwise the metrics are recomputed against the durable provider
+    evidence. The provider itself is never re-invoked in either case.
+    """
+    metrics: tuple[MetricResultPayload, ...] = ()
+    if durable.is_success and input.metric_names:
+        existing_metrics = await _load_existing_metrics(input.run_id, item_id)
+        if existing_metrics is not None and existing_metrics.metrics:
+            metrics = existing_metrics.metrics
+        elif _metric_engine is not None:
+            from app.providers.registry.registry import ProviderRegistry
+
+            registry: Any = (
+                _provider_registry if _provider_registry is not None else ProviderRegistry()
+            )
+            judge_provider = registry.resolve(input.provider_name)
+            metrics = await _evaluate_metrics(
+                engine=_metric_engine,
+                run_id=input.run_id,
+                item_id=item_id,
+                metric_names=input.metric_names,
+                execution=durable,
+                judge_provider=judge_provider,
+            )
+
+    return ExecuteItemResult(
+        item_index=durable.item_index,
+        prompt=durable.prompt,
+        response=durable.response,
+        cost_usd=durable.cost_usd,
+        tokens_input=durable.tokens_input,
+        tokens_output=durable.tokens_output,
+        latency_ms=durable.latency_ms,
+        failed=durable.failed,
+        error=durable.error,
+        item_id=item_id,
+        metrics=metrics,
+    )
 
 
 async def _evaluate_metrics(
@@ -670,29 +875,6 @@ async def persist_metric_results_activity(input: PersistMetricResultsInput) -> i
 
     async with _get_session() as session:
         repo = SqlAlchemyMetricResultRepository(session)
-
-        # Idempotency: delete any existing results for this (run_id, item_id)
-        # before inserting, so retries do not produce duplicate rows.
-        from app.kernel.entities.base import UUIDv7 as KernelUUIDv7
-
-        try:
-            run_uuid = KernelUUIDv7.from_string(input.run_id)
-            item_uuid = KernelUUIDv7.from_string(input.item_id)
-            existing = await repo.find_by_item_id(run_uuid, item_uuid)
-            if existing:
-                from app.infrastructure.database.models.metric_result import (
-                    MetricResultModel,
-                )
-
-                await session.execute(
-                    sa.delete(MetricResultModel).where(
-                        MetricResultModel.run_id == input.run_id,
-                        MetricResultModel.item_id == input.item_id,
-                    )
-                )
-        except Exception:
-            pass  # If ID parsing fails, proceed with insert (first execution)
-
         await repo.save_many([to_domain(p) for p in input.results])
         await session.commit()
     return len(input.results)
@@ -754,21 +936,27 @@ async def finalize_run_integrity_activity(
                 if definition is None:
                     continue
                 threshold = definition.default_threshold
-                if threshold is None:
-                    continue
 
                 metric_results = [r for r in all_results if r.metric_name == metric_name]
                 if not metric_results:
-                    threshold_evaluations[metric_name] = None
+                    if threshold is not None:
+                        threshold_evaluations[metric_name] = None
                     continue
 
-                # Evaluate threshold against aggregated mean
+                # A metric with NO successful result for the whole run failed.
+                # Mirror the error verdict rule thresholded metrics already
+                # have so the run cannot appear fully successful when any
+                # configured metric produced only errors.
                 successful = [r for r in metric_results if r.is_success]
                 if not successful:
                     threshold_evaluations[metric_name] = None
                     verdict = "error" if verdict != "fail" else verdict
                     continue
 
+                if threshold is None:
+                    continue
+
+                # Evaluate threshold against aggregated mean
                 mean_score = sum(r.normalized_score for r in successful) / len(successful)
                 passed = mean_score >= threshold
                 threshold_evaluations[metric_name] = passed
@@ -790,7 +978,14 @@ async def finalize_run_integrity_activity(
                 "requirements_hash": env_snapshot.requirements_hash,
                 "platform_info": env_snapshot.platform_info,
             },
-            "metric_versions": dict.fromkeys(input.metric_names, "1.0.0"),
+            "metric_versions": {
+                name: (
+                    _metric_engine._definitions[name].version
+                    if _metric_engine is not None and name in _metric_engine._definitions
+                    else "1.0.0"
+                )
+                for name in input.metric_names
+            },
             "threshold_evaluations": threshold_evaluations,
         }
 

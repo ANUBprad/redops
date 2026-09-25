@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: RedOps Eval Discussions
+    url: https://github.com/redops-eval/redops-eval/discussions
+    about: Ask questions and discuss with the community.
+  - name: Security
+    url: https://github.com/redops-eval/redops-eval/security/policy
+    about: Report security vulnerabilities (see SECURITY.md).

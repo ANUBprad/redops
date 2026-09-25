@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.kernel.entities.base import AggregateRoot, UUIDv7, VersionMixin
 from app.kernel.exceptions.errors import ConflictError, DomainError
@@ -18,12 +18,16 @@ from app.redteam.domain.enums import (
     SafetyVerdict,
 )
 from app.redteam.domain.events import (
+    AttackRunCancelled,
     AttackRunCompleted,
     AttackRunCreated,
     AttackRunFailed,
     AttackRunStarted,
 )
 from app.redteam.domain.value_objects import AttackScenario, SafetyScore
+
+if TYPE_CHECKING:
+    from app.evaluation.metrics.domain import MetricResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,6 +156,16 @@ class AttackEffectiveness:
     semantic_judge_tokens_output: int = 0
     semantic_judge_latency_ms: int = 0
     evaluated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    # Canonical general-metric representation of the semantic judgment.
+    # Produced alongside the domain fields by AttackEvaluator and persisted
+    # to the metric_results table so red-team runs are visible through the
+    # canonical /metrics pipeline.
+    semantic_metric_result: MetricResult | None = None
+    # Individual metric results from MetricEngine.evaluate_batch(),
+    # one per metric name (e.g. safety, prompt_injection, jailbreak,
+    # toxicity, bias).  Stored so _persist_metric_results can write
+    # every metric to the shared metric_results table.
+    individual_metric_results: tuple[MetricResult, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -212,6 +226,9 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
         description: str = "",
         target_provider: str = "",
         target_model: str = "",
+        target_temperature: float = 0.0,
+        target_max_tokens: int = 2048,
+        system_prompt: str = "",
         attack_categories: tuple[AttackCategory, ...] = (),
         budget: CampaignBudget | None = None,
         mutation_phase: MutationPhase = MutationPhase.EXPLORATION,
@@ -228,6 +245,9 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
         self._description = description
         self._target_provider = target_provider
         self._target_model = target_model
+        self._target_temperature = target_temperature
+        self._target_max_tokens = target_max_tokens
+        self._system_prompt = system_prompt
         self._attack_categories = attack_categories or (
             AttackCategory.PROMPT_INJECTION,
             AttackCategory.JAILBREAK,
@@ -256,6 +276,18 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
     @property
     def target_model(self) -> str:
         return self._target_model
+
+    @property
+    def target_temperature(self) -> float:
+        return self._target_temperature
+
+    @property
+    def target_max_tokens(self) -> int:
+        return self._target_max_tokens
+
+    @property
+    def system_prompt(self) -> str:
+        return self._system_prompt
 
     @property
     def attack_categories(self) -> tuple[AttackCategory, ...]:
@@ -312,6 +344,9 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
         description: str = "",
         target_provider: str,
         target_model: str,
+        target_temperature: float = 0.0,
+        target_max_tokens: int = 2048,
+        system_prompt: str = "",
         attack_categories: tuple[AttackCategory, ...] = (),
         budget: CampaignBudget | None = None,
     ) -> AdaptiveCampaign:
@@ -334,6 +369,9 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
             description=description.strip(),
             target_provider=target_provider,
             target_model=target_model,
+            target_temperature=target_temperature,
+            target_max_tokens=target_max_tokens,
+            system_prompt=system_prompt,
             attack_categories=attack_categories or (),
             budget=budget or CampaignBudget(),
         )
@@ -411,6 +449,23 @@ class AdaptiveCampaign(AggregateRoot, VersionMixin):
             AttackRunCompleted(
                 run_id=self.id,
                 items_total=self._budget.max_attacks,
+                items_completed=self.current_round_number,
+            ),
+        )
+
+    def cancel(self, reason: str = "") -> None:
+        """Transition campaign to cancelled state."""
+        if self._state.is_terminal:
+            raise ConflictError(
+                message=f"Cannot cancel campaign in {self._state.value} state",
+                details={"campaign_id": str(self.id), "state": self._state.value},
+            )
+        self._state = CampaignState.CANCELLED
+        self._completed_at = datetime.now(UTC)
+        self.increment_version()
+        self.raise_event(
+            AttackRunCancelled(
+                run_id=self.id,
                 items_completed=self.current_round_number,
             ),
         )

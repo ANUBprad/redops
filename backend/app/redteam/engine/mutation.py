@@ -58,8 +58,9 @@ class MutationEngine:
     role confusion, context poisoning, and LLM-powered variation.
     """
 
-    def __init__(self, llm_provider: Any | None = None) -> None:
+    def __init__(self, llm_provider: Any | None = None, llm_model: str = "") -> None:
         self._llm_provider = llm_provider
+        self._llm_model = llm_model
 
     async def mutate(
         self,
@@ -312,6 +313,7 @@ class MutationEngine:
 
             response = await self._llm_provider.chat(
                 messages,
+                model=self._llm_model,
                 options=ChatOptions(temperature=0.8, max_tokens=500),
             )
 

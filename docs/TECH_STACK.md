@@ -147,9 +147,9 @@ Every technology choice below was evaluated against three criteria:
 
 ### LangChain
 
-**Why:** Used **only** within specific provider adapters for providers that benefit from LangChain's chat model interface (e.g., Ollama via `ChatOllama`, Groq via `ChatGroq`). The core domain does not import LangChain. This prevents vendor lock-in to LangChain's evolving API surface.
+**Why:** Was evaluated as a universal provider interface to support providers such as Ollama (`ChatOllama`) and Groq (`ChatGroq`). It is **not currently a dependency** — the shipped `openai/` and `anthropic/` adapters use their providers' native SDKs directly, and no LangChain import exists in the codebase.
 
-**Decision:** LangChain is an **internal implementation detail** of certain provider adapters. It is not part of the public API or the evaluation pipeline.
+**Decision:** LangChain is not part of the current implementation. Provider adapters use native SDKs. If a future Phase 11 provider (Groq, Ollama, etc.) benefits from LangChain, it would be introduced as an internal detail of that adapter only — not part of the public API or the evaluation pipeline.
 
 ---
 

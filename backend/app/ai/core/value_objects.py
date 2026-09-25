@@ -68,7 +68,7 @@ class ProviderProfile:
 
     provider_name: str = ""
     model_id: str = ""
-    temperature: float = 0.0
-    max_tokens: int = 4096
+    temperature: float | None = None
+    max_tokens: int | None = None
     timeout_seconds: int = 60
     system_prompt: str | None = None

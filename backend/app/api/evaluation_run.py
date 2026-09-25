@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from hashlib import sha256
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -16,6 +17,9 @@ from app.core.dependencies import (
     get_current_user,
     get_db_session,
     get_temporal_client,
+    require_current_org_membership,
+    require_owned_evaluation,
+    require_owned_run,
 )
 from app.evaluation.application.run_commands import (
     CancelEvaluationRunCommand,
@@ -52,6 +56,23 @@ if TYPE_CHECKING:
     from app.evaluation.domain.entities.evaluation_entities import EvaluationRun
 
 run_router = APIRouter(prefix="/runs", tags=["runs"])
+
+
+def _idempotent_workflow_id(idempotency_key: str) -> str:
+    """Derive a deterministic Temporal workflow ID from an idempotency key.
+
+    The key is hashed so that arbitrary caller-supplied values map to a
+    stable, namespaced workflow ID without risking duplicate runs on retry.
+
+    Args:
+        idempotency_key: The caller-supplied idempotency key.
+
+    Returns:
+        A deterministic workflow ID derived from the key.
+
+    """
+    digest = sha256(idempotency_key.encode("utf-8")).hexdigest()[:16]
+    return f"evaluation-run-idem-{digest}"
 
 
 def _get_repository(session: AsyncSession) -> SqlAlchemyEvaluationRunRepository:
@@ -149,11 +170,39 @@ async def create_run(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
     temporal_client: TemporalClient = Depends(get_temporal_client),
     config: AppConfig = Depends(get_config_dependency),
 ) -> RunResponse:
-    """Create a new evaluation run and schedule its execution."""
+    """Create a new evaluation run and schedule its execution.
+
+    The endpoint is idempotent when an ``Idempotency-Key`` header is
+    supplied: a repeated key returns the previously created run instead of
+    scheduling a duplicate, enabling safe CI/CD retries.
+
+    Tenant-scoped: the run is always attributed to the caller's
+    organization (a spoofed body ``project_id`` is ignored), and a
+    supplied parent ``evaluation_id`` must belong to the caller before
+    anything is persisted or scheduled.
+    """
+    if body.evaluation_id is not None:
+        try:
+            await require_owned_evaluation(body.evaluation_id, current_user, session)
+        except ValueError:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Evaluation not found: {body.evaluation_id}",
+            ) from None
+
     repo = _get_repository(session)
+
+    idempotency_key = request.headers.get("Idempotency-Key")
+    if idempotency_key:
+        existing = await repo.find_by_workflow_id(_idempotent_workflow_id(idempotency_key))
+        if existing is not None:
+            await require_owned_run(str(existing.id), current_user, session)
+            return _run_to_response(existing)
+
     handler = CreateEvaluationRunHandler(repo)
     command = CreateEvaluationRunCommand(
         evaluation_id=body.evaluation_id,
@@ -161,13 +210,15 @@ async def create_run(
         provider=body.provider,
         model=body.model,
         metrics=tuple(body.metrics),
-        project_id=body.project_id,
+        project_id=org_id,
         created_by=current_user.user_id,
         tags=tuple(body.tags),
         workflow_id=body.workflow_id,
         system_prompt=body.system_prompt,
         prompt_template=body.prompt_template,
         dataset_items=tuple(_item_to_payload(item) for item in body.dataset_items),
+        temperature=body.temperature,
+        max_tokens=body.max_tokens,
     )
     try:
         run = await handler.handle(command)
@@ -176,7 +227,11 @@ async def create_run(
         dataset_items = tuple(_item_to_payload(item) for item in body.dataset_items)
         total_items = body.total_items or len(dataset_items)
 
-        workflow_id = f"evaluation-run-{run.id}"
+        workflow_id = (
+            _idempotent_workflow_id(idempotency_key)
+            if idempotency_key
+            else f"evaluation-run-{run.id}"
+        )
         await temporal_client.start_workflow(
             EvaluationRunWorkflow.run,
             EvaluationRunWorkflowInput(
@@ -188,6 +243,8 @@ async def create_run(
                 dataset_items=dataset_items,
                 prompt_template=body.prompt_template,
                 system_prompt=body.system_prompt,
+                temperature=body.temperature,
+                max_tokens=body.max_tokens,
             ),
             id=workflow_id,
             task_queue=config.temporal_task_queue,
@@ -217,8 +274,14 @@ async def list_runs(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> RunListResponse:
-    """List evaluation runs with filtering, sorting, and pagination."""
+    """List evaluation runs with filtering, sorting, and pagination.
+
+    Tenant-scoped: results are always limited to runs of the caller's
+    owned evaluations plus the caller's own orphan runs; a foreign
+    ``evaluation_id`` filter simply matches nothing.
+    """
     repo = _get_repository(session)
     handler = ListEvaluationRunsHandler(repo)
     query = ListEvaluationRunsQuery(
@@ -231,6 +294,7 @@ async def list_runs(
         sort_order=sort_order,
         page=page,
         page_size=page_size,
+        owner_project_id=org_id,
     )
     result = await handler.handle(query)
     return _to_list_response(result)
@@ -241,6 +305,7 @@ async def get_run(
     run_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
 ) -> RunResponse:
     """Get an evaluation run by ID."""
     repo = _get_repository(session)
@@ -259,6 +324,7 @@ async def cancel_run(
     body: CancelRunRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
     temporal_client: TemporalClient = Depends(get_temporal_client),
 ) -> RunResponse:
     """Cancel an evaluation run."""
@@ -287,13 +353,52 @@ async def retry_run(
     run_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_run),
+    temporal_client: TemporalClient = Depends(get_temporal_client),
+    config: AppConfig = Depends(get_config_dependency),
 ) -> RunResponse:
-    """Retry a failed evaluation run."""
+    """Retry a failed evaluation run.
+
+    Creates a new run from the source run's persisted configuration and
+    schedules the production EvaluationRunWorkflow via Temporal.  The new
+    run receives a unique workflow ID so it cannot collide with the
+    original execution.  The persisted dataset inputs and prompt template
+    are reproduced in the retry workflow; legacy runs created before input
+    persistence are rejected with 409 since their original inputs cannot
+    be reconstructed.
+    """
     repo = _get_repository(session)
     handler = RetryEvaluationRunHandler(repo)
     command = RetryEvaluationRunCommand(run_id=run_id)
     try:
         run = await handler.handle(command)
+        await session.flush()
+
+        workflow_id = f"evaluation-run-{run.id}"
+        await temporal_client.start_workflow(
+            EvaluationRunWorkflow.run,
+            EvaluationRunWorkflowInput(
+                run_id=str(run.id),
+                total_items=run.items_total,
+                provider_name=run.profile.provider_name,
+                model_id=run.profile.model_id,
+                metric_names=run.config.metrics,
+                dataset_items=run.config.dataset_items,
+                prompt_template=run.config.prompt_template,
+                system_prompt=run.profile.system_prompt,
+                temperature=run.profile.temperature,
+                max_tokens=run.profile.max_tokens,
+            ),
+            id=workflow_id,
+            task_queue=config.temporal_task_queue,
+            execution_timeout=timedelta(hours=24),
+        )
+
+        queue_handler = QueueEvaluationRunHandler(repo)
+        queue_command = QueueEvaluationRunCommand(run_id=str(run.id))
+        run = await queue_handler.handle(queue_command)
+        run.workflow_id = workflow_id
+        await repo.save(run)
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
     return _run_to_response(run)
@@ -310,6 +415,7 @@ async def list_runs_for_evaluation(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_evaluation),
 ) -> RunListResponse:
     """List all runs for a specific evaluation definition."""
     repo = _get_repository(session)

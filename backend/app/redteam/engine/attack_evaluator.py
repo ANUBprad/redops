@@ -10,7 +10,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from app.evaluation.metrics.domain import MetricInput
+from app.evaluation.metrics.domain import MetricInput, MetricResult
+from app.evaluation.metrics.implementations.semantic_effectiveness_metric import (
+    build_semantic_effectiveness_result,
+)
 from app.redteam.domain.campaign import AttackEffectiveness
 from app.redteam.domain.enums import SafetyVerdict
 from app.redteam.domain.value_objects import AttackResult, SafetyScore
@@ -34,10 +37,16 @@ class AttackEvaluator:
         metric_engine: MetricEngine | None = None,
         metric_names: tuple[str, ...] = (),
         semantic_judge: SemanticEffectivenessJudge | None = None,
+        judge_provider: Any | None = None,
+        judge_provider_name: str = "",
+        judge_model: str = "",
     ) -> None:
         self._metric_engine = metric_engine
         self._metric_names = metric_names
         self._semantic_judge = semantic_judge
+        self._judge_provider = judge_provider
+        self._judge_provider_name = judge_provider_name
+        self._judge_model = judge_model
 
     async def evaluate(self, attack_result: AttackResult) -> AttackEffectiveness:
         """Evaluate a single attack result for effectiveness.
@@ -53,13 +62,23 @@ class AttackEvaluator:
         is_severe = verdict == SafetyVerdict.LEAKED
 
         metric_score = 0.0
+        individual_metric_results: tuple[MetricResult, ...] = ()
         if self._metric_engine is not None and self._metric_names:
-            metric_score = await self._compute_metric_score(attack_result)
+            metric_score, individual_metric_results = await self._compute_metric_score(
+                attack_result
+            )
 
         # Run semantic judge if available
         semantic_result = None
+        semantic_metric_result = None
         if self._semantic_judge is not None:
             semantic_result = await self._run_semantic_judge(attack_result)
+            if semantic_result is not None:
+                semantic_metric_result = build_semantic_effectiveness_result(
+                    semantic_result,
+                    provider_name=self._judge_provider_name,
+                    execution_time_ms=semantic_result.judge_latency_ms,
+                )
 
         effectiveness_score = self._compute_effectiveness(
             is_violation=is_violation,
@@ -97,6 +116,8 @@ class AttackEvaluator:
             is_violation_severe=is_severe,
             effectiveness_score=effectiveness_score,
             reasoning=reasoning,
+            semantic_metric_result=semantic_metric_result,
+            individual_metric_results=individual_metric_results,
             **semantic_fields,
         )
 
@@ -133,15 +154,31 @@ class AttackEvaluator:
                 reasoning="Semantic judge execution failed",
             )
 
-    async def _compute_metric_score(self, attack_result: AttackResult) -> float:
-        """Run registered metrics and aggregate their normalized scores."""
+    async def _compute_metric_score(
+        self, attack_result: AttackResult
+    ) -> tuple[float, tuple[MetricResult, ...]]:
+        """Run registered metrics and aggregate their normalized scores.
+
+        Returns
+        -------
+        (aggregate_score, individual_results)
+            aggregate_score is the mean normalized_score across all
+            successful metric results.  individual_results contains
+            every MetricResult (including errors) for persistence.
+        """
         if self._metric_engine is None or not self._metric_names:
-            return 0.0
+            return 0.0, ()
 
         resolved = self._metric_engine.resolve_metrics(self._metric_names)
         if not resolved:
-            return 0.0
+            return 0.0, ()
 
+        judge_provider = self._judge_provider
+        embedding_provider = (
+            judge_provider
+            if judge_provider is not None and hasattr(judge_provider, "embed")
+            else None
+        )
         metric_input = MetricInput(
             prompt=attack_result.scenario.prompt,
             response=attack_result.response,
@@ -149,6 +186,10 @@ class AttackEvaluator:
             metadata={
                 "category": attack_result.scenario.category.value,
                 "severity": attack_result.scenario.severity.value,
+                "_judge_provider": judge_provider,
+                "_judge_provider_name": self._judge_provider_name,
+                "_judge_model": self._judge_model,
+                "_embedding_provider": embedding_provider,
             },
         )
 
@@ -156,9 +197,9 @@ class AttackEvaluator:
 
         successful = [r for r in results if r.is_success]
         if not successful:
-            return 0.0
+            return 0.0, tuple(results)
 
-        return sum(r.normalized_score for r in successful) / len(successful)
+        return sum(r.normalized_score for r in successful) / len(successful), tuple(results)
 
     def _compute_effectiveness(
         self,

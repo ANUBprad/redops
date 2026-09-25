@@ -1,0 +1,82 @@
+name: "RedOps Eval Gate"
+description: "Trigger a RedOps Eval evaluation run and block on metric threshold breach."
+author: "RedOps Eval"
+
+branding:
+  icon: "shield"
+  color: "red"
+
+inputs:
+  api-url:
+    description: "Base URL of the RedOps Eval API"
+    required: false
+    default: "http://localhost:8000"
+  api-key:
+    description: "API key or JWT for authentication"
+    required: true
+  evaluation-id:
+    description: "ID of the evaluation to run"
+    required: false
+  evaluation-name:
+    description: "Name of the evaluation to run (resolved via the API)"
+    required: false
+  provider:
+    description: "Provider name (e.g. openai, anthropic)"
+    required: true
+  model:
+    description: "Model id to evaluate"
+    required: true
+  metrics:
+    description: "Comma-separated metric names to include in the run"
+    required: false
+    default: ""
+  thresholds:
+    description: >
+      "Comma-separated gate thresholds '<metric><op><value>', e.g.
+      'accuracy>=0.9,toxicity<0.1'"
+    required: false
+    default: ""
+  idempotency-key:
+    description: "Idempotency key enabling safe CI/CD retries"
+    required: false
+  timeout:
+    description: "Maximum seconds to wait for the run"
+    required: false
+    default: "1800"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run RedOps Eval gate
+      shell: bash
+      run: |
+        set -euo pipefail
+        python -c "
+        import os, re, sys
+        sys.path.insert(0, r'${{ github.action_path }}/..')
+        import redops_gate
+
+        metrics = [m for m in re.split(r'[, ]+', r'${{ inputs.metrics }}') if m]
+        thresholds = [t for t in re.split(r'[, ]+', r'${{ inputs.thresholds }}') if t]
+
+        argv = [
+            'redops-gate', 'run',
+            '--api-url', r'${{ inputs.api-url }}',
+            '--api-key', r'${{ inputs.api-key }}',
+            '--provider', r'${{ inputs.provider }}',
+            '--model', r'${{ inputs.model }}',
+            '--timeout', r'${{ inputs.timeout }}',
+        ]
+        if r'${{ inputs.evaluation-id }}':
+            argv += ['--evaluation-id', r'${{ inputs.evaluation-id }}']
+        if r'${{ inputs.evaluation-name }}':
+            argv += ['--evaluation-name', r'${{ inputs.evaluation-name }}']
+        if r'${{ inputs.idempotency-key }}':
+            argv += ['--idempotency-key', r'${{ inputs.idempotency-key }}']
+        for m in metrics:
+            argv += ['--metric', m]
+        for t in thresholds:
+            argv += ['--threshold', t]
+
+        sys.exit(redops_gate.main(argv))
+        "

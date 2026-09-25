@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.infrastructure.database.models.attack_run import AttackRunModel
+from app.infrastructure.database.models.evaluation import EvaluationModel
+from app.infrastructure.database.models.evaluation_run import EvaluationRunModel
 from app.kernel.entities.base import UUIDv7
 from app.kernel.exceptions.errors import ConflictError
 from app.redteam.contracts.repositories import (
@@ -38,6 +40,22 @@ def _get_sort_column(sort_by: str) -> str:
     return _SORT_MAP.get(sort_by, "created_at")
 
 
+def _owner_scope_condition(owner_project_id: str) -> Any:
+    """Match attack runs linked to an owned evaluation run or own orphan.
+
+    Reuses the S-04/S-05 run-ownership semantics: the parent evaluation is
+    owned, or the run is an orphan attributed to the caller's project.
+    Unlinked attack runs carry no attribution and are excluded when scoped.
+    """
+    return or_(
+        EvaluationModel.project_id == owner_project_id,
+        and_(
+            EvaluationRunModel.evaluation_id.is_(None),
+            EvaluationRunModel.metadata_.op("->>")("project_id") == owner_project_id,
+        ),
+    )
+
+
 class SqlAlchemyAttackRunRepository(AttackRunRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -57,6 +75,17 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
 
     async def list(self, query: AttackRunQuery) -> PaginatedAttackRuns:
         stmt = select(AttackRunModel)
+
+        if query.owner_project_id is not None:
+            stmt = stmt.join(
+                EvaluationRunModel,
+                AttackRunModel.evaluation_run_id == EvaluationRunModel.id,
+            ).outerjoin(
+                EvaluationModel,
+                EvaluationRunModel.evaluation_id == EvaluationModel.id,
+            ).where(
+                _owner_scope_condition(query.owner_project_id),
+            )
 
         if query.status:
             stmt = stmt.where(AttackRunModel.status == query.status.value)
@@ -111,16 +140,41 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
         model.started_at = run.started_at
         model.completed_at = run.completed_at
 
+    async def persist_campaign_results(
+        self,
+        run_id: UUIDv7,
+        campaign_results: dict[str, Any],
+    ) -> None:
+        """Persist campaign results JSON to the attack run."""
+        stmt = select(AttackRunModel).where(AttackRunModel.id == str(run_id))
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if not model:
+            return
+        model.campaign_results = campaign_results
+        model.updated_at = datetime.now(UTC)
+
     async def find_by_date_range(
         self,
         since: datetime,
         until: datetime,
+        owner_project_id: str | None = None,
     ) -> Sequence[AttackRun]:
         """Find attack runs created within a date range."""
         stmt = select(AttackRunModel).where(
             AttackRunModel.created_at >= since,
             AttackRunModel.created_at <= until,
         )
+        if owner_project_id is not None:
+            stmt = stmt.join(
+                EvaluationRunModel,
+                AttackRunModel.evaluation_run_id == EvaluationRunModel.id,
+            ).outerjoin(
+                EvaluationModel,
+                EvaluationRunModel.evaluation_id == EvaluationModel.id,
+            ).where(
+                _owner_scope_condition(owner_project_id),
+            )
         result = await self._session.execute(stmt)
         return [self._to_domain(m) for m in result.scalars().all()]
 
@@ -138,6 +192,7 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
             items_violated=run.items_violated,
             items_failed=run.items_failed,
             version=run.version,
+            campaign_results=run.campaign_results,
             started_at=run.started_at,
             completed_at=run.completed_at,
             created_at=run.created_at,
@@ -161,6 +216,7 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
             items_passed=model.items_passed,
             items_violated=model.items_violated,
             items_failed=model.items_failed,
+            campaign_results=model.campaign_results,
         )
 
 
@@ -172,12 +228,18 @@ def _config_to_dict(config: AttackConfiguration | None) -> dict[str, Any]:
         "target_model": config.target_model,
         "temperature": config.temperature,
         "max_tokens": config.max_tokens,
+        "mutation_provider": config.mutation_provider,
+        "mutation_model": config.mutation_model,
+        "mutation_strategy": config.mutation_strategy,
         "timeout_seconds": config.timeout_seconds,
         "system_prompt": config.system_prompt,
         "attack_definitions": [str(aid) for aid in config.attack_definitions],
         "categories": [c.value for c in config.categories],
         "severities": [s.value for s in config.severities],
         "max_scenarios": config.max_scenarios,
+        "max_rounds": config.max_rounds,
+        "max_cost_usd": config.max_cost_usd,
+        "max_duration_seconds": config.max_duration_seconds,
         "mutations": [_mutation_to_dict(m) for m in config.mutations],
         "continue_on_violation": config.continue_on_violation,
         "metadata": config.metadata,
@@ -190,12 +252,18 @@ def _dict_to_config(data: dict[str, Any]) -> AttackConfiguration:
         target_model=data.get("target_model", ""),
         temperature=data.get("temperature", 0.0),
         max_tokens=data.get("max_tokens", 2048),
+        mutation_provider=data.get("mutation_provider", ""),
+        mutation_model=data.get("mutation_model", ""),
+        mutation_strategy=data.get("mutation_strategy", ""),
         timeout_seconds=data.get("timeout_seconds", 60),
         system_prompt=data.get("system_prompt", ""),
         attack_definitions=tuple(UUIDv7(UUID(aid)) for aid in data.get("attack_definitions", [])),
         categories=tuple(AttackCategory(c) for c in data.get("categories", [])),
         severities=tuple(AttackSeverity(s) for s in data.get("severities", [])),
         max_scenarios=data.get("max_scenarios", 0),
+        max_rounds=int(data.get("max_rounds", 10)),
+        max_cost_usd=float(data.get("max_cost_usd", 50.0)),
+        max_duration_seconds=int(data.get("max_duration_seconds", 3600)),
         mutations=tuple(_dict_to_mutation(m) for m in data.get("mutations", [])),
         continue_on_violation=data.get("continue_on_violation", True),
         metadata=dict(data.get("metadata", {})),

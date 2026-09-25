@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 
 from app.evaluation.metrics.domain import (
+    EvaluatorType,
     MetricCategory,
     MetricDefinition,
     MetricInput,
@@ -24,6 +25,8 @@ class AnswerRelevanceMetric(EmbeddingMetric):
             description="Measures how relevant the response is to the prompt using embeddings",
             category=MetricCategory.QUALITY,
             scale=MetricScale.CONTINUOUS,
+            evaluator_type=EvaluatorType.EMBEDDING,
+            required_inputs=("prompt", "response"),
             tags=("quality", "relevance", "embedding"),
         )
 

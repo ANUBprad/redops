@@ -68,6 +68,7 @@ class RunQuery:
     sort_order: str = "desc"
     page: int = 1
     page_size: int = 20
+    owner_project_id: str | None = None
 
 
 @dataclass
@@ -180,12 +181,18 @@ class RunRepository(ABC):
         ...
 
     @abstractmethod
+    async def find_by_workflow_id(self, workflow_id: str) -> EvaluationRun | None:
+        """Find a run by its Temporal workflow ID (used for idempotency)."""
+        ...
+
+    @abstractmethod
     async def find_by_date_range(
         self,
         since: datetime,
         until: datetime,
         provider: str | None = None,
         model: str | None = None,
+        owner_project_id: str | None = None,
     ) -> Sequence[EvaluationRun]:
         """Find runs created within a date range, optionally filtered."""
         ...
@@ -333,6 +340,7 @@ class MetricResultRepository(ABC):
         metric_name: str | None = None,
         provider: str | None = None,
         model: str | None = None,
+        owner_project_id: str | None = None,
     ) -> Sequence[MetricResult]:
         """Find metric results created within a date range."""
         ...

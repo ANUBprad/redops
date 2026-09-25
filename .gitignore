@@ -58,3 +58,5 @@ coverage.xml
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/.next/
+frontend/tsconfig.tsbuildinfo

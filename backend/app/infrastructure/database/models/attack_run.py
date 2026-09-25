@@ -24,6 +24,7 @@ class AttackRunModel(Base):
     items_passed: Mapped[int] = mapped_column(Integer, default=0)
     items_violated: Mapped[int] = mapped_column(Integer, default=0)
     items_failed: Mapped[int] = mapped_column(Integer, default=0)
+    campaign_results: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     version: Mapped[int] = mapped_column(Integer, default=1)
     started_at: Mapped[datetime | None] = mapped_column(nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
