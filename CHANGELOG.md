@@ -1,3 +1,10 @@
+## [0.13.25](https://github.com/ANUBprad/redops/compare/v0.13.24...v0.13.25) (2026-09-25)
+
+
+### Bug Fixes
+
+* **auth:** tenant-scope analytics aggregates, reports and export ([47ac9ae](https://github.com/ANUBprad/redops/commit/47ac9ae482e6d4a75739eed1505cf516b37d42c7))
+
 ## [0.13.24](https://github.com/ANUBprad/redops/compare/v0.13.23...v0.13.24) (2026-09-25)
 
 
