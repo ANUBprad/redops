@@ -1,3 +1,10 @@
+## [0.13.29](https://github.com/ANUBprad/redops/compare/v0.13.28...v0.13.29) (2026-09-25)
+
+
+### Bug Fixes
+
+* **auth:** attest persisted run ids on score/score-batch before engine work ([a29f84e](https://github.com/ANUBprad/redops/commit/a29f84e20d4618883028262e9628e6af2bf8a277))
+
 ## [0.13.28](https://github.com/ANUBprad/redops/compare/v0.13.27...v0.13.28) (2026-09-25)
 
 
