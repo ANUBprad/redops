@@ -1,3 +1,10 @@
+## [0.13.28](https://github.com/ANUBprad/redops/compare/v0.13.27...v0.13.28) (2026-09-25)
+
+
+### Bug Fixes
+
+* **auth:** tenant-scope agent definitions and agent runs ([ce3c27d](https://github.com/ANUBprad/redops/commit/ce3c27ddbc3120f5a0ae09b1464d904448a2a3a0))
+
 ## [0.13.27](https://github.com/ANUBprad/redops/compare/v0.13.26...v0.13.27) (2026-09-25)
 
 
