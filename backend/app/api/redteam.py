@@ -10,10 +10,14 @@ from temporalio.service import RPCError, RPCStatusCode
 
 from app.core.config import AppConfig
 from app.core.dependencies import (
+    CurrentUser,
     get_config_dependency,
     get_current_user,
     get_db_session,
     get_temporal_client,
+    require_current_org_membership,
+    require_owned_attack_run,
+    require_owned_run,
 )
 from app.infrastructure.database.repositories.attack_definition_repository import (
     SqlAlchemyAttackDefinitionRepository,
@@ -75,7 +79,6 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
     from temporalio.client import Client as TemporalClient
 
-    from app.core.dependencies import CurrentUser
     from app.redteam.contracts.repositories import PaginatedAttackDefinitions, PaginatedAttackRuns
 
 
@@ -204,7 +207,7 @@ async def create_attack_definition(
         expected_behavior=body.expected_behavior,
         parameters=dict(body.parameters),
         tags=tuple(body.tags),
-        created_by=body.created_by,
+        created_by=current_user.user_id,
     )
     try:
         definition = await handler.handle(command)
@@ -345,7 +348,16 @@ async def create_attack_run(
     body: CreateAttackRunRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> AttackRunResponse:
+    """Create an attack run.
+
+    A supplied ``evaluation_run_id`` must belong to the caller before
+    anything is persisted. Runs without a link stay unattributed by
+    current persistence design (see ``require_owned_attack_run``).
+    """
+    if body.evaluation_run_id is not None:
+        await require_owned_run(body.evaluation_run_id, current_user, session)
     repo = _get_run_repo(session)
     handler = CreateAttackRunHandler(repo)
     command = CreateAttackRunCommand(
@@ -371,7 +383,13 @@ async def list_attack_runs(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> AttackRunListResponse:
+    """List attack runs linked to the caller's owned evaluation runs.
+
+    Unlinked attack runs carry no attribution and are excluded here
+    (enumeration fails closed); they remain readable by ID.
+    """
     repo = _get_run_repo(session)
     handler = ListAttackRunsHandler(repo)
     query = ListAttackRunsQuery(
@@ -382,6 +400,7 @@ async def list_attack_runs(
         sort_order=sort_order,
         page=page,
         page_size=page_size,
+        owner_project_id=org_id,
     )
     result = await handler.handle(query)
     return _runs_to_list(result)
@@ -392,6 +411,7 @@ async def get_attack_run(
     run_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_attack_run),
 ) -> AttackRunResponse:
     repo = _get_run_repo(session)
     handler = GetAttackRunHandler(repo)
@@ -409,6 +429,7 @@ async def start_attack_run(
     body: StartAttackRunRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_attack_run),
     temporal_client: TemporalClient = Depends(get_temporal_client),
     app_config: AppConfig = Depends(get_config_dependency),
 ) -> AttackRunResponse:
@@ -471,6 +492,7 @@ async def complete_attack_run(
     run_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_attack_run),
 ) -> AttackRunResponse:
     repo = _get_run_repo(session)
     handler = CompleteAttackRunHandler(repo)
@@ -488,6 +510,7 @@ async def fail_attack_run(
     body: FailAttackRunRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_attack_run),
 ) -> AttackRunResponse:
     repo = _get_run_repo(session)
     handler = FailAttackRunHandler(repo)
@@ -504,6 +527,7 @@ async def cancel_attack_run(
     run_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_attack_run),
     temporal_client: TemporalClient = Depends(get_temporal_client),
 ) -> AttackRunResponse:
     repo = _get_run_repo(session)

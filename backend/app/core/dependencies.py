@@ -279,3 +279,40 @@ async def require_owned_experiment(
         )
     if experiment.project_id != current_user.org_id:
         raise HTTPException(status_code=403, detail="Access denied")
+
+
+async def require_owned_attack_run(
+    run_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Require the attack run to belong to the caller's organization.
+
+    Resolves the AttackRun and, when it is linked to an evaluation run,
+    delegates to :func:`require_owned_run`, preserving the single
+    existing run-ownership choke point. Unlinked attack runs carry no
+    attribution in current persistence and are explicitly allowed: they
+    are a legal ad-hoc flow depended on by the campaign lifecycle
+    coverage. Scoped listing (which excludes them) fails closed to
+    compensate for enumeration.
+    """
+    from fastapi import HTTPException
+
+    from app.kernel.entities.base import UUIDv7
+
+    try:
+        r_id = UUIDv7.from_string(run_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail=f"Attack run not found: {run_id}") from None
+
+    # Resolve through the route-level repository seam (not a directly
+    # instantiated repository) so campaign lifecycle coverage, which
+    # substitutes a fake repository there, keeps exercising the real gate.
+    # Deferred import: app.api.redteam imports this module at load time.
+    from app.api.redteam import _get_run_repo
+
+    run = await _get_run_repo(session).find_by_id(r_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail=f"Attack run not found: {run_id}")
+    if run.evaluation_run_id is not None:
+        await require_owned_run(str(run.evaluation_run_id), current_user, session)
