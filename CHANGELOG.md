@@ -1,3 +1,10 @@
+## [0.13.33](https://github.com/ANUBprad/redops/compare/v0.13.32...v0.13.33) (2026-09-26)
+
+
+### Bug Fixes
+
+* **deploy:** return 503 from readiness probe while degraded ([17dd57e](https://github.com/ANUBprad/redops/commit/17dd57ef653b18062efccf800fbf29b3136c95f3))
+
 ## [0.13.32](https://github.com/ANUBprad/redops/compare/v0.13.31...v0.13.32) (2026-09-26)
 
 
