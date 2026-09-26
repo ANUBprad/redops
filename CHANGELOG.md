@@ -1,3 +1,10 @@
+## [0.13.34](https://github.com/ANUBprad/redops/compare/v0.13.33...v0.13.34) (2026-09-26)
+
+
+### Bug Fixes
+
+* **providers:** window breaker failures and exclude fatal errors ([e046b72](https://github.com/ANUBprad/redops/commit/e046b7245a3fa1c20dfaba9c15b5524835fe8733))
+
 ## [0.13.33](https://github.com/ANUBprad/redops/compare/v0.13.32...v0.13.33) (2026-09-26)
 
 
