@@ -209,11 +209,41 @@ class RuntimeCoordinator:
                 )
                 break
 
+            # Breaker admission first: a locally denied call invokes no
+            # provider, so it must consume neither rate-limit quota nor
+            # breaker accounting. acquire() reserves a HALF_OPEN probe
+            # slot synchronously (atomic within the event loop); the
+            # reservation travels as a generation ticket so stale probe
+            # completions cannot corrupt a newer breaker episode.
+            probe = cb.acquire()
+            probe_generation = probe.generation if probe.reserved else None
+            if not probe.admitted:
+                reason = (
+                    "half-open probe capacity exhausted"
+                    if probe.exhausted
+                    else "circuit open"
+                )
+                last_error = CircuitBreakerOpenError(
+                    message=(
+                        f"Circuit breaker cannot admit probe for "
+                        f"{request.provider_name}: {reason}"
+                    ),
+                    details={
+                        "admission": (
+                            "half_open_capacity_exhausted"
+                            if probe.exhausted
+                            else "circuit_open"
+                        ),
+                    },
+                )
+                circuit_open_denial = True
+                break
+
             # Local rate-limit admission per physical attempt, before any
             # paid provider call. check()+record_request()+acquire run
             # back-to-back with no await between, so the pair is atomic
-            # under the asyncio event loop. Denial consumes no quota,
-            # touches no circuit breaker, and is never retried as a
+            # under the asyncio event loop. Denial releases any reserved
+            # probe slot, consumes no quota, and is never retried as a
             # provider call. Each admitted attempt consumes request quota
             # even if the provider call later fails or times out.
             # ponytail: in-memory per-process state only; multi-worker
@@ -222,6 +252,8 @@ class RuntimeCoordinator:
             if enforce_rate_limit:
                 admission = rate_limiter.check(request.provider_name)
                 if not admission.allowed:
+                    if probe.reserved:
+                        cb.release_probe(probe.generation)
                     last_error = RateLimitExceededError(
                         f"Local rate limit exceeded for provider "
                         f"'{request.provider_name}' model '{request.model_id}' "
@@ -238,6 +270,8 @@ class RuntimeCoordinator:
                 if self._policy.rate_limit.concurrent_requests is not None and (
                     not rate_limiter.acquire_concurrent(request.provider_name)
                 ):
+                    if probe.reserved:
+                        cb.release_probe(probe.generation)
                     last_error = RateLimitExceededError(
                         f"Local concurrency limit exceeded for provider "
                         f"'{request.provider_name}' model '{request.model_id}'",
@@ -250,15 +284,6 @@ class RuntimeCoordinator:
                     break
                 rate_limiter.record_request(request.provider_name)
                 concurrent_slot = self._policy.rate_limit.concurrent_requests is not None
-
-            if not cb.can_execute():
-                if concurrent_slot:
-                    rate_limiter.release_concurrent(request.provider_name)
-                last_error = CircuitBreakerOpenError(
-                    message=f"Circuit breaker open for {request.provider_name}",
-                )
-                circuit_open_denial = True
-                break
 
             async def _invoke() -> Any:
                 if self._pipeline is not None:
@@ -288,7 +313,7 @@ class RuntimeCoordinator:
                 else:
                     response = await _invoke()
 
-                cb.record_success()
+                cb.record_success(probe_generation)
                 if concurrent_slot:
                     rate_limiter.release_concurrent(request.provider_name)
 
@@ -323,8 +348,15 @@ class RuntimeCoordinator:
                 # being caller/config problems rather than provider
                 # distress, they must not trip the shared provider breaker.
                 # Unclassified errors keep the legacy retry/count behavior.
+                # Reserved probe slots release on every path (fatal ones
+                # via release_probe since they record nothing).
                 is_fatal = getattr(exc, "retryable", True) is False
-                if not is_fatal:
+                if probe.reserved:
+                    if is_fatal:
+                        cb.release_probe(probe.generation)
+                    else:
+                        cb.record_failure(probe.generation)
+                elif not is_fatal:
                     cb.record_failure()
                 attempt_latency = (datetime.now(UTC) - attempt_start).total_seconds() * 1000
                 cumulative_latency += attempt_latency
@@ -348,7 +380,10 @@ class RuntimeCoordinator:
                 await asyncio.sleep(decision.delay_seconds)
             except BaseException:
                 # Cancellation (CancelledError) must propagate untouched;
-                # just avoid leaking the concurrency slot.
+                # just avoid leaking the concurrency/probe slots. No
+                # breaker accounting: a cancelled call is not a failure.
+                if probe.reserved:
+                    cb.release_probe(probe.generation)
                 if concurrent_slot:
                     rate_limiter.release_concurrent(request.provider_name)
                 raise
