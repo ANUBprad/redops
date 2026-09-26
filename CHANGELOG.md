@@ -1,3 +1,10 @@
+## [0.13.32](https://github.com/ANUBprad/redops/compare/v0.13.31...v0.13.32) (2026-09-26)
+
+
+### Bug Fixes
+
+* **providers:** wire sliding-window rate limiter into runtime coordinator ([a7f5606](https://github.com/ANUBprad/redops/commit/a7f5606e01a53c2fea7fcd04e8e0f494d200e301))
+
 ## [0.13.31](https://github.com/ANUBprad/redops/compare/v0.13.30...v0.13.31) (2026-09-25)
 
 
