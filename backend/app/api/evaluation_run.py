@@ -100,6 +100,22 @@ def _item_to_payload(item: DatasetItemRequest) -> dict[str, str]:
     return payload
 
 
+def _cost_estimated_from_provenance(provenance: dict[str, object] | None) -> bool | None:
+    """Derive run-level cost completeness from persisted provenance.
+
+    Returns True when every item cost was priced, False when the total
+    contains unknown-priced components, and None when recorded before
+    cost provenance existed (unknown, not free).
+    """
+    if not provenance:
+        return None
+    cost_accounting = provenance.get("cost_accounting")
+    if not isinstance(cost_accounting, dict):
+        return None
+    estimated_complete = cost_accounting.get("estimated_complete")
+    return bool(estimated_complete) if estimated_complete is not None else None
+
+
 def _run_to_response(run: EvaluationRun) -> RunResponse:
     """Convert a domain EvaluationRun to an API response."""
     return RunResponse(
@@ -119,6 +135,7 @@ def _run_to_response(run: EvaluationRun) -> RunResponse:
         token_output=run.token_output,
         total_tokens=run.total_tokens,
         cost=run.cost,
+        cost_estimated=_cost_estimated_from_provenance(run.provenance),
         average_latency_ms=run.average_latency_ms,
         failure_reason=(
             run.failure_summary.first_failure if run.failure_summary is not None else None
@@ -147,6 +164,7 @@ def _run_to_summary(run: EvaluationRun) -> RunSummaryResponse:
         items_completed=run.items_completed,
         items_failed=run.items_failed,
         cost=run.cost,
+        cost_estimated=_cost_estimated_from_provenance(run.provenance),
         started_at=run.started_at.isoformat() if run.started_at else None,
         completed_at=run.completed_at.isoformat() if run.completed_at else None,
         created_at=run.created_at.isoformat(),

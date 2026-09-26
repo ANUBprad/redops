@@ -337,6 +337,7 @@ class ExecuteItemResult:
     prompt: str = ""
     response: str = ""
     cost_usd: float = 0.0
+    cost_estimated: bool = True
     tokens_input: int = 0
     tokens_output: int = 0
     latency_ms: int = 0
@@ -649,6 +650,7 @@ async def execute_item_activity(input: ExecuteItemInput) -> ExecuteItemResult:
             prompt=result.prompt,
             response=result.response,
             cost_usd=result.cost_usd,
+            cost_estimated=result.cost_estimated,
             tokens_input=result.tokens_input,
             tokens_output=result.tokens_output,
             latency_ms=elapsed_ms,
@@ -706,6 +708,7 @@ async def _result_for_durable_execution(
         prompt=durable.prompt,
         response=durable.response,
         cost_usd=durable.cost_usd,
+        cost_estimated=durable.cost_estimated,
         tokens_input=durable.tokens_input,
         tokens_output=durable.tokens_output,
         latency_ms=durable.latency_ms,
@@ -835,6 +838,7 @@ async def _load_existing_metrics(run_id: str, item_id: str) -> ExecuteItemResult
             item_index=0,
             response="",
             cost_usd=total_cost,
+            cost_estimated=all(m.metadata.get("cost_estimated", True) for m in metrics),
             item_id=item_id,
             metrics=metrics,
         )
@@ -987,6 +991,12 @@ async def finalize_run_integrity_activity(
                 for name in input.metric_names
             },
             "threshold_evaluations": threshold_evaluations,
+            # Cost provenance: True when every item cost was priced against
+            # known pricing. Defaults True for traces recorded before the
+            # flag existed; None is never stored here (see RunResponse).
+            "cost_accounting": {
+                "estimated_complete": bool(input.trace_data.get("cost_estimated_complete", True)),
+            },
         }
 
         # 4. Persist to evaluation run

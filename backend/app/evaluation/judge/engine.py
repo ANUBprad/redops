@@ -98,6 +98,7 @@ class JudgeEngine:
                 judge_prompt_version=JUDGE_PROMPT_VERSION,
                 execution_time_ms=elapsed,
                 error=f"Judge LLM call failed: {exc}",
+                cost_estimated=False,
             )
 
         elapsed = int((time.monotonic() - start) * 1000)
@@ -121,8 +122,10 @@ class JudgeEngine:
                 tokens_input=usage.get("tokens_input", 0),
                 tokens_output=usage.get("tokens_output", 0),
                 error=parse_error,
+                cost_estimated=False,
             )
 
+        cost_usd, cost_priced = self._estimate_cost(effective_provider, effective_config, usage)
         return JudgeResponse(
             score=parsed["score"],
             confidence=parsed["confidence"],
@@ -132,7 +135,8 @@ class JudgeEngine:
             judge_prompt_version=JUDGE_PROMPT_VERSION,
             raw_output=raw_output,
             execution_time_ms=elapsed,
-            cost_usd=self._estimate_cost(effective_provider, effective_config, usage),
+            cost_usd=cost_usd,
+            cost_estimated=cost_priced,
             tokens_input=usage.get("tokens_input", 0),
             tokens_output=usage.get("tokens_output", 0),
         )
@@ -242,11 +246,12 @@ class JudgeEngine:
         provider: ChatProvider,
         config: JudgeConfig,
         usage: dict[str, Any],
-    ) -> float:
+    ) -> tuple[float, bool]:
         """Estimate the judge call cost from token usage.
 
-        Unknown provider/model pricing yields 0.0 — the judge call
-        still succeeded; only accounting is unavailable.
+        Returns (cost_usd, pricing_found). Unknown provider/model
+        pricing yields (0.0, False) — the judge call still succeeded;
+        only accounting is unavailable.
 
         """
         from app.providers.cost.defaults import build_default_cost_calculator
@@ -255,7 +260,7 @@ class JudgeEngine:
         provider_name = getattr(provider, "provider_name", "")
         model_id = config.model
         if not provider_name or not model_id:
-            return 0.0
+            return 0.0, False
 
         calculator = build_default_cost_calculator()
         try:
@@ -266,6 +271,6 @@ class JudgeEngine:
                     input_tokens=int(usage.get("tokens_input", 0)),
                     output_tokens=int(usage.get("tokens_output", 0)),
                 ),
-            )
+            ), True
         except KeyError:
-            return 0.0
+            return 0.0, False
