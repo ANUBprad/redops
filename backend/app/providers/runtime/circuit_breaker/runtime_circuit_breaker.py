@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import Enum, unique
 
 
@@ -92,6 +93,10 @@ class RuntimeCircuitBreaker:
         self._config = config or CircuitBreakerConfig()
         self._state = RuntimeCircuitState.CLOSED
         self._metrics = CircuitBreakerMetrics()
+        # Rolling failure timestamps for the configured window. Bounded:
+        # pruned to the window on every record and capped at the threshold,
+        # which is all the OPEN decision ever needs.
+        self._failure_window: deque[datetime] = deque()
 
     @property
     def state(self) -> RuntimeCircuitState:
@@ -122,17 +127,29 @@ class RuntimeCircuitBreaker:
         return self._state
 
     def record_failure(self) -> RuntimeCircuitState:
-        """Record a failed execution."""
+        """Record a failed execution.
+
+        Only failures inside the rolling ``failure_window_seconds`` count
+        toward the threshold; older failures age out. A failed HALF_OPEN
+        probe always reopens immediately.
+        """
         now = datetime.now(UTC)
         self._metrics.failure_count += 1
         self._metrics.last_failure_time = now
         self._metrics.consecutive_successes = 0
 
+        window_start = now - timedelta(seconds=self._config.failure_window_seconds)
+        while self._failure_window and self._failure_window[0] < window_start:
+            self._failure_window.popleft()
+        self._failure_window.append(now)
+        while len(self._failure_window) > self._config.failure_threshold:
+            self._failure_window.popleft()
+
         if self._state == RuntimeCircuitState.HALF_OPEN:  # noqa: SIM114
             self._transition_to(RuntimeCircuitState.OPEN)
         elif (
             self._state == RuntimeCircuitState.CLOSED
-            and self._metrics.failure_count >= self._config.failure_threshold
+            and len(self._failure_window) >= self._config.failure_threshold
         ):
             self._transition_to(RuntimeCircuitState.OPEN)
 
@@ -142,6 +159,7 @@ class RuntimeCircuitBreaker:
         """Manually reset circuit breaker to CLOSED."""
         self._transition_to(RuntimeCircuitState.CLOSED)
         self._metrics.reset()
+        self._failure_window.clear()
 
     def snapshot(self) -> CircuitBreakerSnapshot:
         """Return immutable snapshot of current state."""
@@ -168,6 +186,12 @@ class RuntimeCircuitBreaker:
             self._transition_to(RuntimeCircuitState.HALF_OPEN)
 
     def _transition_to(self, new_state: RuntimeCircuitState) -> None:
-        """Transition to a new state."""
+        """Transition to a new state.
+
+        Entering OPEN or CLOSED starts a fresh failure episode: stale
+        window entries must not haunt the new episode.
+        """
         self._state = new_state
         self._metrics.last_state_change = datetime.now(UTC)
+        if new_state in (RuntimeCircuitState.OPEN, RuntimeCircuitState.CLOSED):
+            self._failure_window.clear()

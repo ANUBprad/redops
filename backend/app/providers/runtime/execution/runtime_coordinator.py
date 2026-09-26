@@ -195,6 +195,7 @@ class RuntimeCoordinator:
 
         last_error: Exception | None = None
         local_rate_denial = False
+        circuit_open_denial = False
         total_retries = 0
         cumulative_latency = 0.0
 
@@ -256,6 +257,7 @@ class RuntimeCoordinator:
                 last_error = CircuitBreakerOpenError(
                     message=f"Circuit breaker open for {request.provider_name}",
                 )
+                circuit_open_denial = True
                 break
 
             async def _invoke() -> Any:
@@ -315,15 +317,19 @@ class RuntimeCoordinator:
                 last_error = exc
                 if concurrent_slot:
                     rate_limiter.release_concurrent(request.provider_name)
-                cb.record_failure()
+                # Honor the exception taxonomy: explicitly non-retryable
+                # errors (bad credentials, unknown model, over-limit
+                # context) must never be re-POSTed as paid calls -- and
+                # being caller/config problems rather than provider
+                # distress, they must not trip the shared provider breaker.
+                # Unclassified errors keep the legacy retry/count behavior.
+                is_fatal = getattr(exc, "retryable", True) is False
+                if not is_fatal:
+                    cb.record_failure()
                 attempt_latency = (datetime.now(UTC) - attempt_start).total_seconds() * 1000
                 cumulative_latency += attempt_latency
 
-                # Honor the exception taxonomy: explicitly non-retryable
-                # errors (bad credentials, unknown model, over-limit
-                # context) must never be re-POSTed as paid calls.
-                # Unclassified errors keep the legacy retry behavior.
-                if getattr(exc, "retryable", True) is False:
+                if is_fatal:
                     break
 
                 retry_ctx = RetryContext(
@@ -363,7 +369,11 @@ class RuntimeCoordinator:
                 latency=LatencyMetrics(total_ms=cumulative_latency),
                 retry_count=total_retries,
                 failure_category=(FailureCategory.RATE_LIMIT if local_rate_denial else None),
-                error_code="RATE_LIMIT_EXCEEDED" if local_rate_denial else "",
+                error_code=(
+                    "RATE_LIMIT_EXCEEDED"
+                    if local_rate_denial
+                    else ("CIRCUIT_BREAKER_OPEN" if circuit_open_denial else "")
+                ),
                 error_message=str(last_error),
             ),
             error=str(last_error),

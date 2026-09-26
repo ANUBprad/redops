@@ -275,10 +275,10 @@ async def test_denial_distinguishable_from_provider_timeout_circuit_fatal() -> N
 
     breaking = RuntimeCoordinator(_policy(RateLimitPolicy(), max_attempts=0))
     breaking.get_circuit_breaker("openai", CircuitBreakerConfig(failure_threshold=1))
-    await breaking.execute(_request(), fatal)
+    await breaking.execute(_request(), provider_429)
     circuit_open = await breaking.execute(_request(), ok)
     assert "circuit breaker" in circuit_open.error.lower()
-    assert circuit_open.telemetry.error_code == ""
+    assert circuit_open.telemetry.error_code == "CIRCUIT_BREAKER_OPEN"
 
     fatal_result = await plain.execute(_request(), fatal)
     assert fatal_result.success is False
