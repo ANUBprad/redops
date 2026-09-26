@@ -1,3 +1,10 @@
+## [0.13.35](https://github.com/ANUBprad/redops/compare/v0.13.34...v0.13.35) (2026-09-26)
+
+
+### Bug Fixes
+
+* **accounting:** propagate cost-pricing provenance end to end ([ef026a6](https://github.com/ANUBprad/redops/commit/ef026a62bb4670c187a73d52b70a94edf3989454))
+
 ## [0.13.34](https://github.com/ANUBprad/redops/compare/v0.13.33...v0.13.34) (2026-09-26)
 
 
