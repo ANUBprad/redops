@@ -1,3 +1,10 @@
+## [0.13.36](https://github.com/ANUBprad/redops/compare/v0.13.35...v0.13.36) (2026-09-26)
+
+
+### Bug Fixes
+
+* **providers:** enforce HALF_OPEN probe admission with generation tickets ([4592cb0](https://github.com/ANUBprad/redops/commit/4592cb04f875263568c1788284e971f1524f5beb))
+
 ## [0.13.35](https://github.com/ANUBprad/redops/compare/v0.13.34...v0.13.35) (2026-09-26)
 
 
