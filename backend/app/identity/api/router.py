@@ -101,7 +101,7 @@ async def register(
         return TokenResponse(
             access_token=access_token,
             refresh_token=raw_refresh,
-            expires_in=3600,
+            expires_in=service._get_access_token_ttl(),
         )
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
@@ -128,7 +128,7 @@ async def login(
         return TokenResponse(
             access_token=access_token,
             refresh_token=raw_refresh,
-            expires_in=3600,
+            expires_in=service._get_access_token_ttl(),
         )
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
@@ -149,7 +149,7 @@ async def refresh_tokens(
         return TokenPairResponse(
             access_token=new_access,
             refresh_token=new_refresh,
-            expires_in=3600,
+            expires_in=service._get_access_token_ttl(),
             user=_user_to_response(user),
         )
     except BaseError as exc:
@@ -293,7 +293,7 @@ async def github_callback(
         return TokenResponse(
             access_token=access_token,
             refresh_token=raw_refresh,
-            expires_in=3600,
+            expires_in=auth_svc._get_access_token_ttl(),
         )
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
@@ -334,7 +334,7 @@ async def google_callback(
         return TokenResponse(
             access_token=access_token,
             refresh_token=raw_refresh,
-            expires_in=3600,
+            expires_in=auth_svc._get_access_token_ttl(),
         )
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc

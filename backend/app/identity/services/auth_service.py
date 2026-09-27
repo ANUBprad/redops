@@ -60,10 +60,10 @@ class AuthService:
         return "HS256"
 
     def _get_access_token_ttl(self) -> int:
-        return 3600  # 1 hour
+        return self._config.jwt_access_token_ttl_seconds
 
     def _get_refresh_token_ttl(self) -> int:
-        return 30 * 24 * 3600  # 30 days
+        return self._config.jwt_refresh_token_ttl_seconds
 
     def create_access_token(
         self,
