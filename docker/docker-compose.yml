@@ -18,6 +18,26 @@ services:
     networks:
       - redops-network
 
+  migration:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: redops-migration
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: redops
+      DB_PASSWORD: redops
+      DB_NAME: redops
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - redops-network
+
   redis:
     image: redis:7-alpine
     container_name: redops-redis
@@ -91,8 +111,8 @@ services:
       target: development
     container_name: redops-api
     depends_on:
-      postgres:
-        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       temporal:
