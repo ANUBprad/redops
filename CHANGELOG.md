@@ -1,3 +1,10 @@
+## [0.13.37](https://github.com/ANUBprad/redops/compare/v0.13.36...v0.13.37) (2026-09-27)
+
+
+### Bug Fixes
+
+* **auth:** wire JWT TTL config through AuthService (R-08) ([cf22bdc](https://github.com/ANUBprad/redops/commit/cf22bdce98a8ed3a25a2b11c9b33d97c895e1b12))
+
 ## [0.13.36](https://github.com/ANUBprad/redops/compare/v0.13.35...v0.13.36) (2026-09-26)
 
 
