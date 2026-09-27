@@ -37,7 +37,7 @@ services:
       - redops-network
 
   temporal:
-    image: temporalio/server:1.25.0
+    image: temporalio/auto-setup:1.25.0
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,6 +48,8 @@ services:
       POSTGRES_PWD: ${DB_PASSWORD}
       POSTGRES_SEEDS: postgres
       DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/dynamicconfig.yaml
+      TEMPORAL_DB_NAME: temporal
+      TEMPORAL_VISIBILITY_DB_NAME: temporal_visibility
     volumes:
       - ./temporal/dynamicconfig.yaml:/etc/temporal/dynamicconfig.yaml
     healthcheck:
