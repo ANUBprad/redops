@@ -6,7 +6,7 @@ consistent health reporting across all infrastructure components.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 
 from app.core.config import AppConfig, get_config
 from app.kernel.health.health import HealthRegistry, HealthResult
@@ -72,12 +72,14 @@ async def health_check(
 @health_router.get("/ready", response_model=ReadinessCheckResponse)
 async def readiness_check(
     request: Request,
+    response: Response,
     config: AppConfig = Depends(get_config),
 ) -> ReadinessCheckResponse:
     """Readiness probe.
 
     Returns 200 only when all core dependencies are reachable.
-    Returns 200 with status=degraded when some dependencies are down.
+    Returns 503 with status=degraded when some dependencies are down,
+    so orchestrators (kubelet readinessProbe) stop routing traffic.
     """
     checks: list[DependencyCheck] = []
 
@@ -91,6 +93,8 @@ async def readiness_check(
         ]
 
     all_healthy = all(c.healthy for c in checks)
+    if not all_healthy:
+        response.status_code = 503
 
     return ReadinessCheckResponse(
         status=HealthStatus.HEALTHY if all_healthy else HealthStatus.DEGRADED,

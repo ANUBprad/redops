@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import Enum, unique
 
 
@@ -72,6 +73,28 @@ class CircuitBreakerSnapshot:
     total_rejected: int
 
 
+@dataclass(frozen=True, slots=True)
+class ProbeAdmission:
+    """Result of a HALF_OPEN-aware admission request.
+
+    Attributes:
+        admitted: Whether the caller may invoke the provider.
+        generation: Breaker episode the decision belongs to. Completions
+            must present it back so stale probes cannot corrupt a newer
+            episode.
+        reserved: True when a HALF_OPEN probe slot was reserved and must
+            be released via record_success/record_failure/release_probe.
+        exhausted: True when denied specifically because HALF_OPEN probe
+            capacity is exhausted (vs. the breaker being OPEN).
+
+    """
+
+    admitted: bool
+    generation: int = 0
+    reserved: bool = False
+    exhausted: bool = False
+
+
 class RuntimeCircuitBreaker:
     """Provider-agnostic circuit breaker.
 
@@ -92,12 +115,28 @@ class RuntimeCircuitBreaker:
         self._config = config or CircuitBreakerConfig()
         self._state = RuntimeCircuitState.CLOSED
         self._metrics = CircuitBreakerMetrics()
+        # Rolling failure timestamps for the configured window. Bounded:
+        # pruned to the window on every record and capped at the threshold,
+        # which is all the OPEN decision ever needs.
+        self._failure_window: deque[datetime] = deque()
+        # HALF_OPEN probe admission state. Every state transition starts a
+        # new generation (episode); completions presenting a stale
+        # generation are ignored so late probes cannot corrupt the new
+        # episode. ponytail: in-process only; multi-worker deployments
+        # need a shared breaker to coordinate globally.
+        self._generation = 0
+        self._half_open_in_flight = 0
 
     @property
     def state(self) -> RuntimeCircuitState:
         """Return current circuit state."""
         self._evaluate_state()
         return self._state
+
+    @property
+    def half_open_in_flight(self) -> int:
+        """Return the number of currently reserved HALF_OPEN probe slots."""
+        return self._half_open_in_flight
 
     def can_execute(self) -> bool:
         """Check if execution is allowed."""
@@ -107,8 +146,64 @@ class RuntimeCircuitBreaker:
             return False
         return True
 
-    def record_success(self) -> RuntimeCircuitState:
-        """Record a successful execution."""
+    def acquire(self) -> ProbeAdmission:
+        """Admit one provider invocation, reserving a HALF_OPEN probe slot.
+
+        The check and the reservation run back-to-back with no await
+        between, so concurrent coroutines cannot exceed
+        ``half_open_max_calls`` within one event loop. CLOSED admissions
+        reserve nothing; OPEN and exhausted admissions reserve nothing.
+        """
+        self._evaluate_state()
+        if self._state == RuntimeCircuitState.OPEN:
+            self._metrics.total_rejected += 1
+            return ProbeAdmission(admitted=False, generation=self._generation)
+        if self._state == RuntimeCircuitState.HALF_OPEN:
+            if self._half_open_in_flight >= self._config.half_open_max_calls:
+                self._metrics.total_rejected += 1
+                return ProbeAdmission(
+                    admitted=False,
+                    generation=self._generation,
+                    exhausted=True,
+                )
+            self._half_open_in_flight += 1
+            return ProbeAdmission(
+                admitted=True,
+                generation=self._generation,
+                reserved=True,
+            )
+        return ProbeAdmission(admitted=True, generation=self._generation)
+
+    def release_probe(self, generation: int) -> None:
+        """Release a reserved HALF_OPEN probe slot without recording.
+
+        Used for completions that must not mutate breaker accounting
+        (fatal errors, cancellation). Stale generations are ignored:
+        their episode already cleared the reservation.
+        """
+        if generation == self._generation and self._half_open_in_flight > 0:
+            self._half_open_in_flight -= 1
+
+    def _is_stale(self, generation: int | None) -> bool:
+        """Return True when a completion belongs to a superseded episode."""
+        return generation is not None and generation != self._generation
+
+    def _release_if_current(self, generation: int | None) -> None:
+        """Release one reserved slot for a current-episode completion."""
+        if generation is not None and generation == self._generation:
+            if self._half_open_in_flight > 0:
+                self._half_open_in_flight -= 1
+
+    def record_success(self, generation: int | None = None) -> RuntimeCircuitState:
+        """Record a successful execution.
+
+        A reserved probe presents its admission generation: stale
+        completions are ignored and the slot is released for current
+        ones before counting.
+        """
+        if self._is_stale(generation):
+            return self._state
+        self._release_if_current(generation)
         self._metrics.success_count += 1
         self._metrics.consecutive_successes += 1
 
@@ -121,18 +216,34 @@ class RuntimeCircuitBreaker:
 
         return self._state
 
-    def record_failure(self) -> RuntimeCircuitState:
-        """Record a failed execution."""
+    def record_failure(self, generation: int | None = None) -> RuntimeCircuitState:
+        """Record a failed execution.
+
+        Only failures inside the rolling ``failure_window_seconds`` count
+        toward the threshold; older failures age out. A failed HALF_OPEN
+        probe always reopens immediately. Stale reserved completions are
+        ignored.
+        """
+        if self._is_stale(generation):
+            return self._state
+        self._release_if_current(generation)
         now = datetime.now(UTC)
         self._metrics.failure_count += 1
         self._metrics.last_failure_time = now
         self._metrics.consecutive_successes = 0
 
+        window_start = now - timedelta(seconds=self._config.failure_window_seconds)
+        while self._failure_window and self._failure_window[0] < window_start:
+            self._failure_window.popleft()
+        self._failure_window.append(now)
+        while len(self._failure_window) > self._config.failure_threshold:
+            self._failure_window.popleft()
+
         if self._state == RuntimeCircuitState.HALF_OPEN:  # noqa: SIM114
             self._transition_to(RuntimeCircuitState.OPEN)
         elif (
             self._state == RuntimeCircuitState.CLOSED
-            and self._metrics.failure_count >= self._config.failure_threshold
+            and len(self._failure_window) >= self._config.failure_threshold
         ):
             self._transition_to(RuntimeCircuitState.OPEN)
 
@@ -142,6 +253,7 @@ class RuntimeCircuitBreaker:
         """Manually reset circuit breaker to CLOSED."""
         self._transition_to(RuntimeCircuitState.CLOSED)
         self._metrics.reset()
+        self._failure_window.clear()
 
     def snapshot(self) -> CircuitBreakerSnapshot:
         """Return immutable snapshot of current state."""
@@ -168,6 +280,19 @@ class RuntimeCircuitBreaker:
             self._transition_to(RuntimeCircuitState.HALF_OPEN)
 
     def _transition_to(self, new_state: RuntimeCircuitState) -> None:
-        """Transition to a new state."""
+        """Transition to a new state.
+
+        Every transition starts a new generation: reserved slots belong
+        to the superseded episode and their late completions are
+        ignored. Entering OPEN or CLOSED additionally starts a fresh
+        failure episode: stale window entries must not haunt it.
+        """
         self._state = new_state
+        self._generation += 1
         self._metrics.last_state_change = datetime.now(UTC)
+        if new_state in (RuntimeCircuitState.OPEN, RuntimeCircuitState.CLOSED):
+            self._failure_window.clear()
+        # Any in-flight count at a transition boundary belongs to the
+        # superseded episode (slots only exist in HALF_OPEN, which always
+        # exits through here): never carry it into the new episode.
+        self._half_open_in_flight = 0

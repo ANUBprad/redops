@@ -112,7 +112,6 @@ def create_application() -> FastAPI:
         window_seconds=60,
         route_limits={
             "/api/v1/auth/": (30, 60),
-            "/api/v1/identity/": (60, 60),
             "/api/v1/projects/": (120, 60),
         },
     )

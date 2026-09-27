@@ -64,7 +64,7 @@ class TargetExecutor:
             )
             latency_ms = int((time.monotonic() - start) * 1000)
 
-            cost_usd = self._estimate_cost(
+            cost_usd, cost_priced = self._estimate_cost(
                 provider_name=provider_name,
                 model=model,
                 usage=response.usage,
@@ -78,6 +78,7 @@ class TargetExecutor:
                 tokens_output=response.usage.output_tokens,
                 total_tokens=response.usage.total_tokens,
                 cost_usd=cost_usd,
+                cost_estimated=cost_priced,
                 latency_ms=latency_ms,
                 provider_name=provider_name,
                 model_name=model,
@@ -118,13 +119,14 @@ class TargetExecutor:
         provider_name: str,
         model: str,
         usage: Any,
-    ) -> float:
+    ) -> tuple[float, bool]:
         """Estimate the target call cost from token usage.
 
-        Reuses the default cost calculator and pricing table already
-        used by the general-eval and semantic-judge paths. Unknown
-        provider/model pricing yields 0.0 (the call still succeeded;
-        only accounting is unavailable), never a fabricated cost.
+        Returns (cost_usd, pricing_found). Reuses the default cost
+        calculator and pricing table already used by the general-eval
+        and semantic-judge paths. Unknown provider/model pricing yields
+        (0.0, False) (the call still succeeded; only accounting is
+        unavailable), never a fabricated cost.
         """
         from app.providers.cost.defaults import build_default_cost_calculator
         from app.providers.tokenization.usage import TokenUsage
@@ -140,9 +142,9 @@ class TargetExecutor:
                     cached_tokens=usage.cached_tokens,
                     audio_tokens=usage.audio_tokens,
                 ),
-            )
+            ), True
         except KeyError:
-            return 0.0
+            return 0.0, False
 
     async def execute_batch(
         self,

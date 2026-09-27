@@ -70,6 +70,7 @@ class JudgeResponse:
     metadata: dict[str, Any] = field(default_factory=dict)
     execution_time_ms: int = 0
     cost_usd: float = 0.0
+    cost_estimated: bool = True
     tokens_input: int = 0
     tokens_output: int = 0
     error: str | None = None

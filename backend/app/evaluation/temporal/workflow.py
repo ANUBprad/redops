@@ -80,6 +80,7 @@ class EvaluationRunWorkflowResult:
     total_cost_usd: float = 0.0
     total_tokens_input: int = 0
     total_tokens_output: int = 0
+    cost_estimated_complete: bool = True
 
 
 def _compute_workflow_fingerprint(
@@ -118,6 +119,15 @@ def _compute_workflow_fingerprint(
 
     canonical = json.dumps(components, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()[:32]
+
+
+def _cost_completeness_ok(results: list[ExecuteItemResult]) -> bool:
+    """Return True when every item cost was priced (no unknown component).
+
+    Pure helper so run-level cost completeness stays unit-testable without
+    a Temporal test server.
+    """
+    return all(r.cost_estimated for r in results)
 
 
 def _build_item_trace(item_result: ExecuteItemResult) -> dict[str, Any]:
@@ -216,6 +226,7 @@ class EvaluationRunWorkflow:
         # Trace: record run start
         started_at = workflow.now().isoformat()
         item_traces: list[dict[str, Any]] = []
+        item_results: list[ExecuteItemResult] = []
         total_cost_usd = 0.0
         total_tokens_input = 0
         total_tokens_output = 0
@@ -271,6 +282,7 @@ class EvaluationRunWorkflow:
                     items_total=input.total_items,
                     items_failed=items_failed,
                     total_cost_usd=total_cost_usd,
+                    cost_estimated_complete=_cost_completeness_ok(item_results),
                     total_tokens_input=total_tokens_input,
                     total_tokens_output=total_tokens_output,
                 )
@@ -302,6 +314,7 @@ class EvaluationRunWorkflow:
                 )
 
                 items_completed += 1
+                item_results.append(item_result)
                 total_cost_usd += item_result.cost_usd
                 total_tokens_input += item_result.tokens_input
                 total_tokens_output += item_result.tokens_output
@@ -361,6 +374,7 @@ class EvaluationRunWorkflow:
 
         # Build trace data from accumulated item traces
         completed_at = workflow.now().isoformat()
+        cost_estimated_complete = _cost_completeness_ok(item_results)
         trace_data: dict[str, Any] = {
             "run_id": input.run_id,
             "evaluation_name": "",
@@ -371,6 +385,7 @@ class EvaluationRunWorkflow:
             "status": "completed" if items_failed < input.total_items else "failed",
             "item_traces": item_traces,
             "total_cost_usd": total_cost_usd,
+            "cost_estimated_complete": cost_estimated_complete,
             "total_tokens_input": total_tokens_input,
             "total_tokens_output": total_tokens_output,
             "total_latency_ms": total_latency_ms,
@@ -418,6 +433,7 @@ class EvaluationRunWorkflow:
                 items_total=input.total_items,
                 items_failed=items_failed,
                 total_cost_usd=total_cost_usd,
+                cost_estimated_complete=cost_estimated_complete,
                 total_tokens_input=total_tokens_input,
                 total_tokens_output=total_tokens_output,
             )
@@ -454,6 +470,7 @@ class EvaluationRunWorkflow:
             items_total=input.total_items,
             items_failed=items_failed,
             total_cost_usd=total_cost_usd,
+            cost_estimated_complete=cost_estimated_complete,
             total_tokens_input=total_tokens_input,
             total_tokens_output=total_tokens_output,
         )

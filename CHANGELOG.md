@@ -1,3 +1,87 @@
+## [0.13.38](https://github.com/ANUBprad/redops/compare/v0.13.37...v0.13.38) (2026-09-27)
+
+
+### Bug Fixes
+
+* **security:** remove dead /api/v1/identity rate-limit rule (R-10) ([e01e955](https://github.com/ANUBprad/redops/commit/e01e9555d384d325d4341dcf0b5670e110c2b5b6))
+
+## [0.13.37](https://github.com/ANUBprad/redops/compare/v0.13.36...v0.13.37) (2026-09-27)
+
+
+### Bug Fixes
+
+* **auth:** wire JWT TTL config through AuthService (R-08) ([cf22bdc](https://github.com/ANUBprad/redops/commit/cf22bdce98a8ed3a25a2b11c9b33d97c895e1b12))
+
+## [0.13.36](https://github.com/ANUBprad/redops/compare/v0.13.35...v0.13.36) (2026-09-26)
+
+
+### Bug Fixes
+
+* **providers:** enforce HALF_OPEN probe admission with generation tickets ([4592cb0](https://github.com/ANUBprad/redops/commit/4592cb04f875263568c1788284e971f1524f5beb))
+
+## [0.13.35](https://github.com/ANUBprad/redops/compare/v0.13.34...v0.13.35) (2026-09-26)
+
+
+### Bug Fixes
+
+* **accounting:** propagate cost-pricing provenance end to end ([ef026a6](https://github.com/ANUBprad/redops/commit/ef026a62bb4670c187a73d52b70a94edf3989454))
+
+## [0.13.34](https://github.com/ANUBprad/redops/compare/v0.13.33...v0.13.34) (2026-09-26)
+
+
+### Bug Fixes
+
+* **providers:** window breaker failures and exclude fatal errors ([e046b72](https://github.com/ANUBprad/redops/commit/e046b7245a3fa1c20dfaba9c15b5524835fe8733))
+
+## [0.13.33](https://github.com/ANUBprad/redops/compare/v0.13.32...v0.13.33) (2026-09-26)
+
+
+### Bug Fixes
+
+* **deploy:** return 503 from readiness probe while degraded ([17dd57e](https://github.com/ANUBprad/redops/commit/17dd57ef653b18062efccf800fbf29b3136c95f3))
+
+## [0.13.32](https://github.com/ANUBprad/redops/compare/v0.13.31...v0.13.32) (2026-09-26)
+
+
+### Bug Fixes
+
+* **providers:** wire sliding-window rate limiter into runtime coordinator ([a7f5606](https://github.com/ANUBprad/redops/commit/a7f5606e01a53c2fea7fcd04e8e0f494d200e301))
+
+## [0.13.31](https://github.com/ANUBprad/redops/compare/v0.13.30...v0.13.31) (2026-09-25)
+
+
+### Bug Fixes
+
+* **providers:** honor retry taxonomy and enforce request timeouts in coordinator ([7b3fdc5](https://github.com/ANUBprad/redops/commit/7b3fdc5a02359807828f12368aabf1e38b00d781))
+
+## [0.13.30](https://github.com/ANUBprad/redops/compare/v0.13.29...v0.13.30) (2026-09-25)
+
+
+### Bug Fixes
+
+* **auth:** return raw refresh token on rotation so the chain survives ([c701e2f](https://github.com/ANUBprad/redops/commit/c701e2fbfd73bdc8a5c02f2dcf7c4508f2b4e148))
+
+## [0.13.29](https://github.com/ANUBprad/redops/compare/v0.13.28...v0.13.29) (2026-09-25)
+
+
+### Bug Fixes
+
+* **auth:** attest persisted run ids on score/score-batch before engine work ([a29f84e](https://github.com/ANUBprad/redops/commit/a29f84e20d4618883028262e9628e6af2bf8a277))
+
+## [0.13.28](https://github.com/ANUBprad/redops/compare/v0.13.27...v0.13.28) (2026-09-25)
+
+
+### Bug Fixes
+
+* **auth:** tenant-scope agent definitions and agent runs ([ce3c27d](https://github.com/ANUBprad/redops/commit/ce3c27ddbc3120f5a0ae09b1464d904448a2a3a0))
+
+## [0.13.27](https://github.com/ANUBprad/redops/compare/v0.13.26...v0.13.27) (2026-09-25)
+
+
+### Bug Fixes
+
+* **auth:** tenant-scope red-team AttackRun routes via established run ownership ([11ea6da](https://github.com/ANUBprad/redops/commit/11ea6da680758986e278f005c7c630b1221f46d9))
+
 ## [0.13.26](https://github.com/ANUBprad/redops/compare/v0.13.25...v0.13.26) (2026-09-25)
 
 

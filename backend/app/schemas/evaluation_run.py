@@ -99,6 +99,14 @@ class RunResponse(BaseModel):
     token_output: int = Field(..., description="Output tokens")
     total_tokens: int = Field(..., description="Total tokens")
     cost: float = Field(..., description="Total cost in USD")
+    cost_estimated: bool | None = Field(
+        default=None,
+        description=(
+            "True when every item cost was priced against known pricing, "
+            "False when the total contains unknown-priced components, "
+            "None when recorded before cost provenance existed"
+        ),
+    )
     average_latency_ms: int = Field(..., description="Average latency in ms")
     failure_reason: str | None = Field(default=None, description="Failure reason")
     verdict: str | None = Field(default=None, description="Run verdict: pass, fail, error, or null")
@@ -124,6 +132,7 @@ class RunSummaryResponse(BaseModel):
     items_completed: int
     items_failed: int
     cost: float
+    cost_estimated: bool | None = None
     started_at: str | None = None
     completed_at: str | None = None
     created_at: str

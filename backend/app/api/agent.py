@@ -28,7 +28,13 @@ from app.agent.application.handlers import (
     UpdateAgentHandler,
 )
 from app.agent.domain.entities.agent_definition import AgentDefinition
-from app.core.dependencies import CurrentUser, get_current_user, get_db_session
+from app.core.dependencies import (
+    CurrentUser,
+    get_current_user,
+    get_db_session,
+    require_current_org_membership,
+    require_owned_agent_definition,
+)
 from app.infrastructure.database.repositories.agent_repository import (
     SqlAlchemyAgentDefinitionRepository,
 )
@@ -105,12 +111,17 @@ async def create_agent(
     request: Request,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> AgentResponse:
-    """Create a new agent definition."""
+    """Create a new agent definition.
+
+    Tenant-scoped: the definition is always attributed to the caller's
+    organization (spoofed body ``project_id``/``created_by`` ignored).
+    """
     repo = _get_repository(session)
     handler = CreateAgentHandler(repo)
     command = CreateAgentCommand(
-        project_id=body.project_id,
+        project_id=org_id,
         name=body.name,
         description=body.description,
         agent_type=body.agent_type,
@@ -119,7 +130,7 @@ async def create_agent(
         capabilities=tuple(body.capabilities),
         config=body.config,
         endpoint=body.endpoint,
-        created_by=body.created_by,
+        created_by=current_user.user_id,
     )
     try:
         agent = await handler.handle(command)
@@ -140,12 +151,18 @@ async def list_agents(
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    org_id: str = Depends(require_current_org_membership),
 ) -> AgentListResponse:
-    """List agents with filtering, sorting, and pagination."""
+    """List agents with filtering, sorting, and pagination.
+
+    Tenant-scoped: results are always limited to the caller's
+    organization; the legacy client-supplied ``project_id`` filter is
+    ignored.
+    """
     repo = _get_repository(session)
     handler = ListAgentsHandler(repo)
     query = ListAgentsQuery(
-        project_id=project_id,
+        project_id=org_id,
         agent_type=agent_type,
         status=status,
         search=search,
@@ -163,6 +180,7 @@ async def get_agent(
     agent_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_agent_definition),
 ) -> AgentResponse:
     """Get an agent by ID."""
     repo = _get_repository(session)
@@ -181,6 +199,7 @@ async def update_agent(
     body: UpdateAgentRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_agent_definition),
 ) -> AgentResponse:
     """Update an agent definition."""
     repo = _get_repository(session)
@@ -208,6 +227,7 @@ async def delete_agent(
     agent_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_agent_definition),
 ) -> None:
     """Delete an agent definition."""
     repo = _get_repository(session)
@@ -224,6 +244,7 @@ async def activate_agent(
     agent_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_agent_definition),
 ) -> AgentResponse:
     """Activate an agent definition."""
     repo = _get_repository(session)
@@ -241,6 +262,7 @@ async def deactivate_agent(
     agent_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_agent_definition),
 ) -> AgentResponse:
     """Deactivate an agent definition."""
     repo = _get_repository(session)
@@ -258,6 +280,7 @@ async def archive_agent(
     agent_id: str,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _owned: None = Depends(require_owned_agent_definition),
 ) -> AgentResponse:
     """Archive an agent definition."""
     repo = _get_repository(session)

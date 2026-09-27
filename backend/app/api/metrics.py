@@ -107,7 +107,14 @@ async def score_item(
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[MetricResultResponse]:
-    """Score a single evaluation item with configured metrics."""
+    """Score a single evaluation item with configured metrics.
+
+    Dual-mode attestation: a ``run_id`` that resolves to a persisted
+    evaluation run must belong to the caller (checked before any
+    engine/provider work or persistence); unpersisted ids are scored as
+    explicitly ad-hoc computation.
+    """
+    await _require_score_run_attested(body.run_id, current_user, session)
     engine = get_metric_engine()
     repo = _get_repository(session)
     handler = ScoreItemHandler(engine, repo)
@@ -127,6 +134,8 @@ async def score_item(
         await session.flush()
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid run or item id") from None
     return [
         MetricResultResponse(
             metric_name=r.metric_name,
@@ -145,13 +154,50 @@ async def score_item(
     ]
 
 
+async def _require_score_run_attested(
+    run_id: str,
+    current_user: CurrentUser,
+    session: AsyncSession,
+) -> None:
+    """Attest a score request's run id before engine/provider work.
+
+    Malformed ids are truthfully 404; ids resolving to a persisted run
+    require ownership; unpersisted ids proceed as ad-hoc computation.
+    Item existence is deliberately not attested: it adds nothing
+    cross-tenant once the run is owned.
+    """
+    from fastapi import HTTPException
+
+    from app.infrastructure.database.repositories.evaluation_run_repository import (
+        SqlAlchemyEvaluationRunRepository,
+    )
+    from app.kernel.entities.base import UUIDv7
+
+    try:
+        r_id = UUIDv7.from_string(run_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=404, detail=f"Evaluation run not found: {run_id}"
+        ) from None
+    run = await SqlAlchemyEvaluationRunRepository(session).find_by_id(r_id)
+    if run is None:
+        return
+    await require_owned_run(run_id, current_user, session)
+
+
 @metrics_router.post("/score-batch", response_model=list[MetricResultResponse])
 async def score_batch(
     body: ScoreBatchRequest,
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[MetricResultResponse]:
-    """Score multiple evaluation items with configured metrics."""
+    """Score multiple evaluation items with configured metrics.
+
+    Every distinct ``run_id`` is attested like ``POST /score``; one
+    foreign persisted run denies the whole batch before any work.
+    """
+    for run_id in {item.run_id for item in body.items}:
+        await _require_score_run_attested(run_id, current_user, session)
     engine = get_metric_engine()
     repo = _get_repository(session)
     score_handler = ScoreItemHandler(engine, repo)
@@ -177,6 +223,8 @@ async def score_batch(
         await session.flush()
     except BaseError as exc:
         raise HTTPException(status_code=exc.http_status, detail=str(exc)) from exc
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid run or item id") from None
     return [
         MetricResultResponse(
             metric_name=r.metric_name,

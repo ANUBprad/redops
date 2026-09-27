@@ -113,6 +113,7 @@ class TargetExecution:
     tokens_output: int = 0
     total_tokens: int = 0
     cost_usd: float = 0.0
+    cost_estimated: bool = True
     latency_ms: int = 0
     provider_name: str = ""
     model_name: str = ""
