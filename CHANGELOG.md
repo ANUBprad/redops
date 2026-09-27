@@ -1,3 +1,10 @@
+## [0.13.38](https://github.com/ANUBprad/redops/compare/v0.13.37...v0.13.38) (2026-09-27)
+
+
+### Bug Fixes
+
+* **security:** remove dead /api/v1/identity rate-limit rule (R-10) ([e01e955](https://github.com/ANUBprad/redops/commit/e01e9555d384d325d4341dcf0b5670e110c2b5b6))
+
 ## [0.13.37](https://github.com/ANUBprad/redops/compare/v0.13.36...v0.13.37) (2026-09-27)
 
 
