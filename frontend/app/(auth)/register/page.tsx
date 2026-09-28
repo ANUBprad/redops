@@ -15,32 +15,51 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Loader2, Mail, User, Lock, Eye, EyeOff } from "lucide-react";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login } = useAuth();
+  const { register } = useAuth();
   const router = useRouter();
+
+  const validateForm = () => {
+    if (!email || !displayName || !password || !confirmPassword) {
+      setError("All fields are required");
+      return false;
+    }
+    if (!email.includes("@")) {
+      setError("Please enter a valid email address");
+      return false;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return false;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return false;
+    }
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!email || !password) {
-      setError("Email and password are required");
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
     try {
-      await login(email, password);
+      await register(email, displayName, password);
       router.push("/dashboard");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Login failed";
+      const message = err instanceof Error ? err.message : "Registration failed";
       setError(message);
     } finally {
       setIsLoading(false);
@@ -50,8 +69,8 @@ export default function LoginPage() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle>Welcome to RedOps</CardTitle>
-        <CardDescription>Sign in to access the platform</CardDescription>
+        <CardTitle>Create Account</CardTitle>
+        <CardDescription>Start evaluating AI systems today</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -60,6 +79,23 @@ export default function LoginPage() {
               {error}
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="displayName">Display Name</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="displayName"
+                type="text"
+                placeholder="Your name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
+                className="pl-10"
+                disabled={isLoading}
+              />
+            </div>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -80,21 +116,19 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
-            </div>
+            <Label htmlFor="password">Password</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Password"
+                placeholder="At least 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="pl-10 pr-10"
                 disabled={isLoading}
-                autoComplete="current-password"
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -104,16 +138,25 @@ export default function LoginPage() {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+            <p className="text-xs text-muted-foreground">At least 8 characters</p>
           </div>
 
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" className="rounded border-input bg-background" />
-              <span className="text-sm text-muted-foreground">Remember me</span>
-            </label>
-            <Link href="#" className="text-sm text-primary hover:underline">
-              Forgot password?
-            </Link>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="confirmPassword"
+                type={showPassword ? "text" : "password"}
+                placeholder="Confirm your password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                className="pl-10"
+                disabled={isLoading}
+                autoComplete="new-password"
+              />
+            </div>
           </div>
         </CardContent>
         <CardFooter className="space-y-4">
@@ -121,21 +164,28 @@ export default function LoginPage() {
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in...
+                Creating account...
               </>
             ) : (
-              "Sign In"
+              "Create Account"
             )}
           </Button>
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link href="/login" className="text-primary hover:underline font-medium">
+              Sign In
+            </Link>
+          </p>
         </CardFooter>
       </form>
 
       <div className="mt-6">
         <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-primary hover:underline font-medium">
-            Create one
-          </Link>
+          By creating an account, you agree to our{" "}
+          <a href="#" className="text-primary hover:underline">Terms of Service</a>{" "}
+          and{" "}
+          <a href="#" className="text-primary hover:underline">Privacy Policy</a>
+          .
         </p>
       </div>
     </Card>

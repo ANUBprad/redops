@@ -51,8 +51,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      if (!res.ok) throw new Error("Login failed");
       const data = await res.json();
+      if (!res.ok) {
+        const detail =
+          typeof data === "object" && data !== null && "detail" in data
+            ? String((data as { detail: unknown }).detail)
+            : "Login failed";
+        throw new Error(detail);
+      }
       setAccessToken(data.access_token);
       localStorage.setItem("redops-access-token", data.access_token);
       localStorage.setItem("redops-refresh-token", data.refresh_token);
@@ -78,8 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, display_name: displayName, password }),
       });
-      if (!res.ok) throw new Error("Registration failed");
       const data = await res.json();
+      if (!res.ok) {
+        const detail =
+          typeof data === "object" && data !== null && "detail" in data
+            ? String((data as { detail: unknown }).detail)
+            : "Registration failed";
+        throw new Error(detail);
+      }
       setAccessToken(data.access_token);
       localStorage.setItem("redops-access-token", data.access_token);
       localStorage.setItem("redops-refresh-token", data.refresh_token);
