@@ -21,6 +21,26 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+export const metadata = {
+  title: "RedOps — Production-Grade AI Evaluation & Red Teaming Platform",
+  description: "Evaluate AI systems before your users do. RedOps combines evaluation, adversarial testing, execution orchestration, provenance, and observability into a single platform.",
+  openGraph: {
+    title: "RedOps — Production-Grade AI Evaluation & Red Teaming Platform",
+    description: "Evaluate AI systems before your users do. RedOps combines evaluation, adversarial testing, execution orchestration, provenance, and observability into a single platform.",
+    type: "website",
+    siteName: "RedOps",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "RedOps — Production-Grade AI Evaluation & Red Teaming Platform",
+    description: "Evaluate AI systems before your users do.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 export default function LandingPage() {
   const { isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
@@ -310,12 +330,22 @@ export default function LandingPage() {
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold">RedOps</span>
               </div>
-              <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                <a href="https://github.com/ANUBprad/redops" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors flex items-center gap-1">
-                  <Github className="h-4 w-4" />
-                  GitHub
-                </a>
-                <span>Apache 2.0 License</span>
+              <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:justify-between gap-6">
+                <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                  <Link href="/privacy" className="hover:text-foreground transition-colors">
+                    Privacy
+                  </Link>
+                  <Link href="/terms" className="hover:text-foreground transition-colors">
+                    Terms
+                  </Link>
+                </div>
+                <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                  <a href="https://github.com/ANUBprad/redops" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors flex items-center gap-1">
+                    <Github className="h-4 w-4" />
+                    GitHub
+                  </a>
+                  <span>Apache 2.0 License</span>
+                </div>
               </div>
             </div>
           </div>

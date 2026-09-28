@@ -111,9 +111,6 @@ export default function LoginPage() {
               <input type="checkbox" className="rounded border-input bg-background" />
               <span className="text-sm text-muted-foreground">Remember me</span>
             </label>
-            <Link href="#" className="text-sm text-primary hover:underline">
-              Forgot password?
-            </Link>
           </div>
         </CardContent>
         <CardFooter className="space-y-4">
