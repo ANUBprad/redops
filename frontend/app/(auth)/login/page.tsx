@@ -107,7 +107,7 @@ export default function LoginPage() {
           </div>
 
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex cursor-pointer items-center gap-2">
               <input type="checkbox" className="rounded border-input bg-background" />
               <span className="text-sm text-muted-foreground">Remember me</span>
             </label>
@@ -130,7 +130,7 @@ export default function LoginPage() {
       <div className="mt-6">
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-primary hover:underline font-medium">
+          <Link href="/register" className="font-medium text-primary hover:underline">
             Create one
           </Link>
         </p>

@@ -21,26 +21,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const metadata = {
-  title: "RedOps — Production-Grade AI Evaluation & Red Teaming Platform",
-  description: "Evaluate AI systems before your users do. RedOps combines evaluation, adversarial testing, execution orchestration, provenance, and observability into a single platform.",
-  openGraph: {
-    title: "RedOps — Production-Grade AI Evaluation & Red Teaming Platform",
-    description: "Evaluate AI systems before your users do. RedOps combines evaluation, adversarial testing, execution orchestration, provenance, and observability into a single platform.",
-    type: "website",
-    siteName: "RedOps",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "RedOps — Production-Grade AI Evaluation & Red Teaming Platform",
-    description: "Evaluate AI systems before your users do.",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
-
 export default function LandingPage() {
   const { isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
@@ -55,33 +35,49 @@ export default function LandingPage() {
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
-}
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+      <nav className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-8">
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold">RedOps</span>
-                <span className="hidden text-xs text-muted-foreground sm:inline">AI Evaluation Platform</span>
+                <span className="hidden text-xs text-muted-foreground sm:inline">
+                  AI Evaluation Platform
+                </span>
               </div>
-              <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-                <a href="#platform" className="text-muted-foreground hover:text-foreground transition-colors">
+              <div className="hidden items-center gap-6 text-sm font-medium md:flex">
+                <a
+                  href="#platform"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
                   Platform
                 </a>
-                <a href="#architecture" className="text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#architecture"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
                   Architecture
                 </a>
-                <a href="https://github.com/ANUBprad/redops" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                <a
+                  href="https://github.com/ANUBprad/redops"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
+                >
                   <Github className="h-4 w-4" />
                   GitHub
                 </a>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                href="/login"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
                 Sign In
               </Link>
               <Link href="/register">
@@ -99,21 +95,21 @@ export default function LandingPage() {
         <section className="relative overflow-hidden py-20 sm:py-32 lg:py-40 xl:py-48">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary mb-6">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
                 <Sparkles className="h-4 w-4" />
                 <span>Production-grade AI Evaluation & Red Teaming</span>
               </div>
               <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
                 Evaluate AI systems <span className="text-primary">before your users do</span>
               </h1>
-              <p className="mt-6 mx-auto max-w-2xl text-lg text-muted-foreground">
-                RedOps combines evaluation, adversarial testing, execution orchestration, provenance, and observability
-                into a single platform. Run evaluations you can trust, red-team campaigns that adapt, and observability
-                that makes failures explainable.
+              <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+                RedOps combines evaluation, adversarial testing, execution orchestration,
+                provenance, and observability into a single platform. Run evaluations you can trust,
+                red-team campaigns that adapt, and observability that makes failures explainable.
               </p>
               <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                 <Link href="/register">
-                  <Button size="lg" className="gap-2 w-full sm:w-auto">
+                  <Button size="lg" className="w-full gap-2 sm:w-auto">
                     <Sparkles className="h-5 w-5" />
                     Start Evaluating
                   </Button>
@@ -130,9 +126,9 @@ export default function LandingPage() {
 
         <section id="platform" className="py-20 sm:py-24 lg:py-32">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
+            <div className="mb-16 text-center">
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Core Capabilities</h2>
-              <p className="mt-4 mx-auto max-w-2xl text-muted-foreground">
+              <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
                 Verified capabilities built for production AI engineering teams
               </p>
             </div>
@@ -208,17 +204,17 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="architecture" className="py-20 sm:py-24 lg:py-32 bg-muted/30">
+        <section id="architecture" className="bg-muted/30 py-20 sm:py-24 lg:py-32">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
+            <div className="mb-16 text-center">
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">How It Works</h2>
-              <p className="mt-4 mx-auto max-w-2xl text-muted-foreground">
+              <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
                 From dataset to red-team findings — a unified workflow
               </p>
             </div>
 
             <div className="relative">
-              <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-border -translate-x-1/2 hidden lg:block" />
+              <div className="absolute bottom-0 left-1/2 top-0 hidden w-0.5 -translate-x-1/2 bg-border lg:block" />
               <div className="space-y-12">
                 <WorkflowStep
                   number="01"
@@ -262,9 +258,11 @@ export default function LandingPage() {
         </section>
 
         <section className="py-20 sm:py-24 lg:py-32">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Trust & Execution Integrity</h2>
-            <p className="mt-4 mx-auto max-w-2xl text-muted-foreground">
+          <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Trust & Execution Integrity
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
               Evidence-backed engineering qualities for production AI systems
             </p>
             <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -302,15 +300,17 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="py-20 sm:py-24 lg:py-32 bg-muted/30">
-          <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Ready to Start Evaluating?</h2>
+        <section className="bg-muted/30 py-20 sm:py-24 lg:py-32">
+          <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Ready to Start Evaluating?
+            </h2>
             <p className="mt-4 text-muted-foreground">
               Join teams evaluating AI systems before their users do.
             </p>
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Link href="/register">
-                <Button size="lg" className="gap-2 w-full sm:w-auto">
+                <Button size="lg" className="w-full gap-2 sm:w-auto">
                   <Sparkles className="h-5 w-5" />
                   Create Account
                 </Button>
@@ -330,17 +330,22 @@ export default function LandingPage() {
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold">RedOps</span>
               </div>
-              <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:justify-between gap-6">
+              <div className="flex flex-col items-center gap-4 gap-6 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                  <Link href="/privacy" className="hover:text-foreground transition-colors">
+                  <Link href="/privacy" className="transition-colors hover:text-foreground">
                     Privacy
                   </Link>
-                  <Link href="/terms" className="hover:text-foreground transition-colors">
+                  <Link href="/terms" className="transition-colors hover:text-foreground">
                     Terms
                   </Link>
                 </div>
                 <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                  <a href="https://github.com/ANUBprad/redops" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors flex items-center gap-1">
+                  <a
+                    href="https://github.com/ANUBprad/redops"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 transition-colors hover:text-foreground"
+                  >
                     <Github className="h-4 w-4" />
                     GitHub
                   </a>
@@ -364,7 +369,7 @@ interface CapabilityCardProps {
 
 function CapabilityCard({ icon, title, description, features }: CapabilityCardProps) {
   return (
-    <Card className="bg-card border-border hover:border-primary/50 transition-colors">
+    <Card className="border-border bg-card transition-colors hover:border-primary/50">
       <CardHeader>
         <div className="text-primary">{icon}</div>
         <CardTitle className="text-lg">{title}</CardTitle>
@@ -394,7 +399,7 @@ interface WorkflowStepProps {
 function WorkflowStep({ number, title, description, icon }: WorkflowStepProps) {
   return (
     <div className="relative flex gap-6 lg:gap-8">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-lg shrink-0">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
         {number}
       </div>
       <div className="flex-1 pt-1">
@@ -402,7 +407,7 @@ function WorkflowStep({ number, title, description, icon }: WorkflowStepProps) {
           <div className="text-primary">{icon}</div>
           <h3 className="text-xl font-semibold">{title}</h3>
         </div>
-        <p className="mt-2 ml-11 text-muted-foreground">{description}</p>
+        <p className="ml-11 mt-2 text-muted-foreground">{description}</p>
       </div>
     </div>
   );
@@ -416,10 +421,10 @@ interface TrustCardProps {
 
 function TrustCard({ icon, title, description }: TrustCardProps) {
   return (
-    <Card className="bg-card border-border hover:border-primary/50 transition-colors">
+    <Card className="border-border bg-card transition-colors hover:border-primary/50">
       <CardContent className="pt-6">
-        <div className="text-primary mb-3">{icon}</div>
-        <h3 className="font-semibold mb-2">{title}</h3>
+        <div className="mb-3 text-primary">{icon}</div>
+        <h3 className="mb-2 font-semibold">{title}</h3>
         <p className="text-sm text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
