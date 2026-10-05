@@ -637,7 +637,7 @@ async def get_metric_distribution(
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
     org_id: str = Depends(require_current_org_membership),
-) -> dict:
+) -> dict[str, Any]:
     """Get metric score distribution as histogram bins.
 
     Tenant-scoped: a supplied ``run_id`` must belong to the caller.
@@ -665,7 +665,7 @@ async def get_pass_fail_summary(
     session: AsyncSession = Depends(get_db_session),
     org_id: str = Depends(require_current_org_membership),
     _owned: None = Depends(require_owned_run),
-) -> dict:
+) -> dict[str, Any]:
     """Get pass/fail summary for a run against thresholds.
 
     Tenant-scoped: ``run_id`` must belong to the caller.
@@ -703,7 +703,7 @@ async def start_export_workflow(
     session: AsyncSession = Depends(get_db_session),
     org_id: str = Depends(require_current_org_membership),
     temporal_client: Any = Depends(get_temporal_client),
-) -> dict:
+) -> dict[str, Any]:
     """Start an async export workflow via Temporal.
 
     For large reports that may exceed HTTP timeouts, this endpoint
