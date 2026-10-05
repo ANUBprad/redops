@@ -131,7 +131,7 @@ export default function AttackDefinitionDetailPage() {
             <CardTitle>Prompt Template</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="whitespace-pre-wrap rounded-md bg-muted p-4 text-sm">
+            <pre className="bg-muted rounded-md p-4 text-sm whitespace-pre-wrap">
               {def_.prompt_template}
             </pre>
           </CardContent>
@@ -143,7 +143,7 @@ export default function AttackDefinitionDetailPage() {
               <CardTitle>System Prompt Override</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="whitespace-pre-wrap rounded-md bg-muted p-4 text-sm">
+              <pre className="bg-muted rounded-md p-4 text-sm whitespace-pre-wrap">
                 {def_.system_prompt_override}
               </pre>
             </CardContent>

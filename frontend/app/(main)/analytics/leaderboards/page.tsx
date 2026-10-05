@@ -14,7 +14,7 @@ function getRankIcon(rank: number) {
   if (rank === 1) return <Trophy className="h-5 w-5 text-yellow-500" />;
   if (rank === 2) return <Medal className="h-5 w-5 text-gray-400" />;
   if (rank === 3) return <Medal className="h-5 w-5 text-amber-600" />;
-  return <span className="w-5 text-center text-sm font-medium text-muted-foreground">{rank}</span>;
+  return <span className="text-muted-foreground w-5 text-center text-sm font-medium">{rank}</span>;
 }
 
 function getRankingIcon(rankingBy: string) {
@@ -83,12 +83,12 @@ export default function LeaderboardsPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground">
+            <div className="text-muted-foreground flex items-center justify-center py-12">
               Loading leaderboard...
             </div>
           ) : leaderboard.entries.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Medal className="mb-4 h-12 w-12 text-muted-foreground" />
+              <Medal className="text-muted-foreground mb-4 h-12 w-12" />
               <p className="text-muted-foreground">No data available for this ranking</p>
             </div>
           ) : (
@@ -106,7 +106,7 @@ export default function LeaderboardsPage() {
                     {getRankIcon(entry.rank)}
                     <div>
                       <div className="font-medium">{entry.entity_name}</div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         {entry.metadata?.provider && `Provider: ${entry.metadata.provider}`}
                       </div>
                     </div>

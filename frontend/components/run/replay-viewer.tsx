@@ -38,7 +38,7 @@ export function ReplayViewer({ runId }: ReplayViewerProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summary.total_items}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {summary.successful_items} succeeded · {summary.failed_items} failed
             </p>
           </CardContent>
@@ -51,7 +51,7 @@ export function ReplayViewer({ runId }: ReplayViewerProps) {
             <div className="text-2xl font-bold">
               {(summary.total_tokens_input + summary.total_tokens_output).toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               In: {summary.total_tokens_input.toLocaleString()} · Out:{" "}
               {summary.total_tokens_output.toLocaleString()}
             </p>
@@ -63,7 +63,7 @@ export function ReplayViewer({ runId }: ReplayViewerProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${summary.total_cost_usd.toFixed(4)}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {summary.total_latency_ms.toLocaleString()}ms total
             </p>
           </CardContent>
@@ -76,7 +76,7 @@ export function ReplayViewer({ runId }: ReplayViewerProps) {
             <div className="space-y-1">
               {Object.entries(summary.metric_summaries).map(([name, ms]) => (
                 <div key={name} className="flex justify-between text-xs">
-                  <span className="truncate text-muted-foreground">{name}</span>
+                  <span className="text-muted-foreground truncate">{name}</span>
                   <span className="font-medium">{ms.mean.toFixed(3)}</span>
                 </div>
               ))}
@@ -138,7 +138,7 @@ function ItemRow({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium">#{item.item_index + 1}</span>
-          <span className="max-w-xs truncate text-sm text-muted-foreground">
+          <span className="text-muted-foreground max-w-xs truncate text-sm">
             {item.prompt_preview}
           </span>
         </div>
@@ -149,10 +149,10 @@ function ItemRow({
               {(avgScore * 100).toFixed(0)}%
             </Badge>
           )}
-          <span className="text-xs text-muted-foreground">
+          <span className="text-muted-foreground text-xs">
             {item.total_latency_ms.toLocaleString()}ms
           </span>
-          <span className="text-xs text-muted-foreground">${item.total_cost_usd.toFixed(4)}</span>
+          <span className="text-muted-foreground text-xs">${item.total_cost_usd.toFixed(4)}</span>
         </div>
       </div>
     </button>
@@ -168,15 +168,15 @@ function ItemDetail({ item }: { item: ItemReport }) {
       <CardContent className="space-y-4">
         <div>
           <h4 className="mb-1 text-sm font-medium">Prompt</h4>
-          <p className="whitespace-pre-wrap text-sm text-muted-foreground">{item.prompt_preview}</p>
+          <p className="text-muted-foreground text-sm whitespace-pre-wrap">{item.prompt_preview}</p>
         </div>
 
         <div>
           <h4 className="mb-1 text-sm font-medium">Provider Response</h4>
           {item.provider_error ? (
-            <p className="text-sm text-destructive">{item.provider_error}</p>
+            <p className="text-destructive text-sm">{item.provider_error}</p>
           ) : (
-            <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm whitespace-pre-wrap">
               {item.provider_response_preview}
             </p>
           )}
@@ -185,7 +185,7 @@ function ItemDetail({ item }: { item: ItemReport }) {
         {item.error && (
           <div>
             <h4 className="mb-1 text-sm font-medium">Item Error</h4>
-            <p className="text-sm text-destructive">{item.error}</p>
+            <p className="text-destructive text-sm">{item.error}</p>
           </div>
         )}
 
@@ -198,7 +198,7 @@ function ItemDetail({ item }: { item: ItemReport }) {
           </div>
         </div>
 
-        <div className="flex gap-4 text-xs text-muted-foreground">
+        <div className="text-muted-foreground flex gap-4 text-xs">
           <span>Latency: {item.total_latency_ms.toLocaleString()}ms</span>
           <span>Cost: ${item.total_cost_usd.toFixed(4)}</span>
         </div>
@@ -219,9 +219,9 @@ function MetricRow({ explanation }: { explanation: MetricExplanation }) {
         <span className={`text-sm font-bold ${scoreColor}`}>{scorePercent}%</span>
       </div>
       {explanation.reasoning && (
-        <p className="text-xs text-muted-foreground">{explanation.reasoning}</p>
+        <p className="text-muted-foreground text-xs">{explanation.reasoning}</p>
       )}
-      <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
+      <div className="text-muted-foreground mt-1 flex gap-3 text-xs">
         <span>Confidence: {(explanation.confidence * 100).toFixed(0)}%</span>
         {explanation.judge_model && <span>Judge: {explanation.judge_model}</span>}
       </div>

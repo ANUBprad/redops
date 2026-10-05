@@ -56,7 +56,7 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+            <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm" role="alert">
               {error}
             </div>
           )}
@@ -64,7 +64,7 @@ export default function LoginPage() {
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Mail className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 id="email"
                 type="email"
@@ -84,7 +84,7 @@ export default function LoginPage() {
               <Label htmlFor="password">Password</Label>
             </div>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
@@ -92,13 +92,13 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="pl-10 pr-10"
+                className="pr-10 pl-10"
                 disabled={isLoading}
                 autoComplete="current-password"
               />
               <button
                 type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -108,8 +108,8 @@ export default function LoginPage() {
 
           <div className="flex items-center justify-between">
             <label className="flex cursor-pointer items-center gap-2">
-              <input type="checkbox" className="rounded border-input bg-background" />
-              <span className="text-sm text-muted-foreground">Remember me</span>
+              <input type="checkbox" className="border-input bg-background rounded" />
+              <span className="text-muted-foreground text-sm">Remember me</span>
             </label>
           </div>
         </CardContent>
@@ -128,9 +128,9 @@ export default function LoginPage() {
       </form>
 
       <div className="mt-6">
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-center text-sm">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="font-medium text-primary hover:underline">
+          <Link href="/register" className="text-primary font-medium hover:underline">
             Create one
           </Link>
         </p>

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type MockedFunction } from "vitest";
 import { api } from "@/lib/api";
 
 describe("api client", () => {
@@ -30,16 +30,16 @@ describe("api client", () => {
 });
 
 describe("API request Authorization header", () => {
-  let fetchSpy: ReturnType<typeof vi.fn>;
+  let fetchSpy: MockedFunction<typeof fetch>;
   let originalFetch: typeof global.fetch;
 
   beforeEach(() => {
     originalFetch = global.fetch;
-    fetchSpy = vi.fn().mockResolvedValue({
+    fetchSpy = vi.fn<typeof fetch>().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ status: "ok" }),
       headers: new Headers({ "content-type": "application/json" }),
-    });
+    } as unknown as Response);
     global.fetch = fetchSpy;
   });
 
@@ -103,12 +103,12 @@ describe("SSE URL correctness", () => {
 });
 
 describe("SSE authentication", () => {
-  let fetchSpy: ReturnType<typeof vi.fn>;
+  let fetchSpy: MockedFunction<typeof fetch>;
   let originalFetch: typeof global.fetch;
 
   beforeEach(() => {
     originalFetch = global.fetch;
-    fetchSpy = vi.fn().mockResolvedValue({
+    fetchSpy = vi.fn<typeof fetch>().mockResolvedValue({
       ok: true,
       body: {
         getReader: () => ({
@@ -116,7 +116,7 @@ describe("SSE authentication", () => {
         }),
       },
       headers: new Headers(),
-    });
+    } as unknown as Response);
     global.fetch = fetchSpy;
   });
 

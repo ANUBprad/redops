@@ -110,9 +110,9 @@ export default function ReportsPage() {
                 </CardTitle>
                 <Badge variant="outline">{report.report_type}</Badge>
               </div>
-              <p className="text-sm text-muted-foreground">{report.description}</p>
+              <p className="text-muted-foreground text-sm">{report.description}</p>
               {report.generated_at && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Generated: {new Date(report.generated_at).toLocaleString()}
                 </p>
               )}
@@ -120,7 +120,7 @@ export default function ReportsPage() {
             <CardContent className="space-y-6">
               <div>
                 <h3 className="mb-2 text-lg font-semibold">Summary</h3>
-                <p className="text-sm text-muted-foreground">{report.summary}</p>
+                <p className="text-muted-foreground text-sm">{report.summary}</p>
               </div>
 
               {Object.keys(report.statistics).length > 0 && (
@@ -129,7 +129,7 @@ export default function ReportsPage() {
                   <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                     {Object.entries(report.statistics).map(([key, value]) => (
                       <div key={key} className="rounded-lg border p-3">
-                        <div className="text-xs capitalize text-muted-foreground">
+                        <div className="text-muted-foreground text-xs capitalize">
                           {key.replace(/_/g, " ")}
                         </div>
                         <div className="text-lg font-bold">
@@ -154,7 +154,7 @@ export default function ReportsPage() {
                     {report.sections.map((section, idx) => (
                       <div key={idx} className="rounded-lg border p-4">
                         <h4 className="mb-2 font-medium">{section.title}</h4>
-                        <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm whitespace-pre-wrap">
                           {section.content}
                         </p>
                         {Object.keys(section.statistics).length > 0 && (
@@ -180,7 +180,7 @@ export default function ReportsPage() {
                     {report.recommendations.map((rec, idx) => (
                       <li
                         key={idx}
-                        className="flex items-start gap-2 text-sm text-muted-foreground"
+                        className="text-muted-foreground flex items-start gap-2 text-sm"
                       >
                         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
                         {rec}
@@ -197,7 +197,7 @@ export default function ReportsPage() {
       {!report && !isLoading && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="mb-4 h-12 w-12 text-muted-foreground" />
+            <FileText className="text-muted-foreground mb-4 h-12 w-12" />
             <p className="text-muted-foreground">
               Select a report type and click Generate to create a report
             </p>

@@ -83,7 +83,7 @@ export default function ComparisonsPage() {
               <CardTitle>{comparison.title}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="mb-4 text-sm text-muted-foreground">{comparison.summary}</p>
+              <p className="text-muted-foreground mb-4 text-sm">{comparison.summary}</p>
 
               {comparison.metrics.map((metric) => (
                 <div key={metric.metric_name} className="mb-6">
@@ -118,7 +118,7 @@ export default function ComparisonsPage() {
       {comparison.compared_items.length === 0 && !isLoading && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Medal className="mb-4 h-12 w-12 text-muted-foreground" />
+            <Medal className="text-muted-foreground mb-4 h-12 w-12" />
             <p className="text-muted-foreground">
               Enter entity IDs and click Compare to see results
             </p>

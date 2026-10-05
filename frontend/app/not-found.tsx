@@ -9,13 +9,13 @@ export default function NotFound() {
   const { user } = useAuth();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="bg-background flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-md text-center">
         <div className="mb-8">
-          <span className="text-9xl font-bold text-muted-foreground/30">404</span>
+          <span className="text-muted-foreground/30 text-9xl font-bold">404</span>
         </div>
         <h1 className="mb-4 text-3xl font-bold">Page Not Found</h1>
-        <p className="mx-auto mb-8 max-w-sm text-muted-foreground">
+        <p className="text-muted-foreground mx-auto mb-8 max-w-sm">
           The page you&apos;re looking for doesn&apos;t exist or has been moved. It might have been
           a temporary evaluation run that was deleted, or the URL was mistyped.
         </p>
@@ -35,18 +35,18 @@ export default function NotFound() {
             </Link>
           )}
         </div>
-        <div className="mt-12 border-t border-border pt-8">
+        <div className="border-border mt-12 border-t pt-8">
           <div className="grid gap-4 text-center sm:grid-cols-3">
             <Link
               href="/login"
-              className="flex items-center justify-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 text-sm transition-colors"
             >
               <RotateCcw className="h-4 w-4" />
               Sign In
             </Link>
             <Link
               href="/register"
-              className="flex items-center justify-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 text-sm transition-colors"
             >
               <ExternalLink className="h-4 w-4" />
               Register
@@ -55,7 +55,7 @@ export default function NotFound() {
               href="https://github.com/ANUBprad/redops"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 text-sm transition-colors"
             >
               <ExternalLink className="h-4 w-4" />
               GitHub

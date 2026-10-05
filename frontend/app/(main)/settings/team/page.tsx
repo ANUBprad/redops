@@ -76,7 +76,7 @@ export default function TeamSettingsPage() {
   if (!orgId) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
+        <CardContent className="text-muted-foreground py-8 text-center">
           No organization found. Create an organization first.
         </CardContent>
       </Card>
@@ -136,7 +136,7 @@ export default function TeamSettingsPage() {
           )}
 
           {memberList.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No members found.</p>
+            <p className="text-muted-foreground text-sm">No members found.</p>
           ) : (
             <div className="space-y-2">
               {memberList.map((member) => (
@@ -145,12 +145,12 @@ export default function TeamSettingsPage() {
                   className="flex items-center justify-between rounded-md border p-3"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                    <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium">
                       {member.user_id.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
                       <p className="text-sm font-medium">{member.user_id}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Joined {new Date(member.joined_at).toLocaleDateString()}
                       </p>
                     </div>
@@ -176,7 +176,7 @@ export default function TeamSettingsPage() {
                         }
                       }}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="text-destructive h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -200,7 +200,7 @@ export default function TeamSettingsPage() {
                 >
                   <div>
                     <p className="text-sm font-medium">{inv.email}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Invited as <Badge variant="outline">{inv.role}</Badge> · Expires{" "}
                       {new Date(inv.expires_at).toLocaleDateString()}
                     </p>

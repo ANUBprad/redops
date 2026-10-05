@@ -26,8 +26,8 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="bg-background min-h-screen">
+      <nav className="border-border bg-background/95 supports-[backdrop-filter]:bg-background/60 fixed top-0 right-0 left-0 z-50 border-b backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-2">
@@ -36,13 +36,13 @@ export default function PrivacyPage() {
             <div className="flex items-center gap-3">
               <Link
                 href="/"
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
               >
                 Home
               </Link>
               <Link
                 href="/login"
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
               >
                 Sign In
               </Link>
@@ -61,7 +61,7 @@ export default function PrivacyPage() {
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             <div className="mb-12 text-center">
               <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Privacy Policy</h1>
-              <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+              <p className="text-muted-foreground mx-auto mt-4 max-w-2xl text-lg">
                 Last updated: January 2025. This policy describes how RedOps collects, uses, and
                 protects your information.
               </p>
@@ -74,7 +74,7 @@ export default function PrivacyPage() {
                 icon={<User className="h-6 w-6" />}
                 content={[
                   "We collect information you provide directly when you create an account, configure evaluations, or interact with the platform:",
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="collect">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="collect">
                     <li>
                       <strong>Account information:</strong> Email address, display name, hashed
                       password, and authentication tokens.
@@ -105,7 +105,7 @@ export default function PrivacyPage() {
                 icon={<Lock className="h-6 w-6" />}
                 content={[
                   "We use collected information to:",
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="use">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="use">
                     <li>
                       Provide and operate the RedOps platform (authentication, authorization,
                       evaluation execution).
@@ -134,7 +134,7 @@ export default function PrivacyPage() {
                 content={[
                   "Your data is stored in PostgreSQL databases hosted on infrastructure you control (self-hosted deployment) or on infrastructure we operate on your behalf (managed deployment).",
                   "Retention periods:",
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="retention">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="retention">
                     <li>
                       <strong>Account data:</strong> Retained while your account is active. Deleted
                       within 30 days of account deletion.
@@ -164,7 +164,7 @@ export default function PrivacyPage() {
                 icon={<Globe className="h-6 w-6" />}
                 content={[
                   "RedOps integrates with third-party AI providers to execute evaluations. When you run an evaluation:",
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="third-party">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="third-party">
                     <li>
                       <strong>OpenAI:</strong> Prompts and responses sent to OpenAI API. Subject to{" "}
                       <a
@@ -213,7 +213,7 @@ export default function PrivacyPage() {
                 icon={<Shield className="h-6 w-6" />}
                 content={[
                   "We implement industry-standard security practices:",
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="auth">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="auth">
                     <li>
                       <strong>Passwords:</strong> Hashed with bcrypt (cost factor 12). Never stored
                       in plaintext.
@@ -244,7 +244,7 @@ export default function PrivacyPage() {
                 icon={<Lock className="h-6 w-6" />}
                 content={[
                   "You can exercise the following rights through the platform or by contacting us:",
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="rights">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="rights">
                     <li>
                       <strong>Access:</strong> View your account data, evaluations, and runs in the
                       dashboard.
@@ -274,7 +274,7 @@ export default function PrivacyPage() {
                 icon={<Lock className="h-6 w-6" />}
                 content={[
                   "RedOps uses browser storage for authentication only:",
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="cookies">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="cookies">
                     <li>
                       <strong>localStorage:</strong> Access token, refresh token, and user object
                       for session persistence.
@@ -334,7 +334,7 @@ export default function PrivacyPage() {
               />
             </div>
 
-            <div className="mt-12 border-t border-border pt-8">
+            <div className="border-border mt-12 border-t pt-8">
               <Link href="/terms" className="text-primary hover:underline">
                 Read our Terms of Service →
               </Link>
@@ -357,7 +357,7 @@ function PrivacySection({ number, title, icon, content }: PrivacySectionProps) {
   return (
     <section>
       <div className="flex gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
+        <div className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold">
           {number}
         </div>
         <div className="flex-1">
@@ -365,7 +365,7 @@ function PrivacySection({ number, title, icon, content }: PrivacySectionProps) {
             <div className="text-primary">{icon}</div>
             <h2 className="text-xl font-semibold">{title}</h2>
           </div>
-          <div className="ml-10 space-y-3 text-muted-foreground">
+          <div className="text-muted-foreground ml-10 space-y-3">
             {content.map((item, i) => (
               <Fragment key={i}>{typeof item === "string" ? <p>{item}</p> : item}</Fragment>
             ))}

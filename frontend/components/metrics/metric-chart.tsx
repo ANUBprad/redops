@@ -108,10 +108,10 @@ export function MetricChart({ runId }: { runId: string }) {
                 <Badge variant="outline">{agg.item_count} items</Badge>
               </div>
               <p className="mt-2 text-2xl font-bold">{agg.mean.toFixed(3)}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Median: {agg.median.toFixed(3)} · Std: {agg.std_dev.toFixed(3)}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Success: {Math.round(agg.success_rate * 100)}% · Errors: {agg.error_count}
               </p>
             </CardContent>

@@ -38,8 +38,8 @@ export const metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="bg-background min-h-screen">
+      <nav className="border-border bg-background/95 supports-[backdrop-filter]:bg-background/60 fixed top-0 right-0 left-0 z-50 border-b backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-2">
@@ -48,13 +48,13 @@ export default function TermsPage() {
             <div className="flex items-center gap-3">
               <Link
                 href="/"
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
               >
                 Home
               </Link>
               <Link
                 href="/login"
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
               >
                 Sign In
               </Link>
@@ -73,7 +73,7 @@ export default function TermsPage() {
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             <div className="mb-12 text-center">
               <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Terms of Service</h1>
-              <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+              <p className="text-muted-foreground mx-auto mt-4 max-w-2xl text-lg">
                 Last updated: January 2025. By accessing or using RedOps, you agree to these terms.
               </p>
             </div>
@@ -117,7 +117,7 @@ export default function TermsPage() {
                 icon={<Shield className="h-6 w-6" />}
                 content={[
                   "The Platform provides evaluation, red teaming, and observability capabilities for AI systems. You are responsible for:",
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="eval">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="eval">
                     <li>Providing accurate inputs, datasets, and configurations.</li>
                     <li>
                       Ensuring you have the right to use any data, prompts, or models submitted.
@@ -138,7 +138,7 @@ export default function TermsPage() {
                 icon={<Globe className="h-6 w-6" />}
                 content={[
                   "RedOps integrates with third-party AI providers (OpenAI, Anthropic, Groq) to execute evaluations. When you use these integrations:",
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="providers">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="providers">
                     <li>You must provide your own API keys for each provider you wish to use.</li>
                     <li>
                       Your use of each provider is subject to that provider&apos;s terms of service
@@ -193,7 +193,7 @@ export default function TermsPage() {
                 icon={<AlertCircle className="h-6 w-6" />}
                 content={[
                   "You agree not to use the Platform to:",
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="acceptable-use">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="acceptable-use">
                     <li>Violate any applicable law or regulation.</li>
                     <li>Infringe intellectual property rights.</li>
                     <li>Generate harmful, illegal, or abusive content.</li>
@@ -220,7 +220,7 @@ export default function TermsPage() {
                 icon={<AlertCircle className="h-6 w-6" />}
                 content={[
                   'THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO:',
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="warranties">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="warranties">
                     <li>MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE</li>
                     <li>NON-INFRINGEMENT</li>
                     <li>ACCURACY, COMPLETENESS, OR RELIABILITY OF EVALUATION RESULTS</li>
@@ -237,7 +237,7 @@ export default function TermsPage() {
                 icon={<AlertCircle className="h-6 w-6" />}
                 content={[
                   "TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL REDOPS, ITS CONTRIBUTORS, OR ITS LICENSORS BE LIABLE FOR:",
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="liability">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="liability">
                     <li>INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES</li>
                     <li>LOSS OF PROFITS, REVENUE, DATA, OR GOODWILL</li>
                     <li>SERVICE INTERRUPTION OR DATA LOSS</li>
@@ -253,7 +253,7 @@ export default function TermsPage() {
                 icon={<Shield className="h-6 w-6" />}
                 content={[
                   "You agree to indemnify, defend, and hold harmless RedOps, its contributors, and licensors from and against any claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising from:",
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="indemnity">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="indemnity">
                     <li>Your use of the Platform in violation of these Terms.</li>
                     <li>Your Data or any content you submit.</li>
                     <li>
@@ -270,7 +270,7 @@ export default function TermsPage() {
                 icon={<Lock className="h-6 w-6" />}
                 content={[
                   "You may terminate your account at any time by deleting it in Settings. We may suspend or terminate Your access immediately, with or without notice, for:",
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="termination">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="termination">
                     <li>Breach of these Terms.</li>
                     <li>Security concerns or suspected unauthorized access.</li>
                     <li>Extended inactivity (12+ months).</li>
@@ -303,7 +303,7 @@ export default function TermsPage() {
                 title="General Provisions"
                 icon={<FileText className="h-6 w-6" />}
                 content={[
-                  <ul className="ml-4 mt-2 list-inside list-disc space-y-1" key="general">
+                  <ul className="mt-2 ml-4 list-inside list-disc space-y-1" key="general">
                     <li>
                       <strong>Entire Agreement:</strong> These Terms, together with the Privacy
                       Policy, constitute the entire agreement between You and RedOps.
@@ -350,7 +350,7 @@ export default function TermsPage() {
               />
             </div>
 
-            <div className="mt-12 border-t border-border pt-8">
+            <div className="border-border mt-12 border-t pt-8">
               <Link href="/privacy" className="text-primary hover:underline">
                 Read our Privacy Policy →
               </Link>
@@ -373,7 +373,7 @@ function TermsSection({ number, title, icon, content }: TermsSectionProps) {
   return (
     <section>
       <div className="flex gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
+        <div className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold">
           {number}
         </div>
         <div className="flex-1">
@@ -381,7 +381,7 @@ function TermsSection({ number, title, icon, content }: TermsSectionProps) {
             <div className="text-primary">{icon}</div>
             <h2 className="text-xl font-semibold">{title}</h2>
           </div>
-          <div className="ml-10 space-y-3 text-muted-foreground">
+          <div className="text-muted-foreground ml-10 space-y-3">
             {content.map((item, i) => (
               <Fragment key={i}>{typeof item === "string" ? <p>{item}</p> : item}</Fragment>
             ))}

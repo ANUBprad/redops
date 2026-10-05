@@ -71,7 +71,7 @@ export default function ExperimentsPage() {
 
       <div className="flex items-center gap-4">
         <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder="Search experiments..."
             value={search}
@@ -103,7 +103,7 @@ export default function ExperimentsPage() {
       {experiments.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FlaskConical className="mb-4 h-12 w-12 text-muted-foreground" />
+            <FlaskConical className="text-muted-foreground mb-4 h-12 w-12" />
             <p className="text-muted-foreground">No experiments found.</p>
             <Button asChild className="mt-4">
               <Link href="/experiments/new">Create your first experiment</Link>
@@ -122,11 +122,11 @@ export default function ExperimentsPage() {
                       <Badge className={STATUS_COLORS[exp.status]}>{exp.status}</Badge>
                     </div>
                     {exp.description && (
-                      <p className="mt-1 truncate text-sm text-muted-foreground">
+                      <p className="text-muted-foreground mt-1 truncate text-sm">
                         {exp.description}
                       </p>
                     )}
-                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                    <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
                       {exp.hypothesis && (
                         <span className="max-w-xs truncate">Hypothesis: {exp.hypothesis}</span>
                       )}

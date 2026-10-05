@@ -122,7 +122,7 @@ export default function ProfileDetailPage({ params }: { params: Promise<{ id: st
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/profiles" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/profiles" className="text-muted-foreground hover:text-foreground text-sm">
           <ArrowLeft className="mr-1 inline h-4 w-4" />
           Back to Profiles
         </Link>
@@ -201,7 +201,7 @@ export default function ProfileDetailPage({ params }: { params: Promise<{ id: st
                       type="checkbox"
                       checked={editIsDefault}
                       onChange={(e) => setEditIsDefault(e.target.checked)}
-                      className="rounded border-input"
+                      className="border-input rounded"
                     />
                     Set as default
                   </label>
@@ -218,16 +218,16 @@ export default function ProfileDetailPage({ params }: { params: Promise<{ id: st
               {p.description && (
                 <div>
                   <span className="font-medium">Description:</span>
-                  <p className="mt-1 text-muted-foreground">{p.description}</p>
+                  <p className="text-muted-foreground mt-1">{p.description}</p>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+              <div className="text-muted-foreground grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-foreground">Created:</span>{" "}
+                  <span className="text-foreground font-medium">Created:</span>{" "}
                   {new Date(p.created_at).toLocaleString()}
                 </div>
                 <div>
-                  <span className="font-medium text-foreground">Updated:</span>{" "}
+                  <span className="text-foreground font-medium">Updated:</span>{" "}
                   {new Date(p.updated_at).toLocaleString()}
                 </div>
               </div>
@@ -268,7 +268,7 @@ export default function ProfileDetailPage({ params }: { params: Promise<{ id: st
           )}
 
           {Object.keys(isEditing ? editOverrides : p.metric_overrides).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No metric overrides configured.</p>
+            <p className="text-muted-foreground text-sm">No metric overrides configured.</p>
           ) : (
             <div className="space-y-2">
               {Object.entries(isEditing ? editOverrides : p.metric_overrides).map(
@@ -279,7 +279,7 @@ export default function ProfileDetailPage({ params }: { params: Promise<{ id: st
                   >
                     <div className="flex items-center gap-3">
                       <Badge variant="outline">{metric}</Badge>
-                      <span className="text-sm text-muted-foreground">Weight: {config.weight}</span>
+                      <span className="text-muted-foreground text-sm">Weight: {config.weight}</span>
                       {!config.enabled && <Badge variant="secondary">Disabled</Badge>}
                     </div>
                     {isEditing && (

@@ -114,7 +114,7 @@ export default function AttackRunDetailPage() {
           <CardContent>
             <div className="text-2xl font-bold">{Math.round(runData.progress * 100)}%</div>
             <Progress value={runData.progress * 100} className="mt-2 h-2" />
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-xs">
               {runData.items_completed}/{runData.items_total} scenarios
             </p>
           </CardContent>
@@ -171,12 +171,12 @@ export default function AttackRunDetailPage() {
         </CardHeader>
         <CardContent>
           {runData.attack_definition_ids.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No attack definitions linked</p>
+            <p className="text-muted-foreground text-sm">No attack definitions linked</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {runData.attack_definition_ids.map((defId) => (
                 <Link key={defId} href={`/redteam/definitions/${defId}`}>
-                  <Badge variant="outline" className="cursor-pointer hover:bg-muted">
+                  <Badge variant="outline" className="hover:bg-muted cursor-pointer">
                     {defId.slice(0, 8)}...
                   </Badge>
                 </Link>

@@ -75,7 +75,7 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+            <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm" role="alert">
               {error}
             </div>
           )}
@@ -83,7 +83,7 @@ export default function RegisterPage() {
           <div className="space-y-2">
             <Label htmlFor="displayName">Display Name</Label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <User className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 id="displayName"
                 type="text"
@@ -100,7 +100,7 @@ export default function RegisterPage() {
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Mail className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 id="email"
                 type="email"
@@ -118,7 +118,7 @@ export default function RegisterPage() {
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
@@ -126,25 +126,25 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="pl-10 pr-10"
+                className="pr-10 pl-10"
                 disabled={isLoading}
                 autoComplete="new-password"
               />
               <button
                 type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <p className="text-xs text-muted-foreground">At least 8 characters</p>
+            <p className="text-muted-foreground text-xs">At least 8 characters</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm Password</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 id="confirmPassword"
                 type={showPassword ? "text" : "password"}
@@ -170,9 +170,9 @@ export default function RegisterPage() {
               "Create Account"
             )}
           </Button>
-          <p className="text-center text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-center text-sm">
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-primary hover:underline">
+            <Link href="/login" className="text-primary font-medium hover:underline">
               Sign In
             </Link>
           </p>
@@ -180,7 +180,7 @@ export default function RegisterPage() {
       </form>
 
       <div className="mt-6">
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-center text-sm">
           By creating an account, you agree to our{" "}
           <Link href="/terms" className="text-primary hover:underline">
             Terms of Service

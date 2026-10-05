@@ -206,7 +206,7 @@ export default function NewAttackDefinitionPage() {
               <CardTitle>Preview</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md bg-muted p-3 text-sm">
+              <div className="bg-muted rounded-md p-3 text-sm">
                 {promptTemplate || "Enter a prompt template to see a preview"}
               </div>
             </CardContent>

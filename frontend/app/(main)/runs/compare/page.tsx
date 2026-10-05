@@ -95,8 +95,8 @@ function ComparisonResult({ result }: { result: TraceComparison }) {
           </CardHeader>
           <CardContent>
             <div className="text-lg font-bold">{result.baseline_provider}</div>
-            <div className="text-sm text-muted-foreground">{result.baseline_model}</div>
-            <div className="mt-1 text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-sm">{result.baseline_model}</div>
+            <div className="text-muted-foreground mt-1 text-xs">
               Run: {result.baseline_run_id.slice(0, 8)}...
             </div>
           </CardContent>
@@ -107,8 +107,8 @@ function ComparisonResult({ result }: { result: TraceComparison }) {
           </CardHeader>
           <CardContent>
             <div className="text-lg font-bold">{result.comparison_provider}</div>
-            <div className="text-sm text-muted-foreground">{result.comparison_model}</div>
-            <div className="mt-1 text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-sm">{result.comparison_model}</div>
+            <div className="text-muted-foreground mt-1 text-xs">
               Run: {result.comparison_run_id.slice(0, 8)}...
             </div>
           </CardContent>
@@ -121,10 +121,10 @@ function ComparisonResult({ result }: { result: TraceComparison }) {
             <div className={`text-lg font-bold ${winnerColor}`}>
               {result.winner === "tie" ? "Tie" : `${result.winner} wins`}
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               Confidence: {(result.confidence * 100).toFixed(0)}%
             </div>
-            <div className="mt-1 text-xs text-muted-foreground">
+            <div className="text-muted-foreground mt-1 text-xs">
               Cost delta: ${result.cost_delta.toFixed(4)}
             </div>
           </CardContent>

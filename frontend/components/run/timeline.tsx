@@ -36,21 +36,21 @@ export function Timeline({ runId }: { runId: string }) {
           {events.map((event) => (
             <div key={event.event_id} className="flex gap-3">
               <div className="flex flex-col items-center">
-                <div className="h-2 w-2 rounded-full bg-primary" />
-                <div className="h-full w-px bg-border" />
+                <div className="bg-primary h-2 w-2 rounded-full" />
+                <div className="bg-border h-full w-px" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">
                     {event.event_type}
                   </Badge>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     <Clock className="mr-1 inline h-3 w-3" />
                     {new Date(event.occurred_at).toLocaleTimeString()}
                   </span>
                 </div>
                 {event.data && Object.keys(event.data).length > 0 && (
-                  <pre className="mt-1 text-xs text-muted-foreground">
+                  <pre className="text-muted-foreground mt-1 text-xs">
                     {JSON.stringify(event.data)}
                   </pre>
                 )}

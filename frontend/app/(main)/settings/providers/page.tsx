@@ -65,7 +65,7 @@ export default function ProviderSettingsPage() {
           <CardTitle>Provider Credentials</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Configure API keys for LLM providers. Keys are stored encrypted and never exposed in
             logs or client-side code.
           </p>
@@ -90,7 +90,7 @@ export default function ProviderSettingsPage() {
                     </Badge>
                   )}
                   {provider.configured && provider.keyPrefix && (
-                    <span className="font-mono text-xs text-muted-foreground">
+                    <span className="text-muted-foreground font-mono text-xs">
                       {provider.keyPrefix}
                     </span>
                   )}
@@ -126,7 +126,7 @@ export default function ProviderSettingsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
+                        className="absolute top-0 right-0 h-full px-3"
                         onClick={() => setShowKey(!showKey)}
                       >
                         {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

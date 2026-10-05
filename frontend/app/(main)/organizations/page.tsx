@@ -32,7 +32,7 @@ export default function OrganizationsPage() {
         <p className="text-muted-foreground">Loading...</p>
       ) : organizations.length === 0 ? (
         <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
+          <CardContent className="text-muted-foreground py-8 text-center">
             No organizations yet. Create one to get started.
           </CardContent>
         </Card>
@@ -40,7 +40,7 @@ export default function OrganizationsPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {organizations.map((org) => (
             <Link key={org.id} href={`/organizations/${org.id}`}>
-              <Card className="transition-colors hover:bg-muted">
+              <Card className="hover:bg-muted transition-colors">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     {org.name}
@@ -52,10 +52,10 @@ export default function OrganizationsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {org.description || "No description"}
                   </p>
-                  <p className="mt-2 text-xs text-muted-foreground">Slug: {org.slug}</p>
+                  <p className="text-muted-foreground mt-2 text-xs">Slug: {org.slug}</p>
                 </CardContent>
               </Card>
             </Link>

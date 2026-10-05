@@ -105,7 +105,7 @@ export default function RunsPage() {
 
       <div className="flex items-center gap-4">
         <div className="relative max-w-sm">
-          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder="Search runs..."
             className="pl-8"
@@ -154,7 +154,7 @@ export default function RunsPage() {
                       <Link href={`/runs/${run.id}`} className="font-medium hover:underline">
                         {run.evaluation_name}
                       </Link>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-muted-foreground text-sm">
                         {run.provider} · {run.model}
                       </div>
                     </td>
@@ -165,7 +165,7 @@ export default function RunsPage() {
                       {run.verdict ? (
                         <Badge className={getVerdictColor(run.verdict)}>{run.verdict}</Badge>
                       ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
+                        <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </td>
                     <td className="py-3">
@@ -175,7 +175,7 @@ export default function RunsPage() {
                       {run.items_completed}/{run.items_total}
                     </td>
                     <td className="py-3 text-sm">${run.cost.toFixed(2)}</td>
-                    <td className="py-3 text-sm text-muted-foreground">
+                    <td className="text-muted-foreground py-3 text-sm">
                       {new Date(run.created_at).toLocaleDateString()}
                     </td>
                     <td className="py-3 text-right">
