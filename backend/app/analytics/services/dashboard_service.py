@@ -82,9 +82,7 @@ class DashboardService:
         avg_cost = total_cost / len(recent_runs) if recent_runs else 0.0
         avg_latency = total_latency / latency_count if latency_count > 0 else 0.0
 
-        attack_query = AttackRunQuery(
-            page=1, page_size=1000, owner_project_id=owner_project_id
-        )
+        attack_query = AttackRunQuery(page=1, page_size=1000, owner_project_id=owner_project_id)
         attack_result = await self._attack_run_repo.list(attack_query)
 
         total_attacks = 0

@@ -227,9 +227,7 @@ class InvitationService:
         if membership.role is not OrganizationRole.OWNER:
             return
         members = await self._membership_repo.list_by_org(membership.organization_id)
-        owner_count = sum(
-            1 for m in members if m.role is OrganizationRole.OWNER and m.is_active
-        )
+        owner_count = sum(1 for m in members if m.role is OrganizationRole.OWNER and m.is_active)
         if owner_count <= 1:
             raise ConflictError(
                 message="Cannot demote or remove the last owner",

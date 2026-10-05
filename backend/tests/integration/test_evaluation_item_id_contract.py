@@ -268,9 +268,7 @@ def _evaluation_app(
 
     session.execute = AsyncMock(side_effect=_execute_side_effect)
     app.dependency_overrides[get_db_session] = lambda: session
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
-        user_id="u", org_id="org-c11"
-    )
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="u", org_id="org-c11")
     app.dependency_overrides[get_temporal_client] = lambda: temporal_client
     return app
 

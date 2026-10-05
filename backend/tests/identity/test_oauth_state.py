@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 import time
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from redis import asyncio as aioredis
 
 from app.core.dependencies import CurrentUser, get_current_user, get_db_session, get_redis_client
 from app.identity.api.router import identity_router
@@ -26,7 +23,7 @@ class FakeRedis:
     def __init__(self) -> None:
         self._store: dict[str, tuple[str, float | None]] = {}
 
-    async def setex(self, key: str, ttl: int, value: str) -> None:  # noqa: ARG002
+    async def setex(self, key: str, ttl: int, value: str) -> None:
         self._store[key] = (value, time.time() + ttl)
 
     async def get(self, key: str) -> bytes | str | None:

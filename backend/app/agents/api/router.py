@@ -136,9 +136,7 @@ async def create_agent_run(
     """
     if body.agent_definition_id is not None:
         try:
-            await require_owned_agent_definition(
-                body.agent_definition_id, current_user, session
-            )
+            await require_owned_agent_definition(body.agent_definition_id, current_user, session)
         except ValueError:
             raise HTTPException(
                 status_code=404,

@@ -110,7 +110,11 @@ GET_ROUTES = [
     ("get", f"/api/v1/runs/evaluation/{EVAL_VICTIM}", None),
     ("post", f"/api/v1/runs/{RUN_VICTIM}/cancel", {"reason": "user_cancelled"}),
     ("post", f"/api/v1/runs/{RUN_VICTIM}/retry", None),
-    ("post", f"/api/v1/runs/{RUN_VICTIM}/logs", {"level": "INFO", "source": "t", "message": "forged"}),
+    (
+        "post",
+        f"/api/v1/runs/{RUN_VICTIM}/logs",
+        {"level": "INFO", "source": "t", "message": "forged"},
+    ),
     ("delete", f"/api/v1/replay/traces/{RUN_VICTIM}", None),
 ]
 
@@ -350,9 +354,7 @@ def _override_db(app, *, membership=None, evaluations=None, runs=None):
         traces[RUN_OWNED] = TRACE
     if runs and RUN_VICTIM in runs:
         traces[RUN_VICTIM] = _trace_for(RUN_VICTIM, "victim secret prompt")
-    app.dependency_overrides[get_replay_service] = lambda: ReplayService(
-        _StubTraceRepo(traces)
-    )
+    app.dependency_overrides[get_replay_service] = lambda: ReplayService(_StubTraceRepo(traces))
 
 
 @pytest.fixture
@@ -448,17 +450,16 @@ def test_malformed_run_id_is_truthful(app, client):
 
 
 def test_orphan_run_owned_via_metadata(app, client):
-    evaluations, runs = {}, {
-        RUN_ORPHAN: _run_row(RUN_ORPHAN, evaluation_id=None, project_id=ORG)
-    }
+    evaluations, runs = {}, {RUN_ORPHAN: _run_row(RUN_ORPHAN, evaluation_id=None, project_id=ORG)}
     _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     assert client.get(f"/api/v1/runs/{RUN_ORPHAN}").status_code == 200
 
 
 def test_orphan_run_foreign_metadata_forbidden(app, client):
-    evaluations, runs = {}, {
-        RUN_ORPHAN: _run_row(RUN_ORPHAN, evaluation_id=None, project_id=OTHER_ORG)
-    }
+    evaluations, runs = (
+        {},
+        {RUN_ORPHAN: _run_row(RUN_ORPHAN, evaluation_id=None, project_id=OTHER_ORG)},
+    )
     _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     assert client.get(f"/api/v1/runs/{RUN_ORPHAN}").status_code == 403
 
@@ -472,24 +473,15 @@ def test_mixed_pair_second_foreign_is_forbidden(app, client):
         evaluations={**evaluations_o, **evaluations_v},
         runs={**runs_o, **runs_v},
     )
-    assert (
-        client.get(f"/api/v1/replay/compare/{RUN_OWNED}/{RUN_VICTIM}").status_code == 403
-    )
-    assert (
-        client.get(
-            f"/api/v1/replay/regression/{RUN_OWNED}/{RUN_VICTIM}"
-        ).status_code
-        == 403
-    )
+    assert client.get(f"/api/v1/replay/compare/{RUN_OWNED}/{RUN_VICTIM}").status_code == 403
+    assert client.get(f"/api/v1/replay/regression/{RUN_OWNED}/{RUN_VICTIM}").status_code == 403
 
 
 def test_cross_tenant_cancel_does_not_touch_workflow(app, client, temporal_mock):
     evaluations, runs = _victim_world()
     _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     _override_temporal(app, temporal_mock)
-    response = client.post(
-        f"/api/v1/runs/{RUN_VICTIM}/cancel", json={"reason": "user_cancelled"}
-    )
+    response = client.post(f"/api/v1/runs/{RUN_VICTIM}/cancel", json={"reason": "user_cancelled"})
     assert response.status_code == 403
     temporal_mock.get_workflow_handle.assert_not_called()
 
@@ -498,9 +490,7 @@ def test_same_tenant_cancel_succeeds(app, client, temporal_mock):
     evaluations, runs = _owned_world()
     _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     _override_temporal(app, temporal_mock)
-    response = client.post(
-        f"/api/v1/runs/{RUN_OWNED}/cancel", json={"reason": "user_cancelled"}
-    )
+    response = client.post(f"/api/v1/runs/{RUN_OWNED}/cancel", json={"reason": "user_cancelled"})
     assert response.status_code == 200
     temporal_mock.get_workflow_handle.assert_called_once()
 

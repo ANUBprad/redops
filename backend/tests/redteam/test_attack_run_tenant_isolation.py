@@ -125,9 +125,7 @@ class _StubSession:
                 if "join" in sql:
                     return _StubResult(
                         None,
-                        count=len(
-                            [a for a in self._attacks.values() if self._attack_in_scope(a)]
-                        ),
+                        count=len([a for a in self._attacks.values() if self._attack_in_scope(a)]),
                     )
                 return _StubResult(None, count=len(self._attacks))
             if "limit" in sql:
@@ -180,9 +178,7 @@ def _membership_row() -> MembershipModel:
     )
 
 
-def _attack_row(
-    attack_id: str, eval_run_id: str | None, *, status: str
-) -> AttackRunModel:
+def _attack_row(attack_id: str, eval_run_id: str | None, *, status: str) -> AttackRunModel:
     return AttackRunModel(
         id=attack_id,
         evaluation_run_id=eval_run_id,
@@ -269,24 +265,16 @@ def _run_row(run_id: str, *, evaluation_id: str | None) -> EvaluationRunModel:
 
 def _world() -> tuple[dict, dict, dict]:
     attacks = {
-        ATK_CREATED: _attack_row(
-            ATK_CREATED, EVAL_RUN_OWNED, status=AttackStatus.CREATED.value
-        ),
-        ATK_RUNNING: _attack_row(
-            ATK_RUNNING, EVAL_RUN_OWNED, status=AttackStatus.RUNNING.value
-        ),
+        ATK_CREATED: _attack_row(ATK_CREATED, EVAL_RUN_OWNED, status=AttackStatus.CREATED.value),
+        ATK_RUNNING: _attack_row(ATK_RUNNING, EVAL_RUN_OWNED, status=AttackStatus.RUNNING.value),
         ATK_VICTIM_CREATED: _attack_row(
             ATK_VICTIM_CREATED, EVAL_RUN_VICTIM, status=AttackStatus.CREATED.value
         ),
         ATK_VICTIM_RUNNING: _attack_row(
             ATK_VICTIM_RUNNING, EVAL_RUN_VICTIM, status=AttackStatus.RUNNING.value
         ),
-        ATK_ORPHAN: _attack_row(
-            ATK_ORPHAN, None, status=AttackStatus.RUNNING.value
-        ),
-        ATK_VICTIM_ORPHAN: _attack_row(
-            ATK_VICTIM_ORPHAN, None, status=AttackStatus.RUNNING.value
-        ),
+        ATK_ORPHAN: _attack_row(ATK_ORPHAN, None, status=AttackStatus.RUNNING.value),
+        ATK_VICTIM_ORPHAN: _attack_row(ATK_VICTIM_ORPHAN, None, status=AttackStatus.RUNNING.value),
     }
     evaluations = {
         EVAL_OWNED: _evaluation_row(EVAL_OWNED, project_id=ORG),
@@ -393,9 +381,7 @@ def test_same_tenant_lifecycle_succeeds(app, client, temporal_mock):
         == 200
     )
     temporal_mock.start_workflow.assert_called_once()
-    assert (
-        client.post(f"/api/v1/redteam/runs/{ATK_RUNNING}/complete").status_code == 200
-    )
+    assert client.post(f"/api/v1/redteam/runs/{ATK_RUNNING}/complete").status_code == 200
     assert (
         client.post(
             f"/api/v1/redteam/runs/{ATK_RUNNING}/fail", json={"error_message": "x"}
@@ -407,9 +393,7 @@ def test_same_tenant_lifecycle_succeeds(app, client, temporal_mock):
 
 def test_create_run_foreign_evaluation_denied_no_persistence(app, client):
     session = _override_db(app, membership=_membership_row())
-    response = client.post(
-        "/api/v1/redteam/runs", json={"evaluation_run_id": EVAL_RUN_VICTIM}
-    )
+    response = client.post("/api/v1/redteam/runs", json={"evaluation_run_id": EVAL_RUN_VICTIM})
     assert response.status_code == 403
     assert session.merged == []
 
@@ -418,24 +402,17 @@ def test_create_run_nonexistent_and_malformed_evaluation_truthful(app, client):
     _override_db(app, membership=_membership_row())
     missing = "00000000-0000-0000-0000-0000000000df"
     assert (
-        client.post(
-            "/api/v1/redteam/runs", json={"evaluation_run_id": missing}
-        ).status_code
-        == 404
+        client.post("/api/v1/redteam/runs", json={"evaluation_run_id": missing}).status_code == 404
     )
     assert (
-        client.post(
-            "/api/v1/redteam/runs", json={"evaluation_run_id": "not-a-uuid"}
-        ).status_code
+        client.post("/api/v1/redteam/runs", json={"evaluation_run_id": "not-a-uuid"}).status_code
         == 404
     )
 
 
 def test_create_run_linked_and_orphan_succeed(app, client):
     _override_db(app, membership=_membership_row())
-    linked = client.post(
-        "/api/v1/redteam/runs", json={"evaluation_run_id": EVAL_RUN_OWNED}
-    )
+    linked = client.post("/api/v1/redteam/runs", json={"evaluation_run_id": EVAL_RUN_OWNED})
     assert linked.status_code == 201
     assert linked.json()["evaluation_run_id"] == EVAL_RUN_OWNED
     orphan = client.post("/api/v1/redteam/runs", json={})

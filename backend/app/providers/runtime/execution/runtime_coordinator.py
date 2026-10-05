@@ -218,21 +218,14 @@ class RuntimeCoordinator:
             probe = cb.acquire()
             probe_generation = probe.generation if probe.reserved else None
             if not probe.admitted:
-                reason = (
-                    "half-open probe capacity exhausted"
-                    if probe.exhausted
-                    else "circuit open"
-                )
+                reason = "half-open probe capacity exhausted" if probe.exhausted else "circuit open"
                 last_error = CircuitBreakerOpenError(
                     message=(
-                        f"Circuit breaker cannot admit probe for "
-                        f"{request.provider_name}: {reason}"
+                        f"Circuit breaker cannot admit probe for {request.provider_name}: {reason}"
                     ),
                     details={
                         "admission": (
-                            "half_open_capacity_exhausted"
-                            if probe.exhausted
-                            else "circuit_open"
+                            "half_open_capacity_exhausted" if probe.exhausted else "circuit_open"
                         ),
                     },
                 )

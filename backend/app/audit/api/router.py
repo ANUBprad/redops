@@ -16,12 +16,6 @@ from app.core.dependencies import (
 from app.infrastructure.database.repositories.audit_repository import (
     SqlAlchemyAuditLogRepository,
 )
-from app.infrastructure.database.repositories.tenant_repository import (
-    SqlAlchemyMembershipRepository,
-    SqlAlchemyOrganizationRepository,
-)
-from app.kernel.exceptions.errors import BaseError
-from app.tenant.services.tenant_service import OrganizationService
 
 audit_router = APIRouter(prefix="/audit", tags=["audit"])
 

@@ -86,8 +86,7 @@ class SqlAlchemyAgentRunRepository(AgentRunRepository):
                 AgentDefinitionModel.project_id == query.owner_project_id,
                 and_(
                     AgentRunModel.agent_definition_id.is_(None),
-                    AgentRunModel.metadata_.op("->>")("project_id")
-                    == query.owner_project_id,
+                    AgentRunModel.metadata_.op("->>")("project_id") == query.owner_project_id,
                 ),
             )
             stmt = stmt.outerjoin(

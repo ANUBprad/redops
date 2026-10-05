@@ -176,9 +176,7 @@ async def _require_score_run_attested(
     try:
         r_id = UUIDv7.from_string(run_id)
     except ValueError:
-        raise HTTPException(
-            status_code=404, detail=f"Evaluation run not found: {run_id}"
-        ) from None
+        raise HTTPException(status_code=404, detail=f"Evaluation run not found: {run_id}") from None
     run = await SqlAlchemyEvaluationRunRepository(session).find_by_id(r_id)
     if run is None:
         return

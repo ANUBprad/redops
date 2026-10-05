@@ -274,9 +274,7 @@ async def require_owned_experiment(
         ) from None
     experiment = await SqlAlchemyExperimentRepository(session).find_by_id(exp_id)
     if experiment is None:
-        raise HTTPException(
-            status_code=404, detail=f"Experiment not found: {experiment_id}"
-        )
+        raise HTTPException(status_code=404, detail=f"Experiment not found: {experiment_id}")
     if experiment.project_id != current_user.org_id:
         raise HTTPException(status_code=403, detail="Access denied")
 
@@ -347,9 +345,7 @@ async def require_owned_agent_definition(
     try:
         a_id = UUIDv7.from_string(agent_id)
     except ValueError:
-        raise HTTPException(
-            status_code=404, detail=f"Agent not found: {agent_id}"
-        ) from None
+        raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}") from None
     agent = await SqlAlchemyAgentDefinitionRepository(session).get_by_id(a_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
@@ -380,17 +376,13 @@ async def require_owned_agent_run(
     try:
         r_id = UUIDv7.from_string(run_id)
     except ValueError:
-        raise HTTPException(
-            status_code=404, detail=f"Agent run not found: {run_id}"
-        ) from None
+        raise HTTPException(status_code=404, detail=f"Agent run not found: {run_id}") from None
 
     run = await SqlAlchemyAgentRunRepository(session).find_by_id(r_id)
     if run is None:
         raise HTTPException(status_code=404, detail=f"Agent run not found: {run_id}")
     if run.agent_definition_id:
-        await require_owned_agent_definition(
-            run.agent_definition_id, current_user, session
-        )
+        await require_owned_agent_definition(run.agent_definition_id, current_user, session)
         return
 
     if not current_user.org_id:

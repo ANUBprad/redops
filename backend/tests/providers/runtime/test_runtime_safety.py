@@ -151,9 +151,7 @@ async def test_evaluator_clock_uses_execution_start() -> None:
         timeout=TimeoutPolicy(request_timeout_seconds=0.05),
     )
     coordinator = RuntimeCoordinator(policy)
-    coordinator.get_circuit_breaker(
-        "openai", CircuitBreakerConfig(failure_threshold=10000)
-    )
+    coordinator.get_circuit_breaker("openai", CircuitBreakerConfig(failure_threshold=10000))
     calls = 0
 
     async def instant_fail(request: ExecutionRequest) -> str:

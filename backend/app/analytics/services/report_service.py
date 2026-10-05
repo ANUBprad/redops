@@ -102,9 +102,7 @@ class ReportService:
         days: int,
     ) -> tuple[ReportSection, ...]:
         """Generate executive summary sections."""
-        dashboard = await self._dashboard.get_summary(
-            owner_project_id=owner_project_id, days=days
-        )
+        dashboard = await self._dashboard.get_summary(owner_project_id=owner_project_id, days=days)
 
         overview_stats = {
             "total_evaluations": float(dashboard.total_evaluations),
@@ -137,9 +135,7 @@ class ReportService:
             },
         )
 
-        safety = await self._safety.get_safety_trend(
-            owner_project_id=owner_project_id, days=days
-        )
+        safety = await self._safety.get_safety_trend(owner_project_id=owner_project_id, days=days)
         safety_section = ReportSection(
             title="Safety Overview",
             content=(
@@ -186,9 +182,7 @@ class ReportService:
         days: int,
     ) -> tuple[ReportSection, ...]:
         """Generate safety-focused report."""
-        safety = await self._safety.get_safety_trend(
-            owner_project_id=owner_project_id, days=days
-        )
+        safety = await self._safety.get_safety_trend(owner_project_id=owner_project_id, days=days)
 
         dim_section = ReportSection(
             title="Safety Dimensions",
@@ -206,9 +200,7 @@ class ReportService:
         days: int,
     ) -> tuple[ReportSection, ...]:
         """Generate red team focused report."""
-        safety = await self._safety.get_safety_trend(
-            owner_project_id=owner_project_id, days=days
-        )
+        safety = await self._safety.get_safety_trend(owner_project_id=owner_project_id, days=days)
 
         return (
             ReportSection(
