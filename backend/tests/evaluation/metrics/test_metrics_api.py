@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -11,10 +12,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.metrics import metrics_router
 from app.core.dependencies import CurrentUser, get_current_user, get_db_session
+from app.infrastructure.database.models.evaluation_run import EvaluationRunModel
+from app.infrastructure.database.models.tenant import MembershipModel
+
+RUN_ID = "00000000-0000-0000-0000-000000000001"
+TENANT_ORG_ID = "org-acme"
 
 
 @pytest.fixture
-def mock_session() -> MagicMock:
+def mock_session(
+    mock_membership: MembershipModel,
+    mock_run: EvaluationRunModel,
+) -> MagicMock:
     """Create a mock async session for testing."""
     session = MagicMock(spec=AsyncSession)
 
@@ -22,7 +31,26 @@ def mock_session() -> MagicMock:
     mock_result.scalars.return_value.all.return_value = []
     mock_result.scalar.return_value = 0
     mock_result.scalar_one_or_none.return_value = None
-    session.execute = AsyncMock(return_value=mock_result)
+
+    def execute_side_effect(stmt, parameters=None) -> MagicMock:
+        """Route stub queries to the tenant-owned rows; everything else empty.
+
+        Mirrors the production ``AsyncSession.execute(stmt, parameters)``
+        arity: the metric-result upsert passes an executemany parameter list
+        as the second positional argument, so the double must accept it.
+        """
+        sql = str(stmt.compile(compile_kwargs={"literal_binds": True})).lower()
+        if "memberships" in sql:
+            membership_result = MagicMock()
+            membership_result.scalar_one_or_none.return_value = mock_membership
+            return membership_result
+        if "evaluation_runs" in sql and RUN_ID in sql:
+            run_result = MagicMock()
+            run_result.scalar_one_or_none.return_value = mock_run
+            return run_result
+        return mock_result
+
+    session.execute = AsyncMock(side_effect=execute_side_effect)
     session.flush = AsyncMock()
     session.commit = AsyncMock()
     session.rollback = AsyncMock()
@@ -33,12 +61,62 @@ def mock_session() -> MagicMock:
 
 
 @pytest.fixture
+def mock_membership() -> MembershipModel:
+    """Create an active membership row for the test user."""
+    return MembershipModel(
+        id="00000000-0000-0000-0000-0000000000aa",
+        user_id="test-user",
+        organization_id=TENANT_ORG_ID,
+        role="member",
+        is_active=True,
+    )
+
+
+@pytest.fixture
+def mock_run() -> EvaluationRunModel:
+    """Create the run the run-keyed endpoints resolve.
+
+    Deliberately parentless (``evaluation_id=None``) so ownership is carried
+    by the persisted ``metadata.project_id`` - the fallback
+    ``require_owned_run`` uses for runs without a parent evaluation. The
+    membership row above plus that org match are both still enforced, so a
+    cross-tenant caller still gets 403.
+    """
+    now = datetime.now(UTC)
+    return EvaluationRunModel(
+        id=RUN_ID,
+        evaluation_id=None,
+        evaluation_name="metrics-api-run",
+        provider="openai",
+        model="gpt-4o",
+        status="completed",
+        priority="normal",
+        items_total=0,
+        items_completed=0,
+        items_failed=0,
+        token_input=0,
+        token_output=0,
+        cost=0.0,
+        average_latency_ms=0,
+        config={"name": "metrics-api-run", "metrics": ["accuracy"]},
+        profile={"provider_name": "openai", "model_id": "gpt-4o"},
+        metadata_={"project_id": TENANT_ORG_ID, "created_by": "test-user"},
+        version=1,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+@pytest.fixture
 def test_app(mock_session: MagicMock) -> FastAPI:
     """Create a test FastAPI app with mocked dependencies."""
     app = FastAPI()
     app.include_router(metrics_router)
     app.dependency_overrides[get_db_session] = lambda: mock_session
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="test-user")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        user_id="test-user",
+        org_id=TENANT_ORG_ID,
+    )
     return app
 
 
