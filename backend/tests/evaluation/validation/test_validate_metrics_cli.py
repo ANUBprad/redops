@@ -13,12 +13,16 @@ from app.evaluation.validation.loader import ValidationDatasetLoader
 def test_repository_fixture_is_explicitly_not_ground_truth() -> None:
     repo_root = Path(__file__).resolve().parents[4]
     dataset = asyncio.run(
-        ValidationDatasetLoader().load(str(repo_root / "scripts/validation_data/ground_truth"))
+        ValidationDatasetLoader().load(
+            str(repo_root / "scripts" / "validation_data" / "ground_truth")
+        )
     )
     assert dataset.provenance.is_ground_truth is False
 
 
-def test_cli_refuses_to_report_accuracy_for_synthetic_fixture(monkeypatch, capsys) -> None:
+def test_cli_refuses_to_report_accuracy_for_synthetic_fixture(
+    monkeypatch, capsys
+) -> None:
     repo_root = Path(__file__).resolve().parents[4]
     script = repo_root / "scripts" / "validate_metrics.py"
     corpus = repo_root / "scripts" / "validation_data" / "ground_truth"
