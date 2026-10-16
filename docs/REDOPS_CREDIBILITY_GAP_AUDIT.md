@@ -31,13 +31,13 @@ These are source changes committed to `main`; CI results for the new commits mus
 | 8 | Multi-provider execution is incomplete | **Source support implemented; live parity unverified** | OpenAI, Anthropic, and Groq adapters exist, and the UI provider option has been corrected. Real requests and model-specific options have not been verified for all three. |
 | 9 | Multi-model comparison is implemented | **Source path exists; live comparison unverified** | Comparison APIs and reliability code exist. No fresh live comparison of runs/providers was executed during this audit. |
 | 10 | Red-team UI start is broken | **Source defects fixed; full runtime path unverified** | The form sends provider/model and offers OpenAI/Anthropic/Groq. The API returns saved configuration, passes definition IDs and authenticated owner through Temporal, and the detail UI renders persisted round evidence. Browser-to-provider-to-result execution remains unverified. |
-| 11 | Red-team results are not persisted | **Persistence implemented; visibility incomplete** | The Temporal activity checkpoints rounds and persists campaign results; the run response includes stored `campaign_results`. The detail UI does not adequately render per-round results, and no dedicated rounds endpoint exists. |
+| 11 | Red-team results are not persisted | **Persistence and UI rendering implemented; live path unverified** | The Temporal activity checkpoints rounds and persists campaign results; the run response includes stored `campaign_results`, and the detail UI now renders round prompts, target responses, judge evidence, violation flags, and target-only cost scope. A dedicated rounds endpoint is not implemented, and live browser/database verification remains open. |
 
 ## Detailed technical findings
 
 ### Semantic verdicts
 
-The semantic judge is wired in `backend/app/redteam/temporal/activities.py` and used by `AdaptiveCampaignEngine`. The evaluator previously allowed keyword-based flags to contradict a definitive semantic verdict. The October 16 change makes a valid semantic SUCCESS mark an attack as a violation and a valid semantic FAILURE clear the violation flags. Severity remains conservative: semantic success alone does not prove a severe leak. If judging fails or is inconclusive, the evaluator retains the keyword fallback and records the source accordingly.
+The semantic judge is wired in `backend/app/redteam/temporal/activities.py` and used by `AdaptiveCampaignEngine`. The evaluator previously allowed keyword-based flags and dimension bonuses to contradict a definitive semantic verdict. The October 16 changes make a valid semantic SUCCESS mark an attack as a violation, a valid semantic FAILURE clear the violation flags and force effectiveness to zero, and a semantic SUCCESS score highly without requiring keyword matches. Severity remains conservative: semantic success alone does not prove a severe leak. If judging fails or is inconclusive, the evaluator retains the keyword fallback and records the source accordingly.
 
 Files:
 - `backend/app/redteam/engine/attack_evaluator.py`
@@ -65,7 +65,7 @@ Files:
 
 ### Result persistence and visibility
 
-Round checkpoints and final `campaign_results` persistence exist in the Temporal activity and repository. Existing persistence tests use deterministic providers and an SQLite test database. The remaining gap is user-facing visibility: the frontend run-detail view does not render the stored round evidence in a useful way, and a dedicated rounds endpoint is not implemented.
+Round checkpoints and final `campaign_results` persistence exist in the Temporal activity and repository. Existing persistence tests use deterministic providers and an SQLite test database. The run-detail view now renders persisted per-round prompts, responses, judge evidence, violation flags, and target-only cost scope. A dedicated rounds endpoint is not implemented; the browser-to-database path still needs a live smoke test.
 
 ### Ground-truth validation
 
