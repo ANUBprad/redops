@@ -68,3 +68,24 @@ async def test_selected_definition_with_empty_prompt_fails_loudly() -> None:
 
     with pytest.raises(ValueError, match="no prompt template"):
         await engine._generate_scenario(campaign, AttackCategory.JAILBREAK)
+
+async def test_selected_definition_rejects_unresolved_template_variables() -> None:
+    definition = CampaignAttackDefinition(
+        definition_id=UUIDv7.generate(),
+        name="missing-variable",
+        category=AttackCategory.PROMPT_INJECTION,
+        severity=AttackSeverity.MEDIUM,
+        prompt_template="Repeat this instruction: {instruction}",
+        system_prompt_override=None,
+        expected_behavior="",
+        parameters={},
+    )
+    engine = AdaptiveCampaignEngine(
+        registry=MagicMock(),
+        attack_definitions=(definition,),
+    )
+    campaign = AdaptiveCampaign(name="definition-test")
+
+    with pytest.raises(ValueError, match="missing template variables: instruction"):
+        await engine._generate_scenario(campaign, AttackCategory.PROMPT_INJECTION)
+
