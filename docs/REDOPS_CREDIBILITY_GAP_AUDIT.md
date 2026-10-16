@@ -6,7 +6,7 @@
 
 ## Executive summary
 
-The repository has a substantial implementation and a green backend/frontend CI baseline on the prior audited commit. That does **not** establish metric accuracy, live external-provider success, staging readiness, or complete red-team accounting.
+At source commit `d245e400933b6984834508c2b545c878be3dab28`, GitHub Actions reports backend/frontend CI, Gitleaks, Docker builds, and the Trivy vulnerability gate green. That does **not** establish metric accuracy, live external-provider success, staging readiness, or complete red-team accounting.
 
 Changes made during the October 16 closure work:
 - The semantic judge now controls the red-team `is_violation` decision for definitive `SUCCESS` and `FAILURE` verdicts. An inconclusive or failed judge still falls back to keyword evidence. Regression tests cover both a keyword false-positive refusal and a semantic success without keyword matches.
@@ -83,12 +83,14 @@ The secrets and Docker workflows now trigger for `main` pushes and pull requests
 
 ## Test evidence and limitations
 
-On the previously audited commit `4aa250cc555c1f212a04eaa0653f5d76d6e51007`, GitHub Actions reported:
-- Backend: 3,231 passed, 21 warnings; no test failures.
-- Frontend: 29 passed across five test files; no test failures.
-- Backend/frontend CI jobs were green on that commit.
+On source commit `d245e400933b6984834508c2b545c878be3dab28`, GitHub Actions reported:
+- Backend: 3,238 passed, 7 warnings, 0 test failures (151.23 seconds).
+- Frontend: 31 passed across six test files, 0 test failures.
+- Backend lint/type/security, frontend build/lint/type/security, Docker builds, Trivy HIGH/CRITICAL scan gate, and Gitleaks all completed successfully.
 
-The closure changes after that SHA have not been locally executed in this environment. They must be validated by CI before their test status is marked passed. In particular, watch for the existing `aiosqlite` background-thread warning in `tests/redteam/test_semantic_effectiveness.py::TestAuditAdaptiveStrategy::test_heuristic_violation_not_counted_as_semantic_success` and the Codecov upload error; neither is a test assertion failure, but both deserve follow-up.
+The backend still emits `PytestUnhandledThreadExceptionWarning` from `aiosqlite` connection worker threads when an asyncio event loop is already closed. The warning report associates these with `tests/evaluation/orchestration/test_executor.py::TestProviderInvocationStage::test_execute_step_exception`, `tests/infrastructure/database/repositories/test_evaluation_repository.py::TestSqlAlchemyEvaluationRepositoryExists::test_exists_true`, and parametrized cross-tenant cancellation tests in `tests/redteam/test_attack_run_tenant_isolation.py`. The test suite passes, but the leaked/background connection lifecycle should be diagnosed and fixed rather than suppressed. The current CI stores `coverage.xml` as an artifact; the old Codecov upload error is not part of the current workflow evidence.
+
+These are hosted CI results for the cited source commit, not a local fresh-clone run. Documentation-only commits may follow; their CI should also remain green.
 
 Not verified in this audit:
 - Real API calls with valid OpenAI, Anthropic, and Groq credentials.
