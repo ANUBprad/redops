@@ -2,7 +2,7 @@ name: Docker Build & Push
 
 on:
   push:
-    branches: [develop]
+    branches: [main, develop]
     tags: ["v*"]
   pull_request:
     branches: [develop]
@@ -105,7 +105,8 @@ jobs:
           image-ref: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.ref_name }}
           format: "sarif"
           output: "trivy-backend.sarif"
-        continue-on-error: true
+          severity: "HIGH,CRITICAL"
+          exit-code: "1"
 
       - name: Run Trivy vulnerability scanner (frontend)
         uses: aquasecurity/trivy-action@master
@@ -113,7 +114,8 @@ jobs:
           image-ref: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.ref_name }}
           format: "sarif"
           output: "trivy-frontend.sarif"
-        continue-on-error: true
+          severity: "HIGH,CRITICAL"
+          exit-code: "1"
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
