@@ -9,6 +9,7 @@ WORKDIR /app
 
 # Install system dependencies for asyncpg
 RUN apt-get update && \
+    apt-get upgrade -y --no-install-recommends && \
     apt-get install -y --no-install-recommends gcc libpq-dev curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

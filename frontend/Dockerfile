@@ -1,4 +1,5 @@
 FROM node:20-alpine AS base
+RUN apk upgrade --no-cache
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
@@ -15,6 +16,7 @@ RUN npm run build
 
 FROM base AS production
 ENV NODE_ENV=production
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

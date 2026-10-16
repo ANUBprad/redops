@@ -204,95 +204,93 @@ export default function AttackRunDetailPage() {
         </Card>
       )}
 
-      {runData.campaign_results?.rounds &&
-        runData.campaign_results.rounds.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Campaign Results</CardTitle>
-              <p className="text-muted-foreground text-sm">
-                {runData.campaign_results.total_rounds ??
-                  runData.campaign_results.rounds.length}{" "}
-                rounds · {runData.campaign_results.violation_count ?? 0} violations ·{" "}
-                {runData.campaign_results.severe_violation_count ?? 0} severe
-              </p>
-              <p className="text-muted-foreground text-xs">
-                Cost scope:{" "}
-                {runData.campaign_results.cost_scope === "target_calls_only"
-                  ? "target calls only"
-                  : "not fully classified"}
-                ; judge and mutation-provider costs may be excluded.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {runData.campaign_results.rounds.map((round, index) => (
-                <section
-                  key={round.round_number ?? index}
-                  className="space-y-2 rounded-md border p-3"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-semibold">
-                      Round {round.round_number ?? index + 1}
-                      {round.attack_category ? ` · ${round.attack_category}` : ""}
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
+      {runData.campaign_results?.rounds && runData.campaign_results.rounds.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Campaign Results</CardTitle>
+            <p className="text-muted-foreground text-sm">
+              {runData.campaign_results.total_rounds ?? runData.campaign_results.rounds.length}{" "}
+              rounds · {runData.campaign_results.violation_count ?? 0} violations ·{" "}
+              {runData.campaign_results.severe_violation_count ?? 0} severe
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Cost scope:{" "}
+              {runData.campaign_results.cost_scope === "target_calls_only"
+                ? "target calls only"
+                : "not fully classified"}
+              ; judge and mutation-provider costs may be excluded.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {runData.campaign_results.rounds.map((round, index) => (
+              <section
+                key={round.round_number ?? index}
+                className="space-y-2 rounded-md border p-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-semibold">
+                    Round {round.round_number ?? index + 1}
+                    {round.attack_category ? ` · ${round.attack_category}` : ""}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">
+                      {round.effectiveness?.evaluation_source ?? "unknown source"}
+                    </Badge>
+                    {round.effectiveness?.semantic_verdict && (
                       <Badge variant="outline">
-                        {round.effectiveness?.evaluation_source ?? "unknown source"}
-                      </Badge>
-                      {round.effectiveness?.semantic_verdict && (
-                        <Badge variant="outline">
-                         Judge: {round.effectiveness.semantic_verdict}
-                       </Badge>
-                      )}
-                      {round.effectiveness?.is_violation && <Badge>Violation</Badge>}
-                      {round.effectiveness?.is_violation_severe && (
-                        <Badge variant="destructive">Severe</Badge>
-                      )}
-                    </div>
+                       Judge: {round.effectiveness.semantic_verdict}
+                     </Badge>
+                    )}
+                    {round.effectiveness?.is_violation && <Badge>Violation</Badge>}
+                    {round.effectiveness?.is_violation_severe && (
+                      <Badge variant="destructive">Severe</Badge>
+                    )}
                   </div>
-                  {round.execution?.attack_prompt && (
-                    <div>
-                      <p className="text-muted-foreground text-xs font-medium">Attack prompt</p>
-                      <p className="break-words whitespace-pre-wrap text-sm">
-                        {round.execution.attack_prompt}
+                </div>
+                {round.execution?.attack_prompt && (
+                  <div>
+                    <p className="text-muted-foreground text-xs font-medium">Attack prompt</p>
+                    <p className="text-sm break-words whitespace-pre-wrap">
+                      {round.execution.attack_prompt}
+                    </p>
+                  </div>
+                )}
+                {round.execution?.target_response && (
+                  <div>
+                    <p className="text-muted-foreground text-xs font-medium">Target response</p>
+                    <p className="whitespace-pre-wrap break-words text-sm">
+                      {round.execution.target_response}
+                    </p>
+                  </div>
+                )}
+                {(round.effectiveness?.semantic_reasoning ||
+                  round.effectiveness?.semantic_evidence ||
+                  round.effectiveness?.reasoning) && (
+                  <div>
+                    <p className="text-muted-foreground text-xs font-medium">
+                      Evaluation evidence
+                    </p>
+                    <p className="whitespace-pre-wrap break-words text-sm">
+                      {round.effectiveness.semantic_reasoning || round.effectiveness.reasoning}
+                    </p>
+                    {round.effectiveness.semantic_evidence && (
+                      <p className="mt-1 text-sm break-words whitespace-pre-wrap">
+                        Evidence: {round.effectiveness.semantic_evidence}
                       </p>
-                    </div>
-                  )}
-                  {round.execution?.target_response && (
-                    <div>
-                      <p className="text-muted-foreground text-xs font-medium">Target response</p>
-                      <p className="whitespace-pre-wrap break-words text-sm">
-                        {round.execution.target_response}
-                      </p>
-                    </div>
-                  )}
-                  {(round.effectiveness?.semantic_reasoning ||
-                    round.effectiveness?.semantic_evidence ||
-                    round.effectiveness?.reasoning) && (
-                    <div>
-                      <p className="text-muted-foreground text-xs font-medium">
-                        Evaluation evidence
-                      </p>
-                      <p className="whitespace-pre-wrap break-words text-sm">
-                        {round.effectiveness.semantic_reasoning || round.effectiveness.reasoning}
-                      </p>
-                      {round.effectiveness.semantic_evidence && (
-                        <p className="mt-1 break-words whitespace-pre-wrap text-sm">
-                          Evidence: {round.effectiveness.semantic_evidence}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  <p className="text-muted-foreground text-xs">
-                    Target tokens: {round.tokens_used ?? 0} · Target cost: $
-                    {(round.execution?.cost_usd ?? round.cost_usd ?? 0).toFixed(6)}
-                    {round.effectiveness?.semantic_judge_cost_usd !== undefined &&
-                      ` · Judge cost: $${round.effectiveness.semantic_judge_cost_usd.toFixed(6)}`}
-                  </p>
-                </section>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+                    )}
+                  </div>
+                )}
+                <p className="text-muted-foreground text-xs">
+                  Target tokens: {round.tokens_used ?? 0} · Target cost: $
+                  {(round.execution?.cost_usd ?? round.cost_usd ?? 0).toFixed(6)}
+                  {round.effectiveness?.semantic_judge_cost_usd !== undefined &&
+                    ` · Judge cost: $${round.effectiveness.semantic_judge_cost_usd.toFixed(6)}`}
+                </p>
+              </section>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
