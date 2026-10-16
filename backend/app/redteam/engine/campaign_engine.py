@@ -356,8 +356,7 @@ class AdaptiveCampaignEngine:
             ]
             if not definition.prompt_template.strip():
                 raise ValueError(
-                    f"Attack definition {definition.definition_id} "
-                    "has no prompt template"
+                    f"Attack definition {definition.definition_id} has no prompt template"
                 )
             parameters = {
                 **definition.parameters,
