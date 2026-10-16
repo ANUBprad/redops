@@ -24,13 +24,13 @@ These are source changes committed to `main`; CI results for the new commits mus
 | 1 | Red-team effectiveness is keyword-only | **Partially fixed** | The production activity wires a semantic judge. The evaluator now lets definitive semantic SUCCESS/FAILURE control `is_violation`; heuristic dimension scores remain supporting evidence. Judge error/INCONCLUSIVE falls back to keywords. Live judge execution is unverified. |
 | 2 | No ground-truth dataset | **Still open** | A synthetic fixture corpus exists, but it is explicitly not ground truth. No independent, license-cleared, human-labeled validation corpus is present. |
 | 3 | Metrics lack real validation data | **Still open** | Validation loader/runner and a CLI exist. The synthetic corpus is not valid evidence of metric accuracy; the CLI now refuses to score it. No accuracy claim is justified. |
-| 4 | Attack generation ignores selected definitions | **Open, release blocker** | The campaign engine still calls scenario generation with empty template/parameter mappings. Selected `attack_definition_ids` are stored on the run but are not yet proven to reach the production scenario-generation path. |
+| 4 | Attack generation ignores selected definitions | **Source path fixed; runtime unverified** | Selected IDs now pass API → Temporal input → activity repository lookup → campaign engine, which executes the selected template and fails loudly for missing definitions/templates/variables. Owner-created definitions are checked against the authenticated run owner. A live campaign has not yet verified this path. |
 | 5 | Provider execution is not real | **Source path implemented; live use unverified** | Target execution calls the configured provider's `chat()` through the registry. No successful real OpenAI, Anthropic, or Groq call was demonstrated in this audit. |
 | 6 | Temporal does not orchestrate real evaluation | **Implemented; live red-team run unverified** | Evaluation and red-team workflows/activities are present and covered by deterministic tests. A fresh running deployment, cancellation, retry, and persistence cycle was not exercised here. |
 | 7 | Red-team cost tracking is complete | **Incomplete** | Target calls use `CostCalculator`, but campaign totals/budget accounting do not currently establish full target + judge + mutation cost. Judge usage/cost is recorded on effectiveness; mutation-provider usage is not included in the round total. Unknown pricing must not be interpreted as free. |
 | 8 | Multi-provider execution is incomplete | **Source support implemented; live parity unverified** | OpenAI, Anthropic, and Groq adapters exist, and the UI provider option has been corrected. Real requests and model-specific options have not been verified for all three. |
 | 9 | Multi-model comparison is implemented | **Source path exists; live comparison unverified** | Comparison APIs and reliability code exist. No fresh live comparison of runs/providers was executed during this audit. |
-| 10 | Red-team UI start is broken | **Original form defect fixed; execution contract still incomplete** | The form sends provider/model and now offers supported providers. However, selected definition IDs are not yet demonstrated to drive generated scenarios; the run response currently serializes `configuration={}`. The full browser-to-provider-to-result path remains unverified. |
+| 10 | Red-team UI start is broken | **Source defects fixed; full runtime path unverified** | The form sends provider/model and offers OpenAI/Anthropic/Groq. The API returns saved configuration, passes definition IDs and authenticated owner through Temporal, and the detail UI renders persisted round evidence. Browser-to-provider-to-result execution remains unverified. |
 | 11 | Red-team results are not persisted | **Persistence implemented; visibility incomplete** | The Temporal activity checkpoints rounds and persists campaign results; the run response includes stored `campaign_results`. The detail UI does not adequately render per-round results, and no dedicated rounds endpoint exists. |
 
 ## Detailed technical findings
@@ -55,7 +55,7 @@ Files:
 
 ### Attack definitions and UI
 
-The form submits `attack_definition_ids`, target provider, and target model. The start endpoint forwards target configuration into `RedTeamWorkflowInput`, but the workflow input currently lacks the selected definition IDs and the campaign engine invokes its built-in category generator with `template={}` and `parameters={}`. As a result, saved definition selection is not proof that the selected prompts were executed. The API response mapper also currently returns an empty configuration object.
+The form submits `attack_definition_ids`, target provider, and target model. The API passes selected IDs and the authenticated owner into `RedTeamWorkflowInput`; the Temporal activity resolves the persisted definitions, rejects missing/archived or non-owner-created definitions, and passes the templates into the campaign engine. The engine executes the selected template and rejects missing required variables rather than sending unresolved placeholders. The API response now returns saved configuration, and the run detail page renders persisted per-round evidence. These source paths have regression tests, but the browser-to-real-provider-to-database path still requires a live smoke test.
 
 Files:
 - `frontend/app/(main)/redteam/runs/new/page.tsx`
@@ -101,9 +101,9 @@ Not verified in this audit:
 
 **Do not call v0.1.0 production-ready yet.** The implementation and test infrastructure are substantial, but four credibility gaps remain release blockers:
 
-1. Selected attack definitions must be carried through the API/Temporal path and used to generate the actual scenario.
-2. Campaign accounting must either include target, semantic-judge, and mutation costs with truthful pricing certainty, or expose a clearly named target-only amount and target-only budget.
-3. Persisted per-round evidence must be accessible in the UI/API and covered by tests.
+1. Run a live red-team smoke test proving the selected persisted definition becomes the actual target prompt and the stored round is visible in the UI.
+2. Campaign accounting is explicitly labeled target-call-only; judge costs are stored separately and mutation-provider usage is not fully included. Full all-provider cost accounting remains open.
+3. Confirm the new round-evidence UI against a live persisted campaign.
 4. The release checklist must have evidence for real-provider smoke tests, staging deployment, rollback, and monitoring. The synthetic corpus must not be used to claim metric accuracy.
 
 Use the wording **“AI evaluation and red-teaming platform with durable orchestration and documented limitations”** until the live-provider, ground-truth, cost-accounting, and staging gates are demonstrated.
