@@ -252,7 +252,7 @@ export default function AttackRunDetailPage() {
                   {round.execution?.attack_prompt && (
                     <div>
                       <p className="text-muted-foreground text-xs font-medium">Attack prompt</p>
-                      <p className="whitespace-pre-wrap break-words text-sm">
+                      <p className="break-words whitespace-pre-wrap text-sm">
                         {round.execution.attack_prompt}
                       </p>
                     </div>
@@ -276,7 +276,7 @@ export default function AttackRunDetailPage() {
                         {round.effectiveness.semantic_reasoning || round.effectiveness.reasoning}
                       </p>
                       {round.effectiveness.semantic_evidence && (
-                        <p className="mt-1 whitespace-pre-wrap break-words text-sm">
+                        <p className="mt-1 break-words whitespace-pre-wrap text-sm">
                           Evidence: {round.effectiveness.semantic_evidence}
                         </p>
                       )}
