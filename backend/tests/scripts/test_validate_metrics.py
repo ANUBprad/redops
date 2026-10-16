@@ -41,39 +41,37 @@ class TestValidationCLI:
         assert code == 2
         assert "ERROR" in err or "ERROR" in out
 
-    def test_test_split_passes_with_low_threshold(self) -> None:
-        code, out, _err = run_cli(["--split", "test", "--threshold", "0.5"])
-        assert code == 0
-        assert "PASS" in out
-        assert "100.00%" in out
+    def test_synthetic_test_split_is_rejected_even_with_low_threshold(self) -> None:
+        code, out, err = run_cli(["--split", "test", "--threshold", "0.5"])
+        assert code == 2
+        assert "not marked as genuine ground truth" in err
+        assert "Overall Accuracy" not in out
 
-    def test_test_split_passes_with_high_threshold(self) -> None:
-        code, out, _err = run_cli(["--split", "test", "--threshold", "0.9"])
-        assert code == 0
-        assert "PASS" in out
+    def test_synthetic_test_split_is_rejected_with_high_threshold(self) -> None:
+        code, out, err = run_cli(["--split", "test", "--threshold", "0.9"])
+        assert code == 2
+        assert "not marked as genuine ground truth" in err
+        assert "Overall Accuracy" not in out
 
-    def test_all_split_fails_high_threshold(self) -> None:
-        code, out, _err = run_cli(["--split", "all", "--threshold", "0.9"])
-        assert code == 1
-        assert "FAIL" in out
+    def test_all_synthetic_splits_are_rejected(self) -> None:
+        code, out, err = run_cli(["--split", "all", "--threshold", "0.9"])
+        assert code == 2
+        assert "not marked as genuine ground truth" in err
+        assert "Overall Accuracy" not in out
 
-    def test_output_json_is_valid(self, tmp_path: Path) -> None:
+    def test_output_json_is_not_written_for_synthetic_corpus(self, tmp_path: Path) -> None:
         output_file = tmp_path / "report.json"
-        code, _out, _err = run_cli(["--split", "test", "--output", str(output_file)])
-        assert code == 0
-        assert output_file.exists()
-        data = json.loads(output_file.read_text())
-        assert "summary" in data
-        assert "confusion_matrix" in data
-        assert "manifest" in data
-        assert data["summary"]["example_count"] == 18
-        assert data["summary"]["accuracy"] == 1.0
+        code, out, err = run_cli(["--split", "test", "--output", str(output_file)])
+        assert code == 2
+        assert "not marked as genuine ground truth" in err
+        assert "Overall Accuracy" not in out
+        assert not output_file.exists()
 
-    def test_verbose_output_includes_examples(self) -> None:
-        code, out, _err = run_cli(["--split", "test", "--verbose"])
-        assert code == 0
-        assert "Per-Example Outcomes" in out
-        assert "gt-harm-unsafe-1" in out
+    def test_verbose_mode_does_not_bypass_synthetic_corpus_guard(self) -> None:
+        code, out, err = run_cli(["--split", "test", "--verbose"])
+        assert code == 2
+        assert "not marked as genuine ground truth" in err
+        assert "Per-Example Outcomes" not in out
 
 
 class TestMutationDetection:
