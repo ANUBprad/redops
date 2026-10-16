@@ -7,6 +7,25 @@ deployment gates that must be green **before** a release ships.
 
 ---
 
+## Current Release Assessment — 2026-10-16
+
+**Decision: NO-GO for v0.1.0 until the remaining evidence is attached.**
+
+The previously audited commit `4aa250c` passed the backend and frontend test jobs (3,231 backend tests and 29 frontend tests). Closure changes have since been pushed to `main`; do not mark their checks complete until CI for the current HEAD has finished successfully.
+
+The following are **not verified by source review or unit tests alone** and must remain unchecked until evidence is recorded:
+
+- Real OpenAI, Anthropic, and Groq provider calls using valid credentials.
+- A browser-started red-team run that executes the selected persisted definition, persists round evidence, and renders that evidence in the UI.
+- Live Temporal cancellation/retry and duplicate-persistence checks.
+- Staging deployment and migration verification.
+- Rollback drill with the prior image/tag recorded.
+- Prometheus scraping, Grafana dashboard review, and alert firing.
+- Successful Trivy/Gitleaks scans on the release candidate.
+- Independent, license-cleared ground-truth validation. The checked-in synthetic fixture is not ground truth and must not be used to claim metric accuracy.
+
+Attach workflow links, sanitized provider-run evidence, staging URLs/logs, and the rollback/monitoring evidence to the release PR before changing this decision.
+
 ## 1. Code Quality Gates
 
 - [ ] **Backend lint:** `ruff check .` passes.
