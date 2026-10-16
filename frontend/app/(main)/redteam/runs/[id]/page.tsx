@@ -284,7 +284,7 @@ export default function AttackRunDetailPage() {
                     Target tokens: {round.tokens_used ?? 0} · Target cost: $
                     {(round.execution?.cost_usd ?? round.cost_usd ?? 0).toFixed(6)}
                     {round.effectiveness?.semantic_judge_cost_usd !== undefined &&
-                      ` · Judge cost: ${round.effectiveness.semantic_judge_cost_usd.toFixed(6)}`}
+                      ` · Judge cost: $${round.effectiveness.semantic_judge_cost_usd.toFixed(6)}`}
                   </p>
                 </section>
               ))}
