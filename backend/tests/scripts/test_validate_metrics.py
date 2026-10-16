@@ -58,7 +58,7 @@ class TestValidationCLI:
         assert "not marked as genuine ground truth" in err
         assert "Overall Accuracy" not in out
 
-    def test_output_json_is_not_written_for_synthetic_corpus(self, tmp_path: Path) -> None:
+    def test_no_json_report_for_synthetic_corpus(self, tmp_path: Path) -> None:
         output_file = tmp_path / "report.json"
         code, out, err = run_cli(["--split", "test", "--output", str(output_file)])
         assert code == 2
@@ -74,7 +74,7 @@ class TestValidationCLI:
 
 
 class TestMutationDetection:
-    """Synthetic unit fixtures verify confusion-matrix mechanics, not metric accuracy."""
+    """Synthetic fixtures verify confusion-matrix mechanics, not metric accuracy."""
 
     def test_flipped_labels_flip_confusion_outcomes(self, tmp_path: Path) -> None:
         from app.evaluation.validation.model import ValidationDataset
@@ -128,7 +128,7 @@ class TestMutationDetection:
         assert flipped.overall.false_positives == 1
         assert flipped.overall.false_negatives == 1
 
-    def test_wrong_scorer_produces_expected_confusion_counts(self, tmp_path: Path) -> None:
+    def test_wrong_scorer_confusion_counts(self, tmp_path: Path) -> None:
         from app.evaluation.validation.model import ValidationDataset
         from app.evaluation.validation.runner import run_validation
 
