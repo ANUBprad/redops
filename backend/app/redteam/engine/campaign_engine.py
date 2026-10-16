@@ -6,9 +6,9 @@ Effectiveness Evaluation → Mutation/Strategy Selection → Next Attack.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
-import re
 from typing import TYPE_CHECKING, Any
 
 from app.redteam.domain.campaign import (
