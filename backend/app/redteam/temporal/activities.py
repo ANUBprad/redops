@@ -140,6 +140,7 @@ class RedTeamWorkflowInput:
     """Input for the red team campaign activity."""
 
     attack_run_id: str = ""
+    requested_by: str = ""
     target_provider: str = ""
     target_model: str = ""
     target_temperature: float = 0.0
@@ -801,6 +802,15 @@ async def red_team_campaign_activity(
                     if definition.status.value == "archived":
                         raise ValueError(
                             f"Selected attack definition {raw_definition_id} is archived"
+                        )
+                    if (
+                        definition.created_by is not None
+                        and input.requested_by
+                        and definition.created_by != input.requested_by
+                    ):
+                        raise ValueError(
+                            f"Selected attack definition {raw_definition_id} is not accessible "
+                            "to the run owner"
                         )
                     template = definition.template
                     resolved_definitions.append(
