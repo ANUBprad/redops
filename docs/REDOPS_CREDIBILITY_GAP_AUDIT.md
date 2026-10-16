@@ -6,7 +6,7 @@
 
 ## Executive summary
 
-At source commit `d245e400933b6984834508c2b545c878be3dab28`, GitHub Actions reports backend/frontend CI, Gitleaks, Docker builds, and the Trivy vulnerability gate green. That does **not** establish metric accuracy, live external-provider success, staging readiness, or complete red-team accounting.
+At source commit `12a4aae7b329b71fabe714b48e28edf3c80f55e3`, GitHub Actions reports backend/frontend CI, Gitleaks, Docker builds, and the Trivy vulnerability gate green. That does **not** establish metric accuracy, live external-provider success, staging readiness, or complete red-team accounting.
 
 Changes made during the October 16 closure work:
 - The semantic judge now controls the red-team `is_violation` decision for definitive `SUCCESS` and `FAILURE` verdicts. An inconclusive or failed judge still falls back to keyword evidence. Regression tests cover both a keyword false-positive refusal and a semantic success without keyword matches.
@@ -83,14 +83,15 @@ The secrets and Docker workflows now trigger for `main` pushes and pull requests
 
 ## Test evidence and limitations
 
-On source commit `d245e400933b6984834508c2b545c878be3dab28`, GitHub Actions reported:
-- Backend: 3,238 passed, 7 warnings, 0 test failures (151.23 seconds).
+On source commit `12a4aae7b329b71fabe714b48e28edf3c80f55e3`, GitHub Actions reported:
+- Backend: 3,238 passed, 1 warning, 0 test failures (146.24 seconds).
 - Frontend: 31 passed across six test files, 0 test failures.
 - Backend lint/type/security, frontend build/lint/type/security, Docker builds, Trivy HIGH/CRITICAL scan gate, and Gitleaks all completed successfully.
+- The backend coverage artifact uploaded successfully.
 
-The backend still emits `PytestUnhandledThreadExceptionWarning` from `aiosqlite` connection worker threads when an asyncio event loop is already closed. The warning report associates these with `tests/evaluation/orchestration/test_executor.py::TestProviderInvocationStage::test_execute_step_exception`, `tests/infrastructure/database/repositories/test_evaluation_repository.py::TestSqlAlchemyEvaluationRepositoryExists::test_exists_true`, and parametrized cross-tenant cancellation tests in `tests/redteam/test_attack_run_tenant_isolation.py`. The test suite passes, but the leaked/background connection lifecycle should be diagnosed and fixed rather than suppressed. The current CI stores `coverage.xml` as an artifact; the old Codecov upload error is not part of the current workflow evidence.
+The prior `aiosqlite` background-thread warnings were reduced by explicitly disposing in-memory SQLite engines in the persistence/integration test modules. The remaining backend test warning is a third-party `passlib` deprecation: Python's `crypt` module is slated for removal in Python 3.13. It is not a test assertion failure, but the dependency should be upgraded or replaced before moving to Python 3.13.
 
-These are hosted CI results for the cited source commit, not a local fresh-clone run. Documentation-only commits may follow; their CI should also remain green.
+These are hosted CI results for the cited source commit, not a local fresh-clone run. Live provider and staging evidence remains unverified.
 
 Not verified in this audit:
 - Real API calls with valid OpenAI, Anthropic, and Groq credentials.

@@ -11,7 +11,7 @@ deployment gates that must be green **before** a release ships.
 
 **Decision: NO-GO for v0.1.0 until the remaining evidence is attached.**
 
-Source commit `d245e400933b6984834508c2b545c878be3dab28` passed the hosted backend/frontend CI, Docker builds, Trivy HIGH/CRITICAL vulnerability gate, and Gitleaks. Its test evidence is 3,238 backend tests passed with 7 warnings and 31 frontend tests passed. Documentation-only audit updates follow that source commit; confirm CI remains green on the current HEAD before release.
+Source commit `12a4aae7b329b71fabe714b48e28edf3c80f55e3` passed hosted backend/frontend CI, Docker builds, Trivy HIGH/CRITICAL vulnerability gate, and Gitleaks. Backend: 3,238 passed, 1 third-party `passlib`/`crypt` deprecation warning; frontend: 31 passed. Backend/frontend lint, type, security, build, and test jobs passed. The coverage artifact uploaded successfully. Live-provider and staging evidence is still missing, so the release decision remains NO-GO.
 
 The following are **not verified by source review or unit tests alone** and must remain unchecked until evidence is recorded:
 
@@ -28,13 +28,13 @@ Attach workflow links, sanitized provider-run evidence, staging URLs/logs, and t
 
 ## 1. Code Quality Gates
 
-- [ ] **Backend lint:** `ruff check .` passes.
-- [ ] **Backend format:** `ruff format --check .` passes.
-- [ ] **Backend types:** `mypy --strict` passes.
-- [ ] **Backend tests:** full `pytest` suite passes.
-- [ ] **Frontend format:** `prettier --check .` passes.
-- [ ] **Frontend lint:** `next lint` passes.
-- [ ] **Frontend types:** `tsc --noEmit` passes.
+- [x] **Backend lint:** `ruff check .` passes in CI.
+- [x] **Backend format:** `ruff format --check .` passes in CI.
+- [x] **Backend types:** `mypy app/` passes in CI with `strict = true` in `pyproject.toml`.
+- [x] **Backend tests:** full pytest suite passes (3,238 passed; one third-party deprecation warning).
+- [x] **Frontend format:** `prettier --check .` passes in CI.
+- [x] **Frontend lint:** the configured ESLint job passes in CI.
+- [x] **Frontend types:** `tsc --noEmit` passes in CI.
 - [ ] **redops-gate:** its test suite passes.
 
 > Note: on Windows, `ruff format --check` and `prettier --check` may report style deltas due to
@@ -43,10 +43,9 @@ Attach workflow links, sanitized provider-run evidence, staging URLs/logs, and t
 
 ## 2. Security Gates
 
-- [ ] `pip-audit` and `npm audit` jobs pass in CI.
-- [ ] Trivy container scan (`.github/workflows/docker-build.yml`) reports no high/critical
-      findings.
-- [ ] Gitleaks secrets scan (`.github/workflows/secrets-scan.yml`) passes.
+- [x] `pip-audit` and `npm audit` jobs pass in CI.
+- [x] Trivy container scan (`.github/workflows/docker-build.yml`) passed with the HIGH/CRITICAL gate on the audited source commit.
+- [x] Gitleaks secrets scan (`.github/workflows/secrets-scan.yml`) passes on the audited source commit.
 - [ ] No secrets, keys, or credentials introduced. `APP_SECRET_KEY` / `DB_PASSWORD` rotated.
 
 ## 3. Build & Images
@@ -79,7 +78,7 @@ Attach workflow links, sanitized provider-run evidence, staging URLs/logs, and t
 
 - [ ] `CHANGELOG.md` updated (semantic-release does this automatically).
 - [ ] API docs reflect any new endpoints/fields (`docs/API_SPEC.md`).
-- [ ] User-facing changes reflected in `docs/` (GETTING_STARTED, DEPLOYMENT, MONITORING).
+- [x] User-facing audit/validation/release status changes reflected in `README.md` and `docs/`.
 - [ ] Breaking changes documented in the release notes.
 
 ---
