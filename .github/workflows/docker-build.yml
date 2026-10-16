@@ -104,8 +104,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ghcr.io/anubprad/redops/backend:${{ github.ref_name }}
-          format: "sarif"
-          output: "trivy-backend.sarif"
+          format: "table"
           severity: "HIGH,CRITICAL"
           exit-code: "1"
 
@@ -113,13 +112,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ghcr.io/anubprad/redops/frontend:${{ github.ref_name }}
-          format: "sarif"
-          output: "trivy-frontend.sarif"
+          format: "table"
           severity: "HIGH,CRITICAL"
           exit-code: "1"
 
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always() && (hashFiles('trivy-backend.sarif') != '' || hashFiles('trivy-frontend.sarif') != '')
-        with:
-          sarif_files: "trivy-*.sarif"
