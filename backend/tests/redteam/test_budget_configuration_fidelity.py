@@ -261,6 +261,8 @@ class TestWorkflowBudgetForwarding:
         _propagation_captured.clear()
         wf_input = RedTeamWorkflowInput(
             attack_run_id="budget-forward-test",
+            requested_by="user-123",
+            attack_definition_ids=("definition-123",),
             target_provider="test-provider",
             target_model="test-model",
             max_rounds=3,
@@ -284,6 +286,8 @@ class TestWorkflowBudgetForwarding:
         assert result.status == "completed"
         assert len(_propagation_captured) == 1
         activity_input = _propagation_captured[0]
+        assert activity_input.requested_by == "user-123"
+        assert activity_input.attack_definition_ids == ("definition-123",)
         assert activity_input.max_rounds == 3
         assert activity_input.max_cost_usd == 12.5
         assert activity_input.max_duration_seconds == 600
