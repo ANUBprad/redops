@@ -11,7 +11,7 @@ deployment gates that must be green **before** a release ships.
 
 **Decision: NO-GO for v0.1.0 until the remaining evidence is attached.**
 
-The previously audited commit `4aa250c` passed the backend and frontend test jobs (3,231 backend tests and 29 frontend tests). Closure changes have since been pushed to `main`; do not mark their checks complete until CI for the current HEAD has finished successfully.
+Source commit `d245e400933b6984834508c2b545c878be3dab28` passed the hosted backend/frontend CI, Docker builds, Trivy HIGH/CRITICAL vulnerability gate, and Gitleaks. Its test evidence is 3,238 backend tests passed with 7 warnings and 31 frontend tests passed. Documentation-only audit updates follow that source commit; confirm CI remains green on the current HEAD before release.
 
 The following are **not verified by source review or unit tests alone** and must remain unchecked until evidence is recorded:
 
