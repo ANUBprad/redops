@@ -89,4 +89,3 @@ async def test_selected_definition_rejects_unresolved_template_variables() -> No
 
     with pytest.raises(ValueError, match="missing template variables: instruction"):
         await engine._generate_scenario(campaign, AttackCategory.PROMPT_INJECTION)
-
