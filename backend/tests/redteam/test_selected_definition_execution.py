@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from app.kernel.entities.base import UUIDv7
 from app.redteam.domain.campaign import AdaptiveCampaign
 from app.redteam.domain.enums import AttackCategory, AttackSeverity
@@ -64,11 +66,5 @@ async def test_selected_definition_with_empty_prompt_fails_loudly() -> None:
     )
     campaign = AdaptiveCampaign(name="definition-test")
 
-    import pytest
-
-    try:
+    with pytest.raises(ValueError, match="no prompt template"):
         await engine._generate_scenario(campaign, AttackCategory.JAILBREAK)
-    except ValueError as exc:
-        assert "no prompt template" in str(exc)
-    else:
-        pytest.fail("an empty selected definition must not silently use built-in prompts")
