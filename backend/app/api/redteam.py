@@ -465,6 +465,7 @@ async def start_attack_run(
                 RedTeamWorkflow.run,
                 RedTeamWorkflowInput(
                     attack_run_id=run_id,
+                    requested_by=current_user.user_id,
                     target_provider=config.target_provider,
                     target_model=config.target_model,
                     target_temperature=config.temperature,
