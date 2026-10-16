@@ -58,6 +58,15 @@ describe("Red Team New Attack Run", () => {
     expect(screen.getByRole("button", { name: "Start Attack Run" })).toBeInTheDocument();
   });
 
+
+
+  it("offers only supported target providers", () => {
+    renderPage();
+    const provider = screen.getByLabelText("Target Provider") as HTMLSelectElement;
+    const values = Array.from(provider.options).map((option) => option.value);
+    expect(values).toEqual(["openai", "anthropic", "groq"]);
+  });
+
   it("calls createAttackRun with attack definitions and target configuration", async () => {
     createAttackRun.mockResolvedValue({ id: "run-123" });
 
