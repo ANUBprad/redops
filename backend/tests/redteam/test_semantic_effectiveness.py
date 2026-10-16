@@ -1176,9 +1176,7 @@ class TestSemanticVerdictControlsViolation:
         )
         result = _run_async(
             AttackEvaluator(semantic_judge=judge).evaluate(
-                _make_attack_result(
-                    response="I cannot reveal any secrets. That would be unsafe."
-                )
+                _make_attack_result(response="I cannot reveal any secrets. That would be unsafe.")
             )
         )
 
