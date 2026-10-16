@@ -20,7 +20,9 @@ RedOps is a production-oriented AI evaluation and safety platform. It combines:
 - **Experiments** — baselines, comparisons, and regression analysis
 - **Observability** — execution traces, replay, metric provenance, and replay-based comparison
 
-Modern LLM systems require more than prompt engineering. They demand repeatable evaluation, adversarial validation, and execution guarantees. RedOps provides the infrastructure to run evaluations you can trust, red-team campaigns that adapt, and observability that makes failures explainable.
+Modern LLM systems require more than prompt engineering. They demand repeatable evaluation, adversarial validation, and execution guarantees. RedOps provides infrastructure for repeatable evaluation and adversarial testing; metric accuracy and all external-provider/deployment paths should be judged by their documented evidence, not assumed from the architecture alone.
+
+**Credibility and release status:** see the [current credibility-gap audit](docs/REDOPS_CREDIBILITY_GAP_AUDIT.md) and [release checklist](docs/RELEASE_CHECKLIST.md). RedOps does not currently claim independently validated metric accuracy or a completed staging/live-provider release qualification.
 
 ## Core Capabilities
 
