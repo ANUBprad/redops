@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
+import re
 from typing import TYPE_CHECKING, Any
 
 from app.redteam.domain.campaign import (
@@ -361,6 +362,21 @@ class AdaptiveCampaignEngine:
                 **definition.parameters,
                 "severity": definition.severity.value,
             }
+            variables = parameters.get("variables", {})
+            if not isinstance(variables, dict):
+                raise ValueError(
+                    f"Attack definition {definition.definition_id} variables must be an object"
+                )
+            required_variables = set(
+                re.findall(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}", definition.prompt_template)
+            )
+            missing_variables = required_variables - set(variables)
+            if missing_variables:
+                missing = ", ".join(sorted(missing_variables))
+                raise ValueError(
+                    f"Attack definition {definition.definition_id} is missing template "
+                    f"variables: {missing}"
+                )
             scenarios = await self._orchestrator.generate_scenarios(
                 category=definition.category,
                 template={
