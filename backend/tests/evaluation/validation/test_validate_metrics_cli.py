@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import runpy
 import sys
 from pathlib import Path
@@ -11,7 +12,7 @@ from app.evaluation.validation.loader import ValidationDatasetLoader
 
 def test_repository_fixture_is_explicitly_not_ground_truth() -> None:
     repo_root = Path(__file__).resolve().parents[4]
-    dataset = __import__("asyncio").run(
+    dataset = asyncio.run(
         ValidationDatasetLoader().load(str(repo_root / "scripts/validation_data/ground_truth"))
     )
     assert dataset.provenance.is_ground_truth is False
