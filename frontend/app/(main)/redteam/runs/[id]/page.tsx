@@ -237,9 +237,7 @@ export default function AttackRunDetailPage() {
                       {round.effectiveness?.evaluation_source ?? "unknown source"}
                     </Badge>
                     {round.effectiveness?.semantic_verdict && (
-                      <Badge variant="outline">
-                       Judge: {round.effectiveness.semantic_verdict}
-                     </Badge>
+                      <Badge variant="outline">Judge: {round.effectiveness.semantic_verdict}</Badge>
                     )}
                     {round.effectiveness?.is_violation && <Badge>Violation</Badge>}
                     {round.effectiveness?.is_violation_severe && (
@@ -268,7 +266,7 @@ export default function AttackRunDetailPage() {
                   round.effectiveness?.reasoning) && (
                   <div>
                     <p className="text-muted-foreground text-xs font-medium">Evaluation evidence</p>
-                    <p className="whitespace-pre-wrap break-words text-sm">
+                    <p className="text-sm break-words whitespace-pre-wrap">
                       {round.effectiveness.semantic_reasoning || round.effectiveness.reasoning}
                     </p>
                     {round.effectiveness.semantic_evidence && (
