@@ -269,7 +269,9 @@ export default function AttackRunDetailPage() {
                     round.effectiveness?.semantic_evidence ||
                     round.effectiveness?.reasoning) && (
                     <div>
-                      <p className="text-muted-foreground text-xs font-medium">Evaluation evidence</p>
+                      <p className="text-muted-foreground text-xs font-medium">
+                        Evaluation evidence
+                      </p>
                       <p className="whitespace-pre-wrap break-words text-sm">
                         {round.effectiveness.semantic_reasoning || round.effectiveness.reasoning}
                       </p>
