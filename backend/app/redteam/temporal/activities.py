@@ -39,6 +39,7 @@ from app.redteam.domain.enums import (
 from app.redteam.domain.value_objects import AttackScenario, SafetyScore
 from app.redteam.engine.campaign_engine import (
     AdaptiveCampaignEngine,
+    CampaignAttackDefinition,
     _MetricPersistenceError,
     _RoundPersistenceError,
 )
@@ -148,6 +149,7 @@ class RedTeamWorkflowInput:
     mutation_model: str = ""
     mutation_strategy: str = ""
     attack_categories: tuple[str, ...] = ()
+    attack_definition_ids: tuple[str, ...] = ()
     max_rounds: int = 10
     max_attacks: int = 100
     max_total_tokens: int = 1_000_000
@@ -772,6 +774,45 @@ async def red_team_campaign_activity(
             ),
         )
 
+        attack_definitions: tuple[CampaignAttackDefinition, ...] = ()
+        if input.attack_definition_ids and terminal_state is None:
+            if _session_factory is None:
+                raise RuntimeError(
+                    "Cannot resolve selected attack definitions without a database session factory"
+                )
+            from app.infrastructure.database.repositories.attack_definition_repository import (
+                SqlAlchemyAttackDefinitionRepository,
+            )
+
+            resolved_definitions: list[CampaignAttackDefinition] = []
+            async with _get_session() as session:
+                definition_repo = SqlAlchemyAttackDefinitionRepository(session)
+                for raw_definition_id in input.attack_definition_ids:
+                    definition_id = UUIDv7.from_string(raw_definition_id)
+                    definition = await definition_repo.find_by_id(definition_id)
+                    if definition is None:
+                        raise ValueError(
+                            f"Selected attack definition {raw_definition_id} was not found"
+                        )
+                    if definition.status.value == "archived":
+                        raise ValueError(
+                            f"Selected attack definition {raw_definition_id} is archived"
+                        )
+                    template = definition.template
+                    resolved_definitions.append(
+                        CampaignAttackDefinition(
+                            definition_id=definition.id,
+                            name=definition.name,
+                            category=definition.category,
+                            severity=definition.severity,
+                            prompt_template=template.prompt_template,
+                            system_prompt_override=template.system_prompt_override,
+                            expected_behavior=template.expected_behavior,
+                            parameters={**template.parameters, **definition.parameters},
+                        )
+                    )
+            attack_definitions = tuple(resolved_definitions)
+
         engine = AdaptiveCampaignEngine(
             registry=registry,
             metric_engine=metric_engine,
@@ -786,6 +827,7 @@ async def red_team_campaign_activity(
             cancelled=_activity_cancelled_hook(),
             resume_rounds=resume_rounds,
             checkpoint_round=checkpoint_round,
+            attack_definitions=attack_definitions,
         )
 
         if activity.in_activity():
