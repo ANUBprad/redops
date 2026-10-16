@@ -209,7 +209,7 @@ No benchmark percentages are published here. Run the platform against your model
 | **Cache/Events** | Redis 7 (Redis Streams event bus, rate limiting, caching) |
 | **Frontend** | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS 4, TanStack Query, Recharts |
 | **AI Providers** | OpenAI (GPT-4o, GPT-4.1, o1, o3), Anthropic (Claude Sonnet/Haiku 3.5/4), Groq (Llama 3.1/3.2/3.3, Mixtral, Gemma) |
-| **Testing** | pytest (backend, 3231 tests), vitest (frontend, 29 tests) |
+| **Testing** | pytest (backend), vitest (frontend) |
 | **Observability** | Structlog, Prometheus metrics, OpenTelemetry-ready |
 
 ## Quick Start
