@@ -477,6 +477,7 @@ async def start_attack_run(
                     max_cost_usd=config.max_cost_usd,
                     max_duration_seconds=config.max_duration_seconds,
                     attack_categories=tuple(c.value for c in config.categories),
+                    attack_definition_ids=tuple(str(did) for did in run.attack_definition_ids),
                 ),
                 id=workflow_id,
                 task_queue=app_config.temporal_task_queue,
