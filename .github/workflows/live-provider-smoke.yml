@@ -4,6 +4,12 @@ on:
   push:
     branches: [main, develop]
   workflow_dispatch:
+    inputs:
+      require_live_credentials:
+        description: Fail unless all three provider secrets are configured
+        required: true
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -31,6 +37,19 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/pyproject.toml
+
+      - name: Require credentials for manual live qualification
+        if: github.event_name == 'workflow_dispatch' && inputs.require_live_credentials
+        shell: bash
+        run: |
+          missing=()
+          [[ -n "$OPENAI_API_KEY" ]] || missing+=("OPENAI_API_KEY")
+          [[ -n "$ANTHROPIC_API_KEY" ]] || missing+=("ANTHROPIC_API_KEY")
+          [[ -n "$GROQ_API_KEY" ]] || missing+=("GROQ_API_KEY")
+          if (("${#missing[@]}" > 0)); then
+            printf 'Live provider qualification requires these repository secrets: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
 
       - name: Install backend and test dependencies
         working-directory: backend
