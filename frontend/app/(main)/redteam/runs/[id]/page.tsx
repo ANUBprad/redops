@@ -258,7 +258,7 @@ export default function AttackRunDetailPage() {
                 {round.execution?.target_response && (
                   <div>
                     <p className="text-muted-foreground text-xs font-medium">Target response</p>
-                    <p className="whitespace-pre-wrap break-words text-sm">
+                    <p className="text-sm break-words whitespace-pre-wrap">
                       {round.execution.target_response}
                     </p>
                   </div>
@@ -267,9 +267,7 @@ export default function AttackRunDetailPage() {
                   round.effectiveness?.semantic_evidence ||
                   round.effectiveness?.reasoning) && (
                   <div>
-                    <p className="text-muted-foreground text-xs font-medium">
-                      Evaluation evidence
-                    </p>
+                    <p className="text-muted-foreground text-xs font-medium">Evaluation evidence</p>
                     <p className="whitespace-pre-wrap break-words text-sm">
                       {round.effectiveness.semantic_reasoning || round.effectiveness.reasoning}
                     </p>
