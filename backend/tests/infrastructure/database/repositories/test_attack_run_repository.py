@@ -14,7 +14,6 @@ from app.infrastructure.database.repositories.attack_run_repository import (
 )
 from app.redteam.domain.entities import AttackRun
 
-
 _TEST_ENGINES: list[AsyncEngine] = []
 
 

@@ -31,7 +31,6 @@ from app.redteam.temporal.activities import (
     red_team_campaign_activity,
 )
 
-
 _TEST_ENGINES: list[AsyncEngine] = []
 
 

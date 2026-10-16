@@ -58,7 +58,6 @@ from app.providers.models.messages import Message
 from app.providers.models.responses import ChatResponse, Usage
 from app.providers.registry.registry import ProviderRegistry
 
-
 _TEST_ENGINES: list[AsyncEngine] = []
 
 
