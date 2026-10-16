@@ -74,6 +74,7 @@ class RedTeamWorkflow:
                 mutation_model=input.mutation_model,
                 mutation_strategy=input.mutation_strategy,
                 attack_categories=input.attack_categories,
+                attack_definition_ids=input.attack_definition_ids,
                 max_rounds=input.max_rounds,
                 max_attacks=input.max_attacks,
                 max_total_tokens=input.max_total_tokens,
