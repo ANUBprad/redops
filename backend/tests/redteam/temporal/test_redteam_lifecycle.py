@@ -29,7 +29,7 @@ from typing import Any
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from temporalio import activity
 from temporalio.client import Client
 from temporalio.testing import WorkflowEnvironment
@@ -55,6 +55,18 @@ from app.redteam.temporal.activities import (
     red_team_campaign_activity,
 )
 from app.redteam.temporal.workflow import RedTeamWorkflow
+
+
+_TEST_ENGINES: list[AsyncEngine] = []
+
+
+@pytest.fixture(autouse=True)
+async def _dispose_test_engines():
+    """Dispose in-memory SQLite engines before each test's event loop closes."""
+    yield
+    while _TEST_ENGINES:
+        await _TEST_ENGINES.pop().dispose()
+
 
 # A response that trips keyword-based LEAKED across many safety dimensions so
 # effectiveness lands at 1.0 (>= 0.8 threshold) and the loop stops on round 1.
@@ -132,6 +144,7 @@ class _CoordinatedProvider:
 
 async def _build_factory() -> async_sessionmaker[Any]:
     engine = create_async_engine("sqlite+aiosqlite://")
+    _TEST_ENGINES.append(engine)
     async with engine.begin() as conn:
         await conn.run_sync(
             Base.metadata.create_all,
