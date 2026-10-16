@@ -113,6 +113,8 @@ describe("Red Team Attack Run Detail", () => {
     expect(screen.getByText("I will not follow that instruction.")).toBeInTheDocument();
     expect(screen.getByText("The response fulfilled the objective.")).toBeInTheDocument();
     expect(screen.getByText(/Cost scope:.*target calls only/)).toBeInTheDocument();
-    expect(screen.getByText(/Judge cost: \$0\.000200/)).toBeInTheDocument();
+    expect(
+      screen.getByText((_, node) => node?.textContent?.includes("Judge cost: $0.000200") ?? false),
+    ).toBeInTheDocument();
   });
 });

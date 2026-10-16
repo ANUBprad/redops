@@ -204,19 +204,22 @@ export default function AttackRunDetailPage() {
         </Card>
       )}
 
-      {runData.campaign_results?.rounds && runData.campaign_results.rounds.length > 0 && (
+      {runData.campaign_results?.rounds &&
+        runData.campaign_results.rounds.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Campaign Results</CardTitle>
             <p className="text-muted-foreground text-sm">
-              {runData.campaign_results.total_rounds ?? runData.campaign_results.rounds.length} rounds ·{" "}
-              {runData.campaign_results.violation_count ?? 0} violations ·{" "}
+              {runData.campaign_results.total_rounds ?? runData.campaign_results.rounds.length} rounds
+              · {runData.campaign_results.violation_count ?? 0} violations ·{" "}
               {runData.campaign_results.severe_violation_count ?? 0} severe
             </p>
             <p className="text-muted-foreground text-xs">
-              Cost scope: {runData.campaign_results.cost_scope === "target_calls_only"
+              Cost scope:{" "}
+              {runData.campaign_results.cost_scope === "target_calls_only"
                 ? "target calls only"
-                : "not fully classified"}; judge and mutation-provider costs may be excluded.
+                : "not fully classified"}
+              ; judge and mutation-provider costs may be excluded.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -248,7 +251,9 @@ export default function AttackRunDetailPage() {
                     <p className="whitespace-pre-wrap break-words text-sm">{round.execution.target_response}</p>
                   </div>
                 )}
-                {(round.effectiveness?.semantic_reasoning || round.effectiveness?.semantic_evidence || round.effectiveness?.reasoning) && (
+                {(round.effectiveness?.semantic_reasoning ||
+                  round.effectiveness?.semantic_evidence ||
+                  round.effectiveness?.reasoning) && (
                   <div>
                     <p className="text-muted-foreground text-xs font-medium">Evaluation evidence</p>
                     <p className="whitespace-pre-wrap break-words text-sm">

@@ -1209,4 +1209,3 @@ class TestSemanticVerdictControlsViolation:
         assert result.evaluation_source == "semantic_judge"
         assert result.semantic_verdict == "SUCCESS"
         assert result.is_violation is True
-

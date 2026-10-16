@@ -37,6 +37,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
             type=semver,pattern={{version}}
             type=sha,prefix=
 
@@ -102,7 +103,7 @@ jobs:
       - name: Run Trivy vulnerability scanner (backend)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.ref_name }}
+          image-ref: ghcr.io/anubprad/redops/backend:${{ github.ref_name }}
           format: "sarif"
           output: "trivy-backend.sarif"
           severity: "HIGH,CRITICAL"
@@ -111,7 +112,7 @@ jobs:
       - name: Run Trivy vulnerability scanner (frontend)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.ref_name }}
+          image-ref: ghcr.io/anubprad/redops/frontend:${{ github.ref_name }}
           format: "sarif"
           output: "trivy-frontend.sarif"
           severity: "HIGH,CRITICAL"
@@ -119,6 +120,6 @@ jobs:
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && (hashFiles('trivy-backend.sarif') != '' || hashFiles('trivy-frontend.sarif') != '')
         with:
           sarif_files: "trivy-*.sarif"

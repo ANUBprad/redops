@@ -58,8 +58,6 @@ describe("Red Team New Attack Run", () => {
     expect(screen.getByRole("button", { name: "Start Attack Run" })).toBeInTheDocument();
   });
 
-
-
   it("offers only supported target providers", () => {
     renderPage();
     const provider = screen.getByLabelText("Target Provider") as HTMLSelectElement;
