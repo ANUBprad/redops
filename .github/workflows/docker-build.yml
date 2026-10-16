@@ -114,6 +114,7 @@ jobs:
         with:
           image-ref: ghcr.io/anubprad/redops/backend:${{ github.ref_name }}
           format: "table"
+          scanners: "vuln"
           severity: "HIGH,CRITICAL"
           exit-code: "1"
 
