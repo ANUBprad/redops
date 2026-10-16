@@ -210,8 +210,9 @@ export default function AttackRunDetailPage() {
           <CardHeader>
             <CardTitle>Campaign Results</CardTitle>
             <p className="text-muted-foreground text-sm">
-              {runData.campaign_results.total_rounds ?? runData.campaign_results.rounds.length} rounds
-              · {runData.campaign_results.violation_count ?? 0} violations ·{" "}
+              {runData.campaign_results.total_rounds ??
+                runData.campaign_results.rounds.length}{" "}
+              rounds · {runData.campaign_results.violation_count ?? 0} violations ·{" "}
               {runData.campaign_results.severe_violation_count ?? 0} severe
             </p>
             <p className="text-muted-foreground text-xs">
@@ -224,31 +225,42 @@ export default function AttackRunDetailPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {runData.campaign_results.rounds.map((round, index) => (
-              <section key={round.round_number ?? index} className="space-y-2 rounded-md border p-3">
+              <section
+                key={round.round_number ?? index}
+                className="space-y-2 rounded-md border p-3"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="font-semibold">
                     Round {round.round_number ?? index + 1}
                     {round.attack_category ? ` · ${round.attack_category}` : ""}
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">{round.effectiveness?.evaluation_source ?? "unknown source"}</Badge>
+                    <Badge variant="outline">
+                      {round.effectiveness?.evaluation_source ?? "unknown source"}
+                    </Badge>
                     {round.effectiveness?.semantic_verdict && (
                       <Badge variant="outline">Judge: {round.effectiveness.semantic_verdict}</Badge>
                     )}
                     {round.effectiveness?.is_violation && <Badge>Violation</Badge>}
-                    {round.effectiveness?.is_violation_severe && <Badge variant="destructive">Severe</Badge>}
+                    {round.effectiveness?.is_violation_severe && (
+                      <Badge variant="destructive">Severe</Badge>
+                    )}
                   </div>
                 </div>
                 {round.execution?.attack_prompt && (
                   <div>
                     <p className="text-muted-foreground text-xs font-medium">Attack prompt</p>
-                    <p className="whitespace-pre-wrap break-words text-sm">{round.execution.attack_prompt}</p>
+                    <p className="whitespace-pre-wrap break-words text-sm">
+                      {round.execution.attack_prompt}
+                    </p>
                   </div>
                 )}
                 {round.execution?.target_response && (
                   <div>
                     <p className="text-muted-foreground text-xs font-medium">Target response</p>
-                    <p className="whitespace-pre-wrap break-words text-sm">{round.execution.target_response}</p>
+                    <p className="whitespace-pre-wrap break-words text-sm">
+                      {round.execution.target_response}
+                    </p>
                   </div>
                 )}
                 {(round.effectiveness?.semantic_reasoning ||
