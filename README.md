@@ -1,6 +1,6 @@
 # RedOps
 
-Production-grade platform for LLM evaluation, red teaming, safety testing, and observability.
+AI evaluation and red-teaming platform for safety testing, observability, and execution integrity.
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
@@ -12,9 +12,9 @@ Production-grade platform for LLM evaluation, red teaming, safety testing, and o
 
 ## Overview
 
-RedOps is a production-oriented AI evaluation and safety platform. It combines:
+RedOps combines AI evaluation, safety testing, and durable execution infrastructure:
 
-- **Evaluation engine** — dataset-driven LLM evaluation with a pluggable metric framework, LLM-as-a-judge, and full cost/token provenance
+- **Evaluation engine** — dataset-driven LLM evaluation with a pluggable metric framework, LLM-as-a-judge, and cost/token provenance with documented accounting scope
 - **Red teaming** — adaptive adversarial campaigns with mutation strategies, semantic judging, and durable round persistence
 - **Agent evaluation** — trajectory-based assessment of tool-calling agents
 - **Experiments** — baselines, comparisons, and regression analysis
@@ -32,7 +32,7 @@ Modern LLM systems require more than prompt engineering. They demand repeatable 
 - **Pluggable metric framework** — 24 built-in metrics: groundedness, faithfulness, answer relevance, context relevance, hallucination, toxicity, bias, safety, prompt injection, jailbreak, correctness, schema validation, semantic similarity, semantic effectiveness, cost, latency, token usage, tool-call correctness, reasoning quality, coherence, JSON validity, regex validation, response length, instruction following — plus composable composite metrics
 - **LLM-as-a-judge** — semantic effectiveness, safety, and custom rubric-based evaluation with structured JSON parsing, confidence scoring, and cost tracking
 - **Provider-neutral execution** — unified interface across OpenAI, Anthropic, and Groq with automatic provider registration via API keys
-- **Cost & token provenance** — per-request cost estimation with real provider pricing, cached-token awareness, and end-to-end accounting
+- **Cost & token provenance** — per-request cost estimation with pricing-source tracking; red-team campaign totals currently cover target calls only
 - **Durable execution** — Temporal-orchestrated runs with automatic retries, idempotent item execution, checkpointing, and exactly-once metric persistence
 - **Retry & failure semantics** — circuit breaker, rate limiting, timeout enforcement, fatal vs. retryable error classification
 
