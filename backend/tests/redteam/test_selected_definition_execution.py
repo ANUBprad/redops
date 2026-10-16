@@ -69,6 +69,7 @@ async def test_selected_definition_with_empty_prompt_fails_loudly() -> None:
     with pytest.raises(ValueError, match="no prompt template"):
         await engine._generate_scenario(campaign, AttackCategory.JAILBREAK)
 
+
 async def test_selected_definition_rejects_unresolved_template_variables() -> None:
     definition = CampaignAttackDefinition(
         definition_id=UUIDv7.generate(),
