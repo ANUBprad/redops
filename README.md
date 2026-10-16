@@ -76,7 +76,7 @@ flowchart TB
     subgraph API[API Layer - FastAPI + Python 3.12]
         REST[REST API]
         Health[Health/Ready]
-        Auth[Auth/JWT]
+        Auth[Auth/JWT + OAuth sign-in]
     end
 
     subgraph App[Application Layer]
@@ -405,7 +405,7 @@ npm audit --audit-level=high
 RedOps implements defense-in-depth for multi-tenant AI evaluation:
 
 - **JWT authentication** — HS256 signed access tokens (configurable TTL), rotating refresh tokens with hash storage, logout revokes all refresh tokens
-- **OAuth 2.0** — GitHub and Google providers with PKCE, server-side state storage (Redis, 10-min TTL), CSRF protection
+- **OAuth sign-in** — GitHub and Google authorization/callback flows with server-side Redis state validation (10-minute TTL); provider credentials and redirect configuration are required
 - **Tenant/organization ownership** — every evaluation, run, project, and red team artifact scoped to organization; API enforces ownership on all mutating operations
 - **Rate limiting** — per-route limits (auth: 30/min, projects: 120/min, default: 200/min) with Redis-backed sliding window in production, in-memory fallback
 - **Security headers** — HSTS, X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy
@@ -420,7 +420,6 @@ See [SECURITY.md](SECURITY.md) for the detailed security policy.
 - **Red-team live qualification** — provider adapters, Temporal workflows, and persistence are implemented and tested, but a real-provider staging run is not claimed by the repository's unit/CI tests alone.
 - **In-memory provider rate limiter** — the `SlidingWindowRateLimiter` is per-process; multi-worker deployments require the Redis-backed limiter (not yet wired to Temporal activities)
 - **Streaming provider path** — Anthropic streaming adapter exists but is not used in production evaluation paths
-- **OAuth linkage policy** — OAuth account linking to existing local accounts is not implemented
 - **tokens_per_minute policy field** — declared in provider rate-limit policy but not yet advertised or connected to reservation semantics
 - **AttackDefinition ownership** — schema supports tenant ownership but API enforcement is partial
 - **Temporal multi-worker coordination** — circuit breaker and in-memory rate limiter are process-local; production HA requires shared state (Redis-backed breaker/limiter)
