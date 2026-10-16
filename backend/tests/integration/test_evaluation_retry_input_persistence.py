@@ -16,7 +16,7 @@ from typing import Any
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 
 from app.evaluation.application.run_commands import (
     CreateEvaluationRunCommand,
@@ -40,6 +40,17 @@ from app.infrastructure.database.repositories.evaluation_run_repository import (
 )
 from app.kernel.entities.base import UUIDv7
 from app.kernel.exceptions.errors import ConflictError
+
+_TEST_ENGINES: list[AsyncEngine] = []
+
+
+@pytest.fixture(autouse=True)
+async def _dispose_test_engines():
+    """Dispose in-memory SQLite engines before each test's event loop closes."""
+    yield
+    while _TEST_ENGINES:
+        await _TEST_ENGINES.pop().dispose()
+
 
 PROMPT_TEMPLATE = "Answer using only the context.\n{context}\nQuestion: {prompt}"
 DATASET_ITEMS = (
@@ -137,6 +148,7 @@ class TestRealPersistenceRetryFidelity:
 
     async def test_retry_reproduces_same_dataset_after_persistence(self) -> None:
         engine = create_async_engine("sqlite+aiosqlite://")
+        _TEST_ENGINES.append(engine)
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all, ([EvaluationRunModel.__table__]))
         factory: Any = async_sessionmaker(engine, expire_on_commit=False)
@@ -183,6 +195,7 @@ class TestRealPersistenceRetryFidelity:
 
     async def test_legacy_persisted_row_refuses_retry_and_creates_nothing(self) -> None:
         engine = create_async_engine("sqlite+aiosqlite://")
+        _TEST_ENGINES.append(engine)
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all, ([EvaluationRunModel.__table__]))
         factory: Any = async_sessionmaker(engine, expire_on_commit=False)
