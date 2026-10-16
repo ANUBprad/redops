@@ -356,7 +356,8 @@ class AdaptiveCampaignEngine:
             ]
             if not definition.prompt_template.strip():
                 raise ValueError(
-                    f"Attack definition {definition.definition_id} has no prompt template"
+                    f"Attack definition {definition.definition_id} "
+                    "has no prompt template"
                 )
             parameters = {
                 **definition.parameters,
@@ -375,7 +376,8 @@ class AdaptiveCampaignEngine:
                 parameters["variables"] = variables
             if not isinstance(variables, dict):
                 raise ValueError(
-                    f"Attack definition {definition.definition_id} variables must be an object"
+                    f"Attack definition {definition.definition_id} variables "
+                    "must be an object"
                 )
             required_variables = set(
                 re.findall(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}", definition.prompt_template)
