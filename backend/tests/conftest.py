@@ -17,7 +17,7 @@ def _ensure_secret_key():
     reject HMAC signing.  We inject a test-only key and clear the
     cached AppConfig so it picks up the new value.
     """
-    os.environ.setdefault("APP_SECRET_KEY", "test-secret-not-for-production")
+    os.environ.setdefault("APP_SECRET_KEY", "test-secret-not-for-production-with-32-byte-minimum")
     os.environ.setdefault("APP_DEBUG", "true")
 
     from app.core.config import get_config
