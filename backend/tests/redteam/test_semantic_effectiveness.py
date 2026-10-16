@@ -1157,6 +1157,7 @@ class TestAuditDomainPreservation:
         assert effectiveness.evaluation_source == "keyword_heuristic"
         assert effectiveness.semantic_verdict == ""
 
+
 # ---------------------------------------------------------------------------
 # Regression — semantic verdict controls final violation classification
 # ---------------------------------------------------------------------------
