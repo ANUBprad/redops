@@ -6,16 +6,18 @@
 
 ## Executive summary
 
-At source commit `12a4aae7b329b71fabe714b48e28edf3c80f55e3`, GitHub Actions reports backend/frontend CI, Gitleaks, Docker builds, and the Trivy vulnerability gate green. That does **not** establish metric accuracy, live external-provider success, staging readiness, or complete red-team accounting.
+At source commit `7f0adebd233d51b347fb9d17ed28e2d4bd83453f`, GitHub Actions reports backend/frontend CI, Gitleaks, Docker builds, and the Trivy vulnerability gate green. That does **not** establish metric accuracy, live external-provider success, staging readiness, or complete red-team accounting.
 
 Changes made during the October 16 closure work:
 - The semantic judge now controls the red-team `is_violation` decision for definitive `SUCCESS` and `FAILURE` verdicts. An inconclusive or failed judge still falls back to keyword evidence. Regression tests cover both a keyword false-positive refusal and a semantic success without keyword matches.
 - The red-team run form now offers OpenAI, Anthropic, and Groq instead of an unsupported Google provider option, with a frontend regression test.
 - The bundled synthetic corpus is explicitly marked `is_ground_truth: false`. `scripts/validate_metrics.py` refuses to report accuracy for a corpus not marked as genuine ground truth, and a regression test checks that refusal.
 - Gitleaks and container security workflows now trigger for `main` pushes and pull requests. Trivy high/critical findings are configured to fail the image-scan step.
+- Backend CI now runs the validation CLI against the bundled synthetic corpus and requires the expected refusal exit code; this guards against accidentally treating synthetic labels as accuracy evidence.
+- An opt-in live-provider smoke workflow calls OpenAI, Anthropic, and Groq when credentials are configured. Manual qualification fails early if required secrets are missing; the push-triggered run skips unavailable providers explicitly.
 - The README links to this audit and the release checklist.
 
-These are source changes committed to `main`; CI results for the new commits must be checked before describing them as passing. No live-provider or staging run was performed as part of this source-only work.
+Hosted CI for source commit `7f0adebd233d51b347fb9d17ed28e2d4bd83453f` passed backend, frontend, Docker build, Trivy, and Gitleaks jobs. The live-provider workflow also completed, but all three provider tests were skipped because `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `GROQ_API_KEY` are not configured. No live provider call or staging run was performed.
 
 ## 11-claim status
 
@@ -75,21 +77,21 @@ Before claiming metric accuracy:
 1. Add independently labeled and license-cleared examples with documented provenance and adjudication.
 2. Keep a held-out test split that is not used to tune keyword lists or judge prompts.
 3. Run the metric against that corpus and report confusion counts and per-category performance.
-4. Add a CI gate that validates corpus provenance and runs regression checks on the approved dataset.
+4. The CI gate now asserts that the bundled synthetic corpus is refused. Add a separate accuracy-regression gate only after an independent, license-cleared dataset has been reviewed and approved.
 
 ### CI security workflows
 
-The secrets and Docker workflows now trigger for `main` pushes and pull requests as well as `develop`. Trivy is configured to fail on HIGH/CRITICAL findings instead of ignoring scanner exit status. This change is not evidence that the scans have passed: inspect the workflow runs for the current commit and resolve any findings. Real staging checks remain manual release gates.
+The secrets and Docker workflows now trigger for `main` pushes and pull requests as well as `develop`. Trivy is configured to fail on HIGH/CRITICAL findings instead of ignoring scanner exit status. Trivy and Gitleaks passed for the audited source commit. Release-tag scans and real staging checks remain separate release gates.
 
 ## Test evidence and limitations
 
-On source commit `12a4aae7b329b71fabe714b48e28edf3c80f55e3`, GitHub Actions reported:
-- Backend: 3,238 passed, 1 warning, 0 test failures (146.24 seconds).
+On source commit `7f0adebd233d51b347fb9d17ed28e2d4bd83453f`, GitHub Actions reported:
+- Backend: 3,238 passed, 3 skipped, 2 warnings, 0 test failures (145.80 seconds). The three skipped tests are the live OpenAI, Anthropic, and Groq smoke tests; they skipped because their API-key secrets are absent.
 - Frontend: 31 passed across six test files, 0 test failures.
 - Backend lint/type/security, frontend build/lint/type/security, Docker builds, Trivy HIGH/CRITICAL scan gate, and Gitleaks all completed successfully.
 - The backend coverage artifact uploaded successfully.
 
-The prior `aiosqlite` background-thread warnings were reduced by explicitly disposing in-memory SQLite engines in the persistence/integration test modules. The remaining backend test warning is a third-party `passlib` deprecation: Python's `crypt` module is slated for removal in Python 3.13. It is not a test assertion failure, but the dependency should be upgraded or replaced before moving to Python 3.13.
+The earlier SQLite-thread warnings were reduced by disposing test engines, but one remains: `PytestUnhandledThreadExceptionWarning` from an `aiosqlite` connection worker during `tests/evaluation/orchestration/test_embedding_wiring.py::TestEmbeddingProviderWiring::test_falls_back_to_embedding_capable_judge_provider`, reporting `RuntimeError: Event loop is closed`. The other warning is the third-party `passlib` deprecation for Python's `crypt` module. Neither failed an assertion, but the SQLite worker lifecycle still needs investigation and `passlib` should be replaced or upgraded before Python 3.13.
 
 These are hosted CI results for the cited source commit, not a local fresh-clone run. Live provider and staging evidence remains unverified.
 
@@ -98,7 +100,7 @@ Not verified in this audit:
 - A browser-launched red-team run that reaches the target provider and shows stored results.
 - Live Temporal cancellation, retry, and duplicate-persistence behavior on a running deployment.
 - Staging deployment, rollback drill, Prometheus scrape, Grafana dashboard, and alert firing.
-- Successful Trivy/Gitleaks runs on the current post-change commit.
+- Successful Trivy/Gitleaks scans on the eventual release-tag image (the audited source-commit scans passed).
 
 ## Release recommendation
 

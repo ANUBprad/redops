@@ -11,7 +11,7 @@ deployment gates that must be green **before** a release ships.
 
 **Decision: NO-GO for v0.1.0 until the remaining evidence is attached.**
 
-Source commit `12a4aae7b329b71fabe714b48e28edf3c80f55e3` passed hosted backend/frontend CI, Docker builds, Trivy HIGH/CRITICAL vulnerability gate, and Gitleaks. Backend: 3,238 passed, 1 third-party `passlib`/`crypt` deprecation warning; frontend: 31 passed. Backend/frontend lint, type, security, build, and test jobs passed. The coverage artifact uploaded successfully. Live-provider and staging evidence is still missing, so the release decision remains NO-GO.
+Source commit `7f0adebd233d51b347fb9d17ed28e2d4bd83453f` passed hosted backend/frontend CI, Docker builds, Trivy HIGH/CRITICAL vulnerability gate, and Gitleaks. Backend: 3,238 passed, 3 skipped, 2 warnings in 145.80 seconds; the three skips are live-provider smoke tests skipped because all three API-key secrets are absent. Frontend: 31 passed across six test files. Backend/frontend lint, type, security, build, and test jobs passed. The synthetic-corpus CLI guard passed by confirming the expected refusal. The live-provider workflow did not make external calls; staging evidence is still missing, so the release decision remains NO-GO.
 
 The following are **not verified by source review or unit tests alone** and must remain unchecked until evidence is recorded:
 
@@ -31,7 +31,7 @@ Attach workflow links, sanitized provider-run evidence, staging URLs/logs, and t
 - [x] **Backend lint:** `ruff check .` passes in CI.
 - [x] **Backend format:** `ruff format --check .` passes in CI.
 - [x] **Backend types:** `mypy app/` passes in CI with `strict = true` in `pyproject.toml`.
-- [x] **Backend tests:** full pytest suite passes (3,238 passed; one third-party deprecation warning).
+- [x] **Backend tests:** full pytest suite passes (3,238 passed, 3 skipped, 2 warnings; the skipped tests are live-provider checks with missing secrets).
 - [x] **Frontend format:** `prettier --check .` passes in CI.
 - [x] **Frontend lint:** the configured ESLint job passes in CI.
 - [x] **Frontend types:** `tsc --noEmit` passes in CI.
