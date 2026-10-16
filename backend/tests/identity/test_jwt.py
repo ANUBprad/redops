@@ -47,6 +47,10 @@ def test_jwt_expired_token() -> None:
 
 def test_jwt_wrong_secret() -> None:
     payload = {"sub": "user123", "exp": datetime.now(UTC) + timedelta(hours=1)}
-    token = jwt.encode(payload, "test-secret-a-for-jwt-unit-tests-at-least-32-bytes", algorithm="HS256")
+    token = jwt.encode(
+        payload, "test-secret-a-for-jwt-unit-tests-at-least-32-bytes", algorithm="HS256"
+    )
     with pytest.raises(jwt.InvalidSignatureError):
-        jwt.decode(token, "test-secret-b-for-jwt-unit-tests-at-least-32-bytes", algorithms=["HS256"])
+        jwt.decode(
+            token, "test-secret-b-for-jwt-unit-tests-at-least-32-bytes", algorithms=["HS256"]
+        )
