@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncEngine, create_async_engine
 
 from app.infrastructure.database.models.attack_run import AttackRunModel
 from app.infrastructure.database.models.base import Base
