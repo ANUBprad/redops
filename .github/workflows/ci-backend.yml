@@ -62,6 +62,19 @@ jobs:
       - name: Run tests
         run: pytest --cov=app --cov-report=term-missing --cov-report=xml
 
+      - name: Guard against reporting accuracy on the synthetic corpus
+        shell: bash
+        run: |
+          cd ..
+          set +e
+          python scripts/validate_metrics.py --corpus scripts/validation_data/ground_truth --split test
+          status=$?
+          set -e
+          if [ "$status" -ne 2 ]; then
+            echo "Expected synthetic-corpus refusal (exit 2), received exit $status." >&2
+            exit 1
+          fi
+
       - name: Preserve coverage report
         uses: actions/upload-artifact@v4
         with:
