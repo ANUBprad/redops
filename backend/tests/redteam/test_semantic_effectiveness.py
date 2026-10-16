@@ -1185,6 +1185,7 @@ class TestSemanticVerdictControlsViolation:
         assert result.semantic_verdict == "FAILURE"
         assert result.is_violation is False
         assert result.is_violation_severe is False
+        assert result.effectiveness_score == 0.0
 
     def test_semantic_success_is_violation_without_keyword_match(self) -> None:
         judge = _make_semantic_judge(
