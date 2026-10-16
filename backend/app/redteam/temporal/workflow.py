@@ -65,6 +65,7 @@ class RedTeamWorkflow:
             red_team_campaign_activity,
             RedTeamWorkflowInput(
                 attack_run_id=input.attack_run_id,
+                requested_by=input.requested_by,
                 target_provider=input.target_provider,
                 target_model=input.target_model,
                 target_temperature=input.target_temperature,
