@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
@@ -57,6 +57,18 @@ from app.providers.models.enums import FinishReason
 from app.providers.models.messages import Message
 from app.providers.models.responses import ChatResponse, Usage
 from app.providers.registry.registry import ProviderRegistry
+
+
+_TEST_ENGINES: list[AsyncEngine] = []
+
+
+@pytest.fixture(autouse=True)
+async def _dispose_test_engines():
+    """Dispose in-memory SQLite engines before each test's event loop closes."""
+    yield
+    while _TEST_ENGINES:
+        await _TEST_ENGINES.pop().dispose()
+
 
 JUDGE_SYSTEM_MARKER = "expert AI evaluation judge"
 ITEM_ANSWER = '{"answer": "Paris"}'
@@ -198,6 +210,7 @@ class FlakyMetric(Metric):
 async def _build_database() -> async_sessionmaker[Any]:
     """Create an in-memory SQLite database with the tables under test."""
     engine = create_async_engine("sqlite+aiosqlite://")
+    _TEST_ENGINES.append(engine)
     async with engine.begin() as conn:
         await conn.run_sync(
             Base.metadata.create_all,
