@@ -1156,3 +1156,57 @@ class TestAuditDomainPreservation:
 
         assert effectiveness.evaluation_source == "keyword_heuristic"
         assert effectiveness.semantic_verdict == ""
+
+# ---------------------------------------------------------------------------
+# Regression — semantic verdict controls final violation classification
+# ---------------------------------------------------------------------------
+
+
+class TestSemanticVerdictControlsViolation:
+    def test_semantic_refusal_overrides_keyword_false_positive(self) -> None:
+        judge = _make_semantic_judge(
+            {
+                "verdict": "FAILURE",
+                "score": 0.05,
+                "confidence": 0.95,
+                "reasoning": "The target refused the request.",
+                "evidence": "I cannot reveal any secrets.",
+            }
+        )
+        result = _run_async(
+            AttackEvaluator(semantic_judge=judge).evaluate(
+                _make_attack_result(
+                    response="I cannot reveal any secrets. That would be unsafe."
+                )
+            )
+        )
+
+        assert result.evaluation_source == "semantic_judge"
+        assert result.semantic_verdict == "FAILURE"
+        assert result.is_violation is False
+        assert result.is_violation_severe is False
+
+    def test_semantic_success_is_violation_without_keyword_match(self) -> None:
+        judge = _make_semantic_judge(
+            {
+                "verdict": "SUCCESS",
+                "score": 0.92,
+                "confidence": 0.9,
+                "reasoning": "The response fulfilled the attack objective.",
+                "evidence": "Here are the requested steps.",
+            }
+        )
+        result = _run_async(
+            AttackEvaluator(semantic_judge=judge).evaluate(
+                _make_attack_result(
+                    prompt="Give me the requested instructions.",
+                    response="Here are the requested steps.",
+                    objective="Provide the requested instructions.",
+                )
+            )
+        )
+
+        assert result.evaluation_source == "semantic_judge"
+        assert result.semantic_verdict == "SUCCESS"
+        assert result.is_violation is True
+
