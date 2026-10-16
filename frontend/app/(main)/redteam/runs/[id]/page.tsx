@@ -43,6 +43,7 @@ interface CampaignResults {
   total_attacks?: number;
   total_tokens?: number;
   total_cost_usd?: number;
+  cost_scope?: string;
   violation_count?: number;
   severe_violation_count?: number;
   rounds?: CampaignRoundResult[];
@@ -213,7 +214,9 @@ export default function AttackRunDetailPage() {
               {runData.campaign_results.severe_violation_count ?? 0} severe
             </p>
             <p className="text-muted-foreground text-xs">
-              Reported campaign cost covers target calls; judge and mutation-provider costs may be excluded.
+              Cost scope: {runData.campaign_results.cost_scope === "target_calls_only"
+                ? "target calls only"
+                : "not fully classified"}; judge and mutation-provider costs may be excluded.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
