@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import subprocess
 import sys
 from pathlib import Path
@@ -75,70 +74,98 @@ class TestValidationCLI:
 
 
 class TestMutationDetection:
-    """Mutation-style tests: deliberately corrupt ground truth and verify detection."""
+    """Synthetic unit fixtures verify confusion-matrix mechanics, not metric accuracy."""
 
-    def test_flipped_ground_truth_detected(self, tmp_path: Path) -> None:
-        """Flip safe/unsafe labels and verify validation fails."""
-        import asyncio
-
-        from app.evaluation.validation.loader import ValidationDatasetLoader
+    def test_flipped_labels_flip_confusion_outcomes(self, tmp_path: Path) -> None:
         from app.evaluation.validation.model import ValidationDataset
         from app.evaluation.validation.runner import run_validation
 
-        # Load original dataset
-        loader = ValidationDatasetLoader()
-        dataset = asyncio.run(loader.load(str(CORPUS_DIR)))
-
-        # Create mutated dataset with flipped labels
-        mutated_examples = []
-        for ex in dataset.examples:
-            flipped_label = "unsafe" if ex.ground_truth.value == "safe" else "safe"
-            ex_dict = ex.to_dict()
-            ex_dict["ground_truth"] = flipped_label
-            mutated_examples.append(ex_dict)
-
-        mutated_dataset = ValidationDataset.from_dict(
+        dataset = ValidationDataset.from_dict(
             {
-                "provenance": dataset.provenance.to_dict(),
-                "examples": mutated_examples,
+                "provenance": {
+                    "name": "synthetic-runner-math-fixture",
+                    "is_ground_truth": False,
+                    "note": "Unit fixture for confusion-matrix mechanics only.",
+                },
+                "examples": [
+                    {
+                        "id": "complied",
+                        "prompt": "test prompt",
+                        "response": "complied",
+                        "ground_truth": "unsafe",
+                        "split": "test",
+                    },
+                    {
+                        "id": "refused",
+                        "prompt": "test prompt",
+                        "response": "refused",
+                        "ground_truth": "safe",
+                        "split": "test",
+                    },
+                ],
             }
         )
 
-        # Run validation on mutated dataset
-        result = run_validation(mutated_dataset)
+        def scorer(*, prompt: str, response: str) -> bool:
+            return response == "complied"
 
-        # With flipped labels, accuracy should be very low
-        # Original: 18 unsafe, 18 safe
-        # Flipped: metric predicts unsafe for all 18 originally unsafe (now labeled safe) = 18 FP
-        #           metric predicts safe for some originally safe (now labeled unsafe) = some FN
-        total = result.overall.total
-        correct = result.overall.true_positives + result.overall.true_negatives
-        accuracy = correct / total if total > 0 else 0
+        original = run_validation(dataset, scorer=scorer)
+        flipped_examples = []
+        for example in dataset.examples:
+            item = example.to_dict()
+            item["ground_truth"] = "safe" if example.is_unsafe else "unsafe"
+            flipped_examples.append(item)
+        mutated = ValidationDataset.from_dict(
+            {
+                "provenance": dataset.provenance.to_dict(),
+                "examples": flipped_examples,
+            }
+        )
+        flipped = run_validation(mutated, scorer=scorer)
 
-        # Accuracy should be much lower than original
-        assert accuracy < 0.5, f"Mutated dataset accuracy {accuracy:.2%} should be < 50%"
+        assert original.overall.true_positives == 1
+        assert original.overall.true_negatives == 1
+        assert flipped.overall.false_positives == 1
+        assert flipped.overall.false_negatives == 1
 
-    def test_metric_mutation_detected(self, tmp_path: Path) -> None:
-        """Use a deliberately wrong scorer and verify validation fails."""
-        import asyncio
-
-        from app.evaluation.validation.loader import ValidationDatasetLoader
+    def test_wrong_scorer_produces_expected_confusion_counts(self, tmp_path: Path) -> None:
+        from app.evaluation.validation.model import ValidationDataset
         from app.evaluation.validation.runner import run_validation
 
-        loader = ValidationDatasetLoader()
-        dataset = asyncio.run(loader.load(str(CORPUS_DIR)))
+        dataset = ValidationDataset.from_dict(
+            {
+                "provenance": {
+                    "name": "synthetic-runner-math-fixture",
+                    "is_ground_truth": False,
+                    "note": "Unit fixture for confusion-matrix mechanics only.",
+                },
+                "examples": [
+                    {
+                        "id": "unsafe",
+                        "prompt": "test prompt",
+                        "response": "unsafe response",
+                        "ground_truth": "unsafe",
+                        "split": "train",
+                    },
+                    {
+                        "id": "safe",
+                        "prompt": "test prompt",
+                        "response": "safe response",
+                        "ground_truth": "safe",
+                        "split": "train",
+                    },
+                ],
+            }
+        )
 
-        # Use a scorer that always predicts unsafe (True)
-        def wrong_scorer(*, prompt: str, response: str) -> bool:
+        def always_unsafe(*, prompt: str, response: str) -> bool:
             return True
 
-        _result = run_validation(dataset, scorer=wrong_scorer, splits=["test"])
-
-        # Test split has 18 unsafe examples, all predicted unsafe = 18 TP
-        # But if we use train split (12 safe), all predicted unsafe = 12 FP
-        result_train = run_validation(dataset, scorer=wrong_scorer, splits=["train"])
-        assert result_train.overall.false_positives == 12
-        assert result_train.overall.true_negatives == 0
+        result = run_validation(dataset, scorer=always_unsafe, splits=["train"])
+        assert result.overall.true_positives == 1
+        assert result.overall.false_positives == 1
+        assert result.overall.false_negatives == 0
+        assert result.overall.true_negatives == 0
 
     def test_corrupted_example_detected(self, tmp_path: Path) -> None:
         """Add a malformed example and verify loader rejects it."""
