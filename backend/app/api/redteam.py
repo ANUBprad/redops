@@ -142,7 +142,25 @@ def _run_to_response(r: AttackRun) -> AttackRunResponse:
         evaluation_run_id=str(r.evaluation_run_id) if r.evaluation_run_id else None,
         status=r.status.value,
         attack_definition_ids=[str(did) for did in r.attack_definition_ids],
-        configuration={},
+        configuration=(
+            {
+                "target_provider": r.configuration.target_provider,
+                "target_model": r.configuration.target_model,
+                "temperature": r.configuration.temperature,
+                "max_tokens": r.configuration.max_tokens,
+                "system_prompt": r.configuration.system_prompt,
+                "mutation_provider": r.configuration.mutation_provider,
+                "mutation_model": r.configuration.mutation_model,
+                "mutation_strategy": r.configuration.mutation_strategy,
+                "categories": [category.value for category in r.configuration.categories],
+                "severities": [severity.value for severity in r.configuration.severities],
+                "max_rounds": r.configuration.max_rounds,
+                "max_cost_usd": r.configuration.max_cost_usd,
+                "max_duration_seconds": r.configuration.max_duration_seconds,
+            }
+            if r.configuration is not None
+            else {}
+        ),
         items_total=r.items_total,
         items_completed=r.items_completed,
         items_passed=r.items_passed,
