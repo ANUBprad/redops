@@ -11,6 +11,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
+from app.kernel.entities.base import UUIDv7
 from app.redteam.domain.campaign import (
     AdaptiveCampaign,
     AttackLineage,
@@ -18,7 +19,6 @@ from app.redteam.domain.campaign import (
     CampaignRound,
 )
 from app.redteam.domain.campaign_enums import CampaignState, MutationPhase
-from app.kernel.entities.base import UUIDv7
 from app.redteam.domain.enums import AttackCategory, AttackSeverity
 from app.redteam.domain.value_objects import AttackScenario
 from app.redteam.engine.attack_evaluator import AttackEvaluator
