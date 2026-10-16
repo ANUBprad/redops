@@ -415,6 +415,9 @@ See [SECURITY.md](SECURITY.md) for the detailed security policy.
 
 ## Known Limitations
 
+- **Metric validation corpus** — the checked-in corpus is synthetic tooling data, not independent ground truth. The validation CLI refuses to report accuracy for it; no metric-accuracy claim is made.
+- **Red-team cost scope** — campaign cost and `max_cost_usd` currently cover target calls only. Semantic-judge costs are recorded separately, and mutation-provider usage is not fully included in the campaign budget total.
+- **Red-team live qualification** — provider adapters, Temporal workflows, and persistence are implemented and tested, but a real-provider staging run is not claimed by the repository's unit/CI tests alone.
 - **In-memory provider rate limiter** — the `SlidingWindowRateLimiter` is per-process; multi-worker deployments require the Redis-backed limiter (not yet wired to Temporal activities)
 - **Streaming provider path** — Anthropic streaming adapter exists but is not used in production evaluation paths
 - **OAuth linkage policy** — OAuth account linking to existing local accounts is not implemented
