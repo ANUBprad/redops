@@ -362,7 +362,17 @@ class AdaptiveCampaignEngine:
                 **definition.parameters,
                 "severity": definition.severity.value,
             }
-            variables = parameters.get("variables", {})
+            variables = parameters.get("variables")
+            if variables is None:
+                # Definition APIs historically store template variables as
+                # top-level string parameters. Support that contract while
+                # preferring an explicit nested "variables" mapping.
+                variables = {
+                    key: value
+                    for key, value in definition.parameters.items()
+                    if isinstance(value, str)
+                }
+                parameters["variables"] = variables
             if not isinstance(variables, dict):
                 raise ValueError(
                     f"Attack definition {definition.definition_id} variables must be an object"
