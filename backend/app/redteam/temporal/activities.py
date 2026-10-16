@@ -243,6 +243,10 @@ def _campaign_to_dict(result: CampaignResult) -> dict[str, Any]:
         "total_attacks": result.total_attacks,
         "total_tokens": result.total_tokens,
         "total_cost_usd": result.total_cost_usd,
+        # Campaign budget/cost currently accounts for target calls only.
+        # Judge and mutation-provider usage is recorded separately or is not
+        # yet included, so never label this amount as all-in campaign spend.
+        "cost_scope": "target_calls_only",
         "total_duration_ms": result.total_duration_ms,
         "final_effectiveness": result.final_effectiveness,
         "peak_effectiveness": result.peak_effectiveness,
