@@ -76,7 +76,7 @@ flowchart TB
     subgraph API[API Layer - FastAPI + Python 3.12]
         REST[REST API]
         Health[Health/Ready]
-        Auth[Auth/JWT/OAuth]
+        Auth[Auth/JWT]
     end
 
     subgraph App[Application Layer]
