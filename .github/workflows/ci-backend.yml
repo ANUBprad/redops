@@ -62,11 +62,26 @@ jobs:
       - name: Run tests
         run: pytest --cov=app --cov-report=term-missing --cov-report=xml
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
+      - name: Guard against reporting accuracy on the synthetic corpus
+        shell: bash
+        run: |
+          cd ..
+          set +e
+          python scripts/validate_metrics.py --corpus scripts/validation_data/ground_truth --split test
+          status=$?
+          set -e
+          if [ "$status" -ne 2 ]; then
+            echo "Expected synthetic-corpus refusal (exit 2), received exit $status." >&2
+            exit 1
+          fi
+
+      - name: Preserve coverage report
+        uses: actions/upload-artifact@v4
         with:
-          file: backend/coverage.xml
-          flags: backend
+          name: backend-coverage
+          path: backend/coverage.xml
+          if-no-files-found: error
+          retention-days: 14
 
   security:
     runs-on: ubuntu-latest
@@ -89,4 +104,6 @@ jobs:
           pip install pip-audit
 
       - name: Run pip-audit
-        run: pip-audit --strict
+        run: |
+          pip freeze --exclude-editable > /tmp/requirements.txt
+          pip-audit --strict -r /tmp/requirements.txt

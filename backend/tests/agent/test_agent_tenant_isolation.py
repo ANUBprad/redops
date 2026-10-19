@@ -275,9 +275,7 @@ def _run_row(
 
 def _world() -> tuple[dict, dict]:
     agents = {
-        AGENT_ACTIVE: _agent_row(
-            AGENT_ACTIVE, project_id=ORG, status=AgentStatus.ACTIVE.value
-        ),
+        AGENT_ACTIVE: _agent_row(AGENT_ACTIVE, project_id=ORG, status=AgentStatus.ACTIVE.value),
         AGENT_INACTIVE: _agent_row(
             AGENT_INACTIVE, project_id=ORG, status=AgentStatus.INACTIVE.value
         ),
@@ -382,9 +380,7 @@ def test_member_agent_crud_lifecycle(app, client):
     _override_db(app, membership=_membership_row())
     assert client.get(f"/api/v1/agents/{AGENT_ACTIVE}").status_code == 200
     assert (
-        client.patch(
-            f"/api/v1/agents/{AGENT_ACTIVE}", json={"description": "mine"}
-        ).status_code
+        client.patch(f"/api/v1/agents/{AGENT_ACTIVE}", json={"description": "mine"}).status_code
         == 200
     )
     assert client.post(f"/api/v1/agents/{AGENT_INACTIVE}/activate").status_code == 200
@@ -466,7 +462,12 @@ def test_same_tenant_run_lifecycle(app, client, temporal_mock):
     _override_db(app, membership=_membership_row())
     _override_temporal(app, temporal_mock)
     assert client.get(f"/api/v1/agent-runs/{RUN_LINKED}").status_code == 200
-    assert client.post(f"/api/v1/agent-runs/{RUN_LINKED}/cancel", json={"reason": "user_cancelled"}).status_code == 200
+    assert (
+        client.post(
+            f"/api/v1/agent-runs/{RUN_LINKED}/cancel", json={"reason": "user_cancelled"}
+        ).status_code
+        == 200
+    )
     assert client.post(f"/api/v1/agent-runs/{RUN_FAILED}/retry").status_code == 201
     temporal_mock.get_workflow_handle.assert_called_once()
 
@@ -483,9 +484,7 @@ def test_create_run_foreign_definition_denied_no_persistence(app, client, tempor
     assert session.merged == []
 
 
-def test_create_run_nonexistent_and_malformed_definition_truthful(
-    app, client, temporal_mock
-):
+def test_create_run_nonexistent_and_malformed_definition_truthful(app, client, temporal_mock):
     _override_db(app, membership=_membership_row())
     _override_temporal(app, temporal_mock)
     missing = "00000000-0000-0000-0000-0000000000bf"

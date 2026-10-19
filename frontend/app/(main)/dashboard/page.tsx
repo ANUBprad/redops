@@ -129,7 +129,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {runs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 No runs yet. Create an evaluation and start a run.
               </p>
             ) : (
@@ -154,7 +154,7 @@ export default function DashboardPage() {
                       }
                       className="h-2"
                     />
-                    <div className="flex justify-between text-xs text-muted-foreground">
+                    <div className="text-muted-foreground flex justify-between text-xs">
                       <span>
                         {String(run.items_completed ?? 0)}/{String(run.items_total ?? 0)} items
                       </span>
@@ -173,7 +173,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {totalSafety === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 No safety data available yet. Run a red-team campaign.
               </p>
             ) : (

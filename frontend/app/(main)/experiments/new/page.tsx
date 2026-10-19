@@ -52,7 +52,7 @@ export default function NewExperimentPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/experiments" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/experiments" className="text-muted-foreground hover:text-foreground text-sm">
           <ArrowLeft className="mr-1 inline h-4 w-4" />
           Back to Experiments
         </Link>

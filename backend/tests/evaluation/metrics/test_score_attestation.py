@@ -164,7 +164,9 @@ def _evaluation_row(eval_id: str, *, project_id: str) -> EvaluationModel:
     )
 
 
-def _run_row(run_id: str, *, evaluation_id: str | None, project_id: str | None) -> EvaluationRunModel:
+def _run_row(
+    run_id: str, *, evaluation_id: str | None, project_id: str | None
+) -> EvaluationRunModel:
     return EvaluationRunModel(
         id=run_id,
         evaluation_id=evaluation_id,
@@ -217,9 +219,7 @@ def _world() -> tuple[dict, dict]:
         RUN_OWNED: _run_row(RUN_OWNED, evaluation_id=EVAL_OWNED, project_id=ORG),
         RUN_VICTIM: _run_row(RUN_VICTIM, evaluation_id=EVAL_VICTIM, project_id=OTHER_ORG),
         RUN_ORPHAN_OWN: _run_row(RUN_ORPHAN_OWN, evaluation_id=None, project_id=ORG),
-        RUN_ORPHAN_FOREIGN: _run_row(
-            RUN_ORPHAN_FOREIGN, evaluation_id=None, project_id=OTHER_ORG
-        ),
+        RUN_ORPHAN_FOREIGN: _run_row(RUN_ORPHAN_FOREIGN, evaluation_id=None, project_id=OTHER_ORG),
     }
     return evaluations, runs
 
@@ -321,14 +321,9 @@ def test_malformed_run_id_is_truthful(app, client, engine_spy):
 
 def test_orphan_run_attribution(app, client, engine_spy):
     _override_db(app, membership=_membership_row())
+    assert client.post("/api/v1/metrics/score", json=_score_body(RUN_ORPHAN_OWN)).status_code == 200
     assert (
-        client.post("/api/v1/metrics/score", json=_score_body(RUN_ORPHAN_OWN)).status_code
-        == 200
-    )
-    assert (
-        client.post(
-            "/api/v1/metrics/score", json=_score_body(RUN_ORPHAN_FOREIGN)
-        ).status_code
+        client.post("/api/v1/metrics/score", json=_score_body(RUN_ORPHAN_FOREIGN)).status_code
         == 403
     )
     assert engine_spy != []
@@ -353,9 +348,7 @@ class TestCanonicalIdentityOverwrite:
 
         engine = create_async_engine("sqlite+aiosqlite:///:memory:")
         async with engine.begin() as conn:
-            await conn.run_sync(
-                Base.metadata.create_all, tables=[MetricResultModel.__table__]
-            )
+            await conn.run_sync(Base.metadata.create_all, tables=[MetricResultModel.__table__])
         factory = async_sessionmaker(engine, expire_on_commit=False)
         async with factory() as session:
             session.add(

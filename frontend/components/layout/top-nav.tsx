@@ -15,13 +15,13 @@ export function TopNav({ onMenuToggle }: TopNavProps) {
   const { user } = useAuth();
 
   return (
-    <header className="flex h-14 items-center justify-between gap-4 border-b bg-card px-4">
+    <header className="bg-card flex h-14 items-center justify-between gap-4 border-b px-4">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" className="lg:hidden" onClick={onMenuToggle}>
           <Menu className="h-5 w-5" />
         </Button>
         <div className="relative hidden sm:block">
-          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
           <Input placeholder="Search..." className="w-64 pl-8" />
         </div>
       </div>

@@ -77,14 +77,18 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
         stmt = select(AttackRunModel)
 
         if query.owner_project_id is not None:
-            stmt = stmt.join(
-                EvaluationRunModel,
-                AttackRunModel.evaluation_run_id == EvaluationRunModel.id,
-            ).outerjoin(
-                EvaluationModel,
-                EvaluationRunModel.evaluation_id == EvaluationModel.id,
-            ).where(
-                _owner_scope_condition(query.owner_project_id),
+            stmt = (
+                stmt.join(
+                    EvaluationRunModel,
+                    AttackRunModel.evaluation_run_id == EvaluationRunModel.id,
+                )
+                .outerjoin(
+                    EvaluationModel,
+                    EvaluationRunModel.evaluation_id == EvaluationModel.id,
+                )
+                .where(
+                    _owner_scope_condition(query.owner_project_id),
+                )
             )
 
         if query.status:
@@ -166,14 +170,18 @@ class SqlAlchemyAttackRunRepository(AttackRunRepository):
             AttackRunModel.created_at <= until,
         )
         if owner_project_id is not None:
-            stmt = stmt.join(
-                EvaluationRunModel,
-                AttackRunModel.evaluation_run_id == EvaluationRunModel.id,
-            ).outerjoin(
-                EvaluationModel,
-                EvaluationRunModel.evaluation_id == EvaluationModel.id,
-            ).where(
-                _owner_scope_condition(owner_project_id),
+            stmt = (
+                stmt.join(
+                    EvaluationRunModel,
+                    AttackRunModel.evaluation_run_id == EvaluationRunModel.id,
+                )
+                .outerjoin(
+                    EvaluationModel,
+                    EvaluationRunModel.evaluation_id == EvaluationModel.id,
+                )
+                .where(
+                    _owner_scope_condition(owner_project_id),
+                )
             )
         result = await self._session.execute(stmt)
         return [self._to_domain(m) for m in result.scalars().all()]

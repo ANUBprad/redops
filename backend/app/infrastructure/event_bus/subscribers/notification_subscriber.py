@@ -15,9 +15,7 @@ from typing import TYPE_CHECKING, Any
 from structlog import get_logger
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncSessionFactory
-
-    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = get_logger("redops_eval.event_subscribers.notification")
 
@@ -62,7 +60,7 @@ class NotificationEventSubscriber:
     transaction boundaries.
     """
 
-    def __init__(self, session_factory: AsyncSessionFactory) -> None:
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
 
     async def handle(self, event: Any) -> None:

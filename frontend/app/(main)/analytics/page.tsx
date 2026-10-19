@@ -33,12 +33,12 @@ function StatCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <Icon className="text-muted-foreground h-4 w-4" />
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
         {description && (
-          <p className="flex items-center gap-1 text-xs text-muted-foreground">
+          <p className="text-muted-foreground flex items-center gap-1 text-xs">
             {trend === "up" && <TrendingUp className="h-3 w-3 text-green-500" />}
             {trend === "down" && <TrendingDown className="h-3 w-3 text-red-500" />}
             {description}
@@ -162,7 +162,7 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           {summary.recent_activity.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No recent activity</p>
+            <p className="text-muted-foreground text-sm">No recent activity</p>
           ) : (
             <div className="space-y-3">
               {summary.recent_activity.map((activity) => (
@@ -173,16 +173,16 @@ export default function AnalyticsPage() {
                   <div className="flex items-center gap-3">
                     <div className="flex flex-col">
                       <span className="text-sm font-medium">{activity.name}</span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-muted-foreground text-xs">
                         {activity.type === "evaluation_run" ? "Evaluation Run" : "Attack Run"}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground">{activity.summary}</span>
+                    <span className="text-muted-foreground text-xs">{activity.summary}</span>
                     <Badge className={getStatusColor(activity.status)}>{activity.status}</Badge>
                     {activity.timestamp && (
-                      <span className="whitespace-nowrap text-xs text-muted-foreground">
+                      <span className="text-muted-foreground text-xs whitespace-nowrap">
                         {new Date(activity.timestamp).toLocaleDateString()}
                       </span>
                     )}

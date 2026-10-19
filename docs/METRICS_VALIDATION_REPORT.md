@@ -1,7 +1,7 @@
 # RedOps Metrics — Ground-Truth Validation Report
 
-**Date:** 2026-08-30
-**Branch:** `develop`
+**Updated:** 2026-10-16
+**Branch:** `main`
 **Status:** FOUNDATION COMPLETE — METRICS **NOT VALIDATED**
 
 This report implements the reporting methodology required before any metric
@@ -77,9 +77,7 @@ ready to produce honest numbers *as soon as a legitimate corpus is added*.
   fetched here.
 - Metric accuracy cannot be stated nor inferred from the unit tests; passing
   tests demonstrate the *machinery* works, not that the metric is correct.
-- The keyword safety metric itself is a heuristic with a known hardcoded
-  `confidence=0.8` (see `redteam/metrics/safety.py:67`) and no ground-truth
-  anchor; validating it (or replacing it) is a separate, later step.
+- The keyword safety metric derives a confidence-like score from observed keyword evidence and its verdict. This score is heuristic, not a calibrated probability, and has no independent ground-truth anchor. The scoring logic can be unit-tested, but its confidence and accuracy must not be treated as empirically validated until an independently labeled corpus is available.
 
 ## 5. Failure Analysis
 

@@ -31,7 +31,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 from sqlalchemy import create_engine, select, text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.api.evaluation_run import _item_to_payload
 from app.core.config import AppConfig
@@ -268,9 +273,7 @@ def _evaluation_app(
 
     session.execute = AsyncMock(side_effect=_execute_side_effect)
     app.dependency_overrides[get_db_session] = lambda: session
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
-        user_id="u", org_id="org-c11"
-    )
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="u", org_id="org-c11")
     app.dependency_overrides[get_temporal_client] = lambda: temporal_client
     return app
 
@@ -328,9 +331,21 @@ def test_128_char_identifier_reaches_workflow_input_verbatim(
 # ---------------------------------------------------------------------------
 
 
+_TEST_ENGINES: list[AsyncEngine] = []
+
+
+@pytest.fixture(autouse=True)
+async def _dispose_test_engines():
+    """Dispose in-memory SQLite engines before each test's event loop closes."""
+    yield
+    while _TEST_ENGINES:
+        await _TEST_ENGINES.pop().dispose()
+
+
 async def _make_database(*tables: Any) -> async_sessionmaker[Any]:
     """Create an in-memory SQLite database holding the given tables."""
     engine = create_async_engine("sqlite+aiosqlite://")
+    _TEST_ENGINES.append(engine)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all, list(tables) or None)
     return async_sessionmaker(engine, expire_on_commit=False)

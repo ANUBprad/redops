@@ -32,7 +32,9 @@ class _TestModel(_Base):
 class TestSqlAlchemyRepository:
     @pytest.fixture
     def session(self) -> AsyncMock:
-        return AsyncMock()
+        session = AsyncMock()
+        session.add = MagicMock()
+        return session
 
     @pytest.fixture
     def repo(self, session: AsyncMock) -> SqlAlchemyRepository[Any]:

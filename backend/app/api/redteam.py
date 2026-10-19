@@ -142,7 +142,25 @@ def _run_to_response(r: AttackRun) -> AttackRunResponse:
         evaluation_run_id=str(r.evaluation_run_id) if r.evaluation_run_id else None,
         status=r.status.value,
         attack_definition_ids=[str(did) for did in r.attack_definition_ids],
-        configuration={},
+        configuration=(
+            {
+                "target_provider": r.configuration.target_provider,
+                "target_model": r.configuration.target_model,
+                "temperature": r.configuration.temperature,
+                "max_tokens": r.configuration.max_tokens,
+                "system_prompt": r.configuration.system_prompt,
+                "mutation_provider": r.configuration.mutation_provider,
+                "mutation_model": r.configuration.mutation_model,
+                "mutation_strategy": r.configuration.mutation_strategy,
+                "categories": [category.value for category in r.configuration.categories],
+                "severities": [severity.value for severity in r.configuration.severities],
+                "max_rounds": r.configuration.max_rounds,
+                "max_cost_usd": r.configuration.max_cost_usd,
+                "max_duration_seconds": r.configuration.max_duration_seconds,
+            }
+            if r.configuration is not None
+            else {}
+        ),
         items_total=r.items_total,
         items_completed=r.items_completed,
         items_passed=r.items_passed,
@@ -447,6 +465,7 @@ async def start_attack_run(
                 RedTeamWorkflow.run,
                 RedTeamWorkflowInput(
                     attack_run_id=run_id,
+                    requested_by=current_user.user_id,
                     target_provider=config.target_provider,
                     target_model=config.target_model,
                     target_temperature=config.temperature,
@@ -459,6 +478,7 @@ async def start_attack_run(
                     max_cost_usd=config.max_cost_usd,
                     max_duration_seconds=config.max_duration_seconds,
                     attack_categories=tuple(c.value for c in config.categories),
+                    attack_definition_ids=tuple(str(did) for did in run.attack_definition_ids),
                 ),
                 id=workflow_id,
                 task_queue=app_config.temporal_task_queue,

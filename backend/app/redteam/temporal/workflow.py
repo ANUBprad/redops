@@ -65,6 +65,7 @@ class RedTeamWorkflow:
             red_team_campaign_activity,
             RedTeamWorkflowInput(
                 attack_run_id=input.attack_run_id,
+                requested_by=input.requested_by,
                 target_provider=input.target_provider,
                 target_model=input.target_model,
                 target_temperature=input.target_temperature,
@@ -74,6 +75,7 @@ class RedTeamWorkflow:
                 mutation_model=input.mutation_model,
                 mutation_strategy=input.mutation_strategy,
                 attack_categories=input.attack_categories,
+                attack_definition_ids=input.attack_definition_ids,
                 max_rounds=input.max_rounds,
                 max_attacks=input.max_attacks,
                 max_total_tokens=input.max_total_tokens,

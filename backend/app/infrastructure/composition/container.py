@@ -299,7 +299,7 @@ class InfrastructureContainer:
                 "external_metrics_discovered",
                 count=len(discovered),
                 metrics=discovered,
-            )  # type: ignore[call-arg]
+            )
 
         # Register all metrics (built-in + discovered) into the engine
         metric_engine.register_many(metric_registry.get_all())

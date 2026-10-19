@@ -43,7 +43,7 @@ export default function SettingsGeneralPage() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm">Session Timeout</span>
-            <span className="text-sm text-muted-foreground">24 hours</span>
+            <span className="text-muted-foreground text-sm">24 hours</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm">API Key Rotation</span>
@@ -59,11 +59,11 @@ export default function SettingsGeneralPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-sm">Audit Log Retention</span>
-            <span className="text-sm text-muted-foreground">Indefinite</span>
+            <span className="text-muted-foreground text-sm">Indefinite</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm">Evaluation Data</span>
-            <span className="text-sm text-muted-foreground">Indefinite</span>
+            <span className="text-muted-foreground text-sm">Indefinite</span>
           </div>
         </CardContent>
       </Card>
@@ -75,23 +75,23 @@ export default function SettingsGeneralPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-sm">Owner</span>
-            <span className="text-xs text-muted-foreground">Full access</span>
+            <span className="text-muted-foreground text-xs">Full access</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm">Admin</span>
-            <span className="text-xs text-muted-foreground">Manage members & resources</span>
+            <span className="text-muted-foreground text-xs">Manage members & resources</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm">Developer</span>
-            <span className="text-xs text-muted-foreground">Create & run evaluations</span>
+            <span className="text-muted-foreground text-xs">Create & run evaluations</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm">Analyst</span>
-            <span className="text-xs text-muted-foreground">Read & export reports</span>
+            <span className="text-muted-foreground text-xs">Read & export reports</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm">Viewer</span>
-            <span className="text-xs text-muted-foreground">Read-only access</span>
+            <span className="text-muted-foreground text-xs">Read-only access</span>
           </div>
         </CardContent>
       </Card>

@@ -109,11 +109,11 @@ export default function TrendsPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+            <div className="text-muted-foreground flex h-[300px] items-center justify-center">
               Loading trend data...
             </div>
           ) : chartData.length === 0 ? (
-            <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+            <div className="text-muted-foreground flex h-[300px] items-center justify-center">
               No data available for this time range
             </div>
           ) : (

@@ -78,6 +78,7 @@ class TestSqlAlchemyEvaluationRepositoryCreate:
     async def test_create_adds_to_session(self) -> None:
         """Create adds the model to the session."""
         session = AsyncMock()
+        session.add = MagicMock()
         repo = SqlAlchemyEvaluationRepository(session)
         evaluation = _make_evaluation()
 
@@ -94,6 +95,7 @@ class TestSqlAlchemyEvaluationRepositoryCreate:
         from sqlalchemy.exc import IntegrityError
 
         session = AsyncMock()
+        session.add = MagicMock()
         flush_error = IntegrityError("INSERT", (), Exception("unique violation"))
         session.flush = AsyncMock(side_effect=flush_error)
         repo = SqlAlchemyEvaluationRepository(session)

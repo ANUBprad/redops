@@ -110,7 +110,7 @@ export default function NewAttackRunPage() {
               >
                 <option value="openai">OpenAI</option>
                 <option value="anthropic">Anthropic</option>
-                <option value="google">Google</option>
+                <option value="groq">Groq</option>
               </Select>
             </div>
             <div className="space-y-2">

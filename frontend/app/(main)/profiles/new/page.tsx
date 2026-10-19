@@ -74,7 +74,7 @@ export default function NewProfilePage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/profiles" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/profiles" className="text-muted-foreground hover:text-foreground text-sm">
           <ArrowLeft className="mr-1 inline h-4 w-4" />
           Back to Profiles
         </Link>
@@ -124,7 +124,7 @@ export default function NewProfilePage() {
                   type="checkbox"
                   checked={isDefault}
                   onChange={(e) => setIsDefault(e.target.checked)}
-                  className="rounded border-input"
+                  className="border-input rounded"
                 />
                 Set as default for this category
               </label>
@@ -163,7 +163,7 @@ export default function NewProfilePage() {
                   type="checkbox"
                   checked={metricEnabled}
                   onChange={(e) => setMetricEnabled(e.target.checked)}
-                  className="rounded border-input"
+                  className="border-input rounded"
                 />
                 Enabled
               </label>
@@ -179,7 +179,7 @@ export default function NewProfilePage() {
                 <div key={metric} className="flex items-center justify-between rounded border p-2">
                   <div className="flex items-center gap-3">
                     <Badge variant="outline">{metric}</Badge>
-                    <span className="text-sm text-muted-foreground">Weight: {config.weight}</span>
+                    <span className="text-muted-foreground text-sm">Weight: {config.weight}</span>
                     {!config.enabled && <Badge variant="secondary">Disabled</Badge>}
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => removeMetric(metric)}>

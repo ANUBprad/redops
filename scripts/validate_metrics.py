@@ -80,6 +80,19 @@ def main() -> int:
         print(f"ERROR: Corpus directory not found: {args.corpus}", file=sys.stderr)
         return 2
 
+    # Synthetic/schema fixtures are useful for testing the pipeline, but
+    # their scores are not evidence of metric accuracy. Refuse to calculate
+    # or report accuracy unless the corpus is explicitly marked as genuine
+    # ground truth in its reviewed provenance.
+    if not dataset.provenance.is_ground_truth:
+        print(
+            "ERROR: Corpus is not marked as genuine ground truth. "
+            "Refusing to report metric accuracy; use an independently "
+            "labeled, license-cleared corpus.",
+            file=sys.stderr,
+        )
+        return 2
+
     # Determine splits to evaluate
     splits = None if args.split == "all" else [args.split]
 

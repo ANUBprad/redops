@@ -83,7 +83,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       <div className="flex items-center justify-between p-6">
         <div>
           <h1 className="text-xl font-bold">RedOps</h1>
-          <p className="text-xs text-muted-foreground">AI Evaluation Platform</p>
+          <p className="text-muted-foreground text-xs">AI Evaluation Platform</p>
         </div>
         <Button variant="ghost" size="sm" className="lg:hidden" onClick={onClose}>
           <X className="h-5 w-5" />
@@ -92,7 +92,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       <nav className="flex-1 space-y-4 overflow-y-auto px-3">
         {navGroups.map((group) => (
           <div key={group.heading}>
-            <h2 className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <h2 className="text-muted-foreground mb-1 px-3 text-xs font-semibold tracking-wider uppercase">
               {group.heading}
             </h2>
             <div className="space-y-0.5">
@@ -132,7 +132,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden h-screen w-64 flex-col overflow-y-auto border-r bg-card lg:flex">
+      <aside className="bg-card hidden h-screen w-64 flex-col overflow-y-auto border-r lg:flex">
         {navContent}
       </aside>
 
@@ -140,7 +140,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-          <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-card shadow-xl">
+          <aside className="bg-card fixed inset-y-0 left-0 z-50 flex w-64 flex-col shadow-xl">
             {navContent}
           </aside>
         </div>

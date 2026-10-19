@@ -150,7 +150,7 @@ export default function ReportsPage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-muted-foreground">
+              <p className="text-muted-foreground py-8 text-center text-sm">
                 No trend data available
               </p>
             )}
@@ -186,7 +186,7 @@ export default function ReportsPage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-muted-foreground">
+              <p className="text-muted-foreground py-8 text-center text-sm">
                 No safety data available
               </p>
             )}
@@ -200,13 +200,13 @@ export default function ReportsPage() {
             <CardTitle>{reportData.title}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">{reportData.description}</p>
+            <p className="text-muted-foreground text-sm">{reportData.description}</p>
             {reportData.recommendations.length > 0 && (
               <div>
                 <h3 className="mb-2 font-medium">Recommendations</h3>
                 <ul className="space-y-1">
                   {reportData.recommendations.map((rec, i) => (
-                    <li key={i} className="text-sm text-muted-foreground">
+                    <li key={i} className="text-muted-foreground text-sm">
                       • {rec}
                     </li>
                   ))}

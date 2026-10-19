@@ -1,6 +1,6 @@
 # RedOps
 
-Production-grade platform for LLM evaluation, red teaming, safety testing, and observability.
+AI evaluation and red-teaming platform for safety testing, observability, and execution integrity.
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
@@ -12,25 +12,27 @@ Production-grade platform for LLM evaluation, red teaming, safety testing, and o
 
 ## Overview
 
-RedOps is a production-oriented AI evaluation and safety platform. It combines:
+RedOps combines AI evaluation, safety testing, and durable execution infrastructure:
 
-- **Evaluation engine** — dataset-driven LLM evaluation with a pluggable metric framework, LLM-as-a-judge, and full cost/token provenance
+- **Evaluation engine** — dataset-driven LLM evaluation with a pluggable metric framework, LLM-as-a-judge, and cost/token provenance with documented accounting scope
 - **Red teaming** — adaptive adversarial campaigns with mutation strategies, semantic judging, and durable round persistence
 - **Agent evaluation** — trajectory-based assessment of tool-calling agents
 - **Experiments** — baselines, comparisons, and regression analysis
 - **Observability** — execution traces, replay, metric provenance, and replay-based comparison
 
-Modern LLM systems require more than prompt engineering. They demand repeatable evaluation, adversarial validation, and execution guarantees. RedOps provides the infrastructure to run evaluations you can trust, red-team campaigns that adapt, and observability that makes failures explainable.
+Modern LLM systems require more than prompt engineering. They demand repeatable evaluation, adversarial validation, and execution guarantees. RedOps provides infrastructure for repeatable evaluation and adversarial testing; metric accuracy and all external-provider/deployment paths should be judged by their documented evidence, not assumed from the architecture alone.
+
+**Credibility and release status:** see the [current credibility-gap audit](docs/REDOPS_CREDIBILITY_GAP_AUDIT.md) and [release checklist](docs/RELEASE_CHECKLIST.md). RedOps does not currently claim independently validated metric accuracy or a completed staging/live-provider release qualification.
 
 ## Core Capabilities
 
 ### Evaluation Engine
 
 - **Dataset & single-item execution** — run evaluations against structured datasets or individual prompts
-- **Pluggable metric framework** — 25+ built-in metrics: groundedness, faithfulness, answer relevance, hallucination, toxicity, bias, prompt injection, jailbreak, correctness, schema validation, semantic similarity, cost, latency, token usage, tool-call correctness, reasoning quality, coherence, JSON validity, regex validation, response length, instruction following, composite metrics
+- **Pluggable metric framework** — 24 built-in metrics: groundedness, faithfulness, answer relevance, context relevance, hallucination, toxicity, bias, safety, prompt injection, jailbreak, correctness, schema validation, semantic similarity, semantic effectiveness, cost, latency, token usage, tool-call correctness, reasoning quality, coherence, JSON validity, regex validation, response length, instruction following — plus composable composite metrics
 - **LLM-as-a-judge** — semantic effectiveness, safety, and custom rubric-based evaluation with structured JSON parsing, confidence scoring, and cost tracking
 - **Provider-neutral execution** — unified interface across OpenAI, Anthropic, and Groq with automatic provider registration via API keys
-- **Cost & token provenance** — per-request cost estimation with real provider pricing, cached-token awareness, and end-to-end accounting
+- **Cost & token provenance** — per-request cost estimation with pricing-source tracking; red-team campaign totals currently cover target calls only
 - **Durable execution** — Temporal-orchestrated runs with automatic retries, idempotent item execution, checkpointing, and exactly-once metric persistence
 - **Retry & failure semantics** — circuit breaker, rate limiting, timeout enforcement, fatal vs. retryable error classification
 
@@ -74,7 +76,7 @@ flowchart TB
     subgraph API[API Layer - FastAPI + Python 3.12]
         REST[REST API]
         Health[Health/Ready]
-        Auth[Auth/JWT/OAuth]
+        Auth[Auth/JWT + OAuth sign-in]
     end
 
     subgraph App[Application Layer]
@@ -205,9 +207,9 @@ No benchmark percentages are published here. Run the platform against your model
 | **Orchestration** | Temporal 1.25 (Python SDK), auto-setup for clean-start bootstrap |
 | **Database** | PostgreSQL 16 (asyncpg), structured schema with 24 migrations |
 | **Cache/Events** | Redis 7 (Redis Streams event bus, rate limiting, caching) |
-| **Frontend** | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, TanStack Query, Recharts |
+| **Frontend** | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS 4, TanStack Query, Recharts |
 | **AI Providers** | OpenAI (GPT-4o, GPT-4.1, o1, o3), Anthropic (Claude Sonnet/Haiku 3.5/4), Groq (Llama 3.1/3.2/3.3, Mixtral, Gemma) |
-| **Testing** | pytest (backend), vitest (frontend), 1000+ tests |
+| **Testing** | pytest (backend), vitest (frontend) |
 | **Observability** | Structlog, Prometheus metrics, OpenTelemetry-ready |
 
 ## Quick Start
@@ -304,11 +306,13 @@ redops/
 ├── backend/                 # FastAPI application
 │   ├── app/
 │   │   ├── agent/           # Agent evaluation runtime
+│   │   ├── agents/          # Agent definitions, runs, trajectories API
 │   │   ├── ai/              # AI/ML utilities
 │   │   ├── analytics/       # Analytics & experiments
 │   │   ├── api/             # REST API routers
 │   │   ├── apikeys/         # API key management
 │   │   ├── audit/           # Audit logging
+│   │   ├── cli/             # Command-line interface
 │   │   ├── core/            # Configuration, dependencies
 │   │   ├── evaluation/      # Evaluation engine (domain, execution, metrics, judge, replay, temporal)
 │   │   ├── identity/        # Authentication (JWT, OAuth, sessions)
@@ -330,7 +334,11 @@ redops/
 │   ├── components/          # React components (UI, run viewers, charts)
 │   ├── lib/                 # API client, utilities
 │   ├── providers/           # React context providers (auth, query, theme)
+│   ├── public/              # Static assets
+│   ├── src/                 # Shared source modules
+│   ├── styles/              # Global CSS (Tailwind CSS 4 theme)
 │   ├── tests/               # Frontend test suite (vitest)
+│   ├── types/               # Shared TypeScript types
 │   └── Dockerfile
 ├── docker/                  # Docker Compose (dev + prod)
 │   ├── docker-compose.yml
@@ -344,14 +352,24 @@ redops/
 
 ## Testing
 
+These are the same gates CI runs on every push to `main` and `develop`. See [`.github/workflows/`](.github/workflows/).
+
 ### Backend
 
 ```bash
 cd backend
 pip install -e ".[dev]"
 
+# Formatting, linting, and type checking
+ruff format --check .
+ruff check .
+mypy app/
+
 # Unit + integration tests (requires running Postgres/Redis/Temporal)
 pytest
+
+# Same as CI, with coverage
+pytest --cov=app --cov-report=term-missing --cov-report=xml
 
 # Specific test modules
 pytest tests/evaluation/temporal/        # Temporal workflow/activity tests
@@ -364,19 +382,25 @@ pytest tests/identity/                   # Auth tests
 
 ```bash
 cd frontend
-npm install
+npm ci
 
-# Type checking
-npm run typecheck
+# Formatting
+npm run format:check
 
-# Linting
+# Linting (ESLint + TypeScript)
 npm run lint
 
-# Unit tests
-npm run test
+# Type checking only
+npm run typecheck
+
+# Unit tests — use `npx vitest run`; bare `npm run test` starts watch mode
+npx vitest run
 
 # Production build verification
 npm run build
+
+# Dependency audit
+npm audit --audit-level=high
 ```
 
 ## Security
@@ -384,19 +408,21 @@ npm run build
 RedOps implements defense-in-depth for multi-tenant AI evaluation:
 
 - **JWT authentication** — HS256 signed access tokens (configurable TTL), rotating refresh tokens with hash storage, logout revokes all refresh tokens
-- **OAuth 2.0** — GitHub and Google providers with PKCE, server-side state storage (Redis, 10-min TTL), CSRF protection
+- **OAuth sign-in** — GitHub and Google authorization/callback flows with server-side Redis state validation (10-minute TTL); provider credentials and redirect configuration are required
 - **Tenant/organization ownership** — every evaluation, run, project, and red team artifact scoped to organization; API enforces ownership on all mutating operations
 - **Rate limiting** — per-route limits (auth: 30/min, projects: 120/min, default: 200/min) with Redis-backed sliding window in production, in-memory fallback
-- **Security headers** — CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+- **Security headers** — HSTS, X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy
 - **Secrets management** — no hardcoded secrets; all credentials via environment variables; production requires explicit `APP_SECRET_KEY`
 
 See [SECURITY.md](SECURITY.md) for the detailed security policy.
 
 ## Known Limitations
 
+- **Metric validation corpus** — the checked-in corpus is synthetic tooling data, not independent ground truth. The validation CLI refuses to report accuracy for it; no metric-accuracy claim is made.
+- **Red-team cost scope** — campaign cost and `max_cost_usd` currently cover target calls only. Semantic-judge costs are recorded separately, and mutation-provider usage is not fully included in the campaign budget total.
+- **Red-team live qualification** — provider adapters, Temporal workflows, and persistence are implemented and tested, but a real-provider staging run is not claimed by the repository's unit/CI tests alone.
 - **In-memory provider rate limiter** — the `SlidingWindowRateLimiter` is per-process; multi-worker deployments require the Redis-backed limiter (not yet wired to Temporal activities)
 - **Streaming provider path** — Anthropic streaming adapter exists but is not used in production evaluation paths
-- **OAuth linkage policy** — OAuth account linking to existing local accounts is not implemented
 - **tokens_per_minute policy field** — declared in provider rate-limit policy but not yet advertised or connected to reservation semantics
 - **AttackDefinition ownership** — schema supports tenant ownership but API enforcement is partial
 - **Temporal multi-worker coordination** — circuit breaker and in-memory rate limiter are process-local; production HA requires shared state (Redis-backed breaker/limiter)

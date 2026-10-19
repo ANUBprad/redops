@@ -25,7 +25,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from temporalio import activity
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
@@ -120,8 +120,20 @@ class _PricedProvider:
         return object()
 
 
+_TEST_ENGINES: list[AsyncEngine] = []
+
+
+@pytest.fixture(autouse=True)
+async def _dispose_test_engines():
+    """Dispose in-memory SQLite engines before each test's event loop closes."""
+    yield
+    while _TEST_ENGINES:
+        await _TEST_ENGINES.pop().dispose()
+
+
 async def _build_factory() -> async_sessionmaker[Any]:
     engine = create_async_engine("sqlite+aiosqlite://")
+    _TEST_ENGINES.append(engine)
     async with engine.begin() as conn:
         await conn.run_sync(
             Base.metadata.create_all,
@@ -261,6 +273,8 @@ class TestWorkflowBudgetForwarding:
         _propagation_captured.clear()
         wf_input = RedTeamWorkflowInput(
             attack_run_id="budget-forward-test",
+            requested_by="user-123",
+            attack_definition_ids=("definition-123",),
             target_provider="test-provider",
             target_model="test-model",
             max_rounds=3,
@@ -284,6 +298,8 @@ class TestWorkflowBudgetForwarding:
         assert result.status == "completed"
         assert len(_propagation_captured) == 1
         activity_input = _propagation_captured[0]
+        assert activity_input.requested_by == "user-123"
+        assert activity_input.attack_definition_ids == ("definition-123",)
         assert activity_input.max_rounds == 3
         assert activity_input.max_cost_usd == 12.5
         assert activity_input.max_duration_seconds == 600

@@ -114,7 +114,7 @@ export default function ExperimentDetailPage({ params }: { params: Promise<{ id:
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/experiments" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/experiments" className="text-muted-foreground hover:text-foreground text-sm">
           <ArrowLeft className="mr-1 inline h-4 w-4" />
           Back to Experiments
         </Link>
@@ -224,19 +224,19 @@ export default function ExperimentDetailPage({ params }: { params: Promise<{ id:
               {exp.description && (
                 <div>
                   <span className="font-medium">Description:</span>
-                  <p className="mt-1 text-muted-foreground">{exp.description}</p>
+                  <p className="text-muted-foreground mt-1">{exp.description}</p>
                 </div>
               )}
               {exp.hypothesis && (
                 <div>
                   <span className="font-medium">Hypothesis:</span>
-                  <p className="mt-1 text-muted-foreground">{exp.hypothesis}</p>
+                  <p className="text-muted-foreground mt-1">{exp.hypothesis}</p>
                 </div>
               )}
               {exp.methodology && (
                 <div>
                   <span className="font-medium">Methodology:</span>
-                  <p className="mt-1 text-muted-foreground">{exp.methodology}</p>
+                  <p className="text-muted-foreground mt-1">{exp.methodology}</p>
                 </div>
               )}
               <div>
@@ -249,17 +249,17 @@ export default function ExperimentDetailPage({ params }: { params: Promise<{ id:
                       </Badge>
                     ))
                   ) : (
-                    <span className="text-sm text-muted-foreground">No tags</span>
+                    <span className="text-muted-foreground text-sm">No tags</span>
                   )}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+              <div className="text-muted-foreground grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-foreground">Created:</span>{" "}
+                  <span className="text-foreground font-medium">Created:</span>{" "}
                   {new Date(exp.created_at).toLocaleString()}
                 </div>
                 <div>
-                  <span className="font-medium text-foreground">Updated:</span>{" "}
+                  <span className="text-foreground font-medium">Updated:</span>{" "}
                   {new Date(exp.updated_at).toLocaleString()}
                 </div>
               </div>

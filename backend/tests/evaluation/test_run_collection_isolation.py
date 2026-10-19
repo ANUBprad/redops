@@ -359,9 +359,7 @@ def test_list_runs_non_member_forbidden(app, client):
 
 def test_list_runs_same_tenant_only(app, client):
     evaluations, runs = _mixed_world()
-    _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     response = client.get("/api/v1/runs")
     assert response.status_code == 200
     payload = response.json()
@@ -371,9 +369,7 @@ def test_list_runs_same_tenant_only(app, client):
 
 def test_list_runs_victim_only_world_is_empty(app, client):
     evaluations, runs = _victim_only_world()
-    _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     response = client.get("/api/v1/runs")
     assert response.status_code == 200
     assert response.json()["items"] == []
@@ -382,9 +378,7 @@ def test_list_runs_victim_only_world_is_empty(app, client):
 
 def test_list_runs_foreign_evaluation_filter_is_empty(app, client):
     evaluations, runs = _mixed_world()
-    _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     response = client.get("/api/v1/runs", params={"evaluation_id": EVAL_VICTIM})
     assert response.status_code == 200
     assert response.json()["items"] == []
@@ -393,9 +387,7 @@ def test_list_runs_foreign_evaluation_filter_is_empty(app, client):
 
 def test_list_runs_owned_evaluation_filter(app, client):
     evaluations, runs = _mixed_world()
-    _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     response = client.get("/api/v1/runs", params={"evaluation_id": EVAL_OWNED})
     assert response.status_code == 200
     assert [item["id"] for item in response.json()["items"]] == [RUN_O1]
@@ -403,28 +395,14 @@ def test_list_runs_owned_evaluation_filter(app, client):
 
 def test_list_runs_unknown_and_malformed_evaluation_filter(app, client):
     evaluations, runs = _mixed_world()
-    _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
-    assert (
-        client.get("/api/v1/runs", params={"evaluation_id": EVAL_MISSING}).json()[
-            "items"
-        ]
-        == []
-    )
-    assert (
-        client.get("/api/v1/runs", params={"evaluation_id": "not-a-uuid"}).json()[
-            "items"
-        ]
-        == []
-    )
+    _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
+    assert client.get("/api/v1/runs", params={"evaluation_id": EVAL_MISSING}).json()["items"] == []
+    assert client.get("/api/v1/runs", params={"evaluation_id": "not-a-uuid"}).json()["items"] == []
 
 
 def test_list_runs_status_filter_within_scope(app, client):
     evaluations, runs = _mixed_world()
-    _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     response = client.get("/api/v1/runs", params={"status": "failed"})
     assert response.status_code == 200
     assert response.json()["items"] == []
@@ -432,9 +410,7 @@ def test_list_runs_status_filter_within_scope(app, client):
 
 def test_list_runs_pagination_never_bleeds(app, client):
     evaluations, runs = _mixed_world()
-    _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     first = client.get("/api/v1/runs", params={"page": 1, "page_size": 1}).json()
     second = client.get("/api/v1/runs", params={"page": 2, "page_size": 1}).json()
     assert first["total"] == 2
@@ -455,9 +431,7 @@ def test_create_run_unauthenticated_rejected(client):
 
 def test_create_run_non_member_forbidden_no_side_effects(app, client, temporal_mock):
     evaluations, runs = _mixed_world()
-    session = _override_db(
-        app, membership=None, evaluations=evaluations, runs=runs
-    )
+    session = _override_db(app, membership=None, evaluations=evaluations, runs=runs)
     _override_temporal(app, temporal_mock)
     assert client.post("/api/v1/runs", json=CREATE_BODY).status_code == 403
     temporal_mock.start_workflow.assert_not_called()
@@ -466,9 +440,7 @@ def test_create_run_non_member_forbidden_no_side_effects(app, client, temporal_m
 
 def test_create_run_same_tenant_evaluation(app, client, temporal_mock):
     evaluations, runs = _mixed_world()
-    session = _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    session = _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     _override_temporal(app, temporal_mock)
     response = client.post("/api/v1/runs", json=CREATE_BODY)
     assert response.status_code == 201
@@ -481,22 +453,16 @@ def test_create_run_same_tenant_evaluation(app, client, temporal_mock):
 
 def test_create_run_project_spoof_is_ignored(app, client, temporal_mock):
     evaluations, runs = _mixed_world()
-    session = _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    session = _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     _override_temporal(app, temporal_mock)
     body = {**CREATE_BODY, "project_id": OTHER_ORG, "created_by": "attacker"}
     assert client.post("/api/v1/runs", json=body).status_code == 201
     assert session.merged[0].metadata_["project_id"] == ORG
 
 
-def test_create_run_cross_tenant_evaluation_denied_no_side_effects(
-    app, client, temporal_mock
-):
+def test_create_run_cross_tenant_evaluation_denied_no_side_effects(app, client, temporal_mock):
     evaluations, runs = _mixed_world()
-    session = _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    session = _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     _override_temporal(app, temporal_mock)
     body = {**CREATE_BODY, "evaluation_id": EVAL_VICTIM}
     assert client.post("/api/v1/runs", json=body).status_code == 403
@@ -504,13 +470,9 @@ def test_create_run_cross_tenant_evaluation_denied_no_side_effects(
     assert session.merged == []
 
 
-def test_create_run_nonexistent_evaluation_truthful_no_side_effects(
-    app, client, temporal_mock
-):
+def test_create_run_nonexistent_evaluation_truthful_no_side_effects(app, client, temporal_mock):
     evaluations, runs = _mixed_world()
-    session = _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    session = _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     _override_temporal(app, temporal_mock)
     body = {**CREATE_BODY, "evaluation_id": EVAL_MISSING}
     assert client.post("/api/v1/runs", json=body).status_code == 404
@@ -518,13 +480,9 @@ def test_create_run_nonexistent_evaluation_truthful_no_side_effects(
     assert session.merged == []
 
 
-def test_create_run_malformed_evaluation_id_truthful_no_side_effects(
-    app, client, temporal_mock
-):
+def test_create_run_malformed_evaluation_id_truthful_no_side_effects(app, client, temporal_mock):
     evaluations, runs = _mixed_world()
-    session = _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    session = _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     _override_temporal(app, temporal_mock)
     body = {**CREATE_BODY, "evaluation_id": "not-a-uuid"}
     assert client.post("/api/v1/runs", json=body).status_code == 404
@@ -534,9 +492,7 @@ def test_create_run_malformed_evaluation_id_truthful_no_side_effects(
 
 def test_create_run_orphan_attributes_caller_org(app, client, temporal_mock):
     evaluations, runs = _mixed_world()
-    session = _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    session = _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     _override_temporal(app, temporal_mock)
     body = {k: v for k, v in CREATE_BODY.items() if k != "evaluation_id"}
     response = client.post("/api/v1/runs", json=body)
@@ -548,9 +504,7 @@ def test_create_run_orphan_attributes_caller_org(app, client, temporal_mock):
 
 def test_create_run_idempotent_replay_of_own_run(app, client, temporal_mock):
     evaluations, runs = _mixed_world()
-    _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     _override_temporal(app, temporal_mock)
     response = client.post(
         "/api/v1/runs", json=CREATE_BODY, headers={"Idempotency-Key": "key-owned"}
@@ -560,13 +514,9 @@ def test_create_run_idempotent_replay_of_own_run(app, client, temporal_mock):
     temporal_mock.start_workflow.assert_not_called()
 
 
-def test_create_run_idempotent_replay_of_foreign_run_denied(
-    app, client, temporal_mock
-):
+def test_create_run_idempotent_replay_of_foreign_run_denied(app, client, temporal_mock):
     evaluations, runs = _mixed_world()
-    _override_db(
-        app, membership=_membership_row(), evaluations=evaluations, runs=runs
-    )
+    _override_db(app, membership=_membership_row(), evaluations=evaluations, runs=runs)
     _override_temporal(app, temporal_mock)
     response = client.post(
         "/api/v1/runs", json=CREATE_BODY, headers={"Idempotency-Key": "key-victim"}
@@ -636,17 +586,11 @@ class TestRunListTenantPredicate:
         result = await sqlite_repo.list(RunQuery())
         assert result.total == 4
 
-    async def test_scoped_list_with_foreign_evaluation_filter_is_empty(
-        self, sqlite_repo
-    ):
-        result = await sqlite_repo.list(
-            RunQuery(owner_project_id=ORG, evaluation_id=EVAL_VICTIM)
-        )
+    async def test_scoped_list_with_foreign_evaluation_filter_is_empty(self, sqlite_repo):
+        result = await sqlite_repo.list(RunQuery(owner_project_id=ORG, evaluation_id=EVAL_VICTIM))
         assert result.items == []
         assert result.total == 0
 
     async def test_scoped_list_with_owned_evaluation_filter(self, sqlite_repo):
-        result = await sqlite_repo.list(
-            RunQuery(owner_project_id=ORG, evaluation_id=EVAL_OWNED)
-        )
+        result = await sqlite_repo.list(RunQuery(owner_project_id=ORG, evaluation_id=EVAL_OWNED))
         assert [str(item.id) for item in result.items] == [RUN_O1]

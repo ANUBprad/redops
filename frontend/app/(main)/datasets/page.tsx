@@ -139,16 +139,16 @@ export default function DatasetsPage() {
             <div className="space-y-2">
               <Label>Dataset File</Label>
               <div
-                className="cursor-pointer rounded-md border-2 border-dashed p-8 text-center transition-colors hover:border-primary/50"
+                className="hover:border-primary/50 cursor-pointer rounded-md border-2 border-dashed p-8 text-center transition-colors"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleDrop}
                 onClick={() => document.getElementById("file-upload")?.click()}
               >
-                <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">
+                <FileText className="text-muted-foreground mx-auto h-12 w-12" />
+                <p className="text-muted-foreground mt-2 text-sm">
                   Drag and drop or click to upload
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">Supports JSON, CSV, and JSONL</p>
+                <p className="text-muted-foreground mt-1 text-xs">Supports JSON, CSV, and JSONL</p>
                 <Input
                   id="file-upload"
                   type="file"
@@ -161,7 +161,7 @@ export default function DatasetsPage() {
                 />
               </div>
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-destructive text-sm">{error}</p>}
           </CardContent>
         </Card>
       ) : (
@@ -186,7 +186,7 @@ export default function DatasetsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="mb-4 flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="text-muted-foreground mb-4 flex items-center gap-4 text-sm">
                 <span>{formatSize(dataset.size)}</span>
                 <span>{dataset.columns.length} columns</span>
                 <span>{dataset.rowCount} rows</span>
@@ -209,7 +209,7 @@ export default function DatasetsPage() {
                   Preview
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Label className="text-sm text-muted-foreground">Rows:</Label>
+                  <Label className="text-muted-foreground text-sm">Rows:</Label>
                   <Input
                     type="number"
                     value={previewRows}
@@ -226,9 +226,9 @@ export default function DatasetsPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
-                      <th className="p-2 text-left font-medium text-muted-foreground">#</th>
+                      <th className="text-muted-foreground p-2 text-left font-medium">#</th>
                       {dataset.columns.map((col) => (
-                        <th key={col} className="p-2 text-left font-medium text-muted-foreground">
+                        <th key={col} className="text-muted-foreground p-2 text-left font-medium">
                           {col}
                         </th>
                       ))}
@@ -237,7 +237,7 @@ export default function DatasetsPage() {
                   <tbody>
                     {dataset.rows.slice(0, previewRows).map((row, i) => (
                       <tr key={i} className="border-b last:border-0">
-                        <td className="p-2 text-muted-foreground">{i + 1}</td>
+                        <td className="text-muted-foreground p-2">{i + 1}</td>
                         {dataset.columns.map((col) => (
                           <td key={col} className="max-w-[300px] truncate p-2">
                             {String(row[col] ?? "")}

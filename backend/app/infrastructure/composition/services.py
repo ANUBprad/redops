@@ -7,7 +7,8 @@ ordering. Also registers health contributors into the HealthRegistry.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import asyncio
+from typing import TYPE_CHECKING, Any, cast
 
 from app.agents.temporal.activities import (
     configure_agent_provider_registry,
@@ -49,9 +50,30 @@ from app.redteam.temporal.activities import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
     from app.kernel.container.di_container import DIContainer
+    from app.kernel.events.event_bus import BaseEvent
     from app.kernel.health.health import HealthRegistry
     from app.kernel.service_registry.service_registry import ServiceRegistry
+
+
+def _run_or_schedule(coro: Coroutine[Any, Any, None]) -> None:
+    """Drive a coroutine from synchronous startup code.
+
+    Uses the already-running loop when there is one (fire-and-forget, matching
+    the rest of async startup) and otherwise runs it to completion.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # Fire-and-forget during async startup; the coroutine logs its own errors.
+            loop.create_task(coro)  # noqa: RUF006
+        else:
+            loop.run_until_complete(coro)
+    except RuntimeError:
+        # No event loop running — safe to use run_until_complete
+        asyncio.run(coro)
 
 
 def _register_event_types(event_bus: RedisStreamsEventBus) -> None:
@@ -159,7 +181,7 @@ def _register_event_types(event_bus: RedisStreamsEventBus) -> None:
         AgentCheckpointLoaded,
     ):
         event_instance = cls()
-        serializer.register_event_type(event_instance.event_type, cls)
+        serializer.register_event_type(event_instance.event_type, cast("type[BaseEvent]", cls))
 
 
 def _subscribe_event_handlers(event_bus: RedisStreamsEventBus, di_container: DIContainer) -> None:
@@ -174,54 +196,63 @@ def _subscribe_event_handlers(event_bus: RedisStreamsEventBus, di_container: DIC
     session_factory = di_container.resolve(DatabaseEngine).session_factory
 
     audit_subscriber = AuditEventSubscriber(session_factory)
-    for event_type in (
-        "evaluation.created",
-        "evaluation.queued",
-        "evaluation.started",
-        "evaluation.completed",
-        "evaluation.cancelled",
-        "evaluation.failed",
-        "evaluation.timed_out",
-        "evaluation.item.completed",
-        "evaluation.item.failed",
-        "evaluation.metric.computed",
-        "evaluation.checkpoint.created",
-        "safety.attack_run.created",
-        "safety.attack_run.started",
-        "safety.attack_run.completed",
-        "safety.attack_run.failed",
-        "safety.attack_run.cancelled",
-        "safety.finding.detected",
-        "safety.campaign.completed",
-    ):
-        event_bus.subscribe(event_type, audit_subscriber.handle, group="audit")
-
     notif_subscriber = NotificationEventSubscriber(session_factory)
-    event_bus.subscribe("evaluation.completed", notif_subscriber.handle, group="notifications")
-    event_bus.subscribe("evaluation.failed", notif_subscriber.handle, group="notifications")
-    event_bus.subscribe("safety.finding.detected", notif_subscriber.handle, group="notifications")
-    event_bus.subscribe("safety.campaign.completed", notif_subscriber.handle, group="notifications")
 
     webhook_provider = WebhookNotificationProvider()
     webhook_subscriber = WebhookDeliverySubscriber(webhook_provider)
-    event_bus.subscribe("evaluation.completed", webhook_subscriber.handle, group="webhooks")
-    event_bus.subscribe("safety.campaign.completed", webhook_subscriber.handle, group="webhooks")
-    event_bus.subscribe("safety.finding.detected", webhook_subscriber.handle, group="webhooks")
 
     report_refresh_service = ReportRefreshService()
     report_subscriber = ReportRefreshSubscriber(report_refresh_service)
-    event_bus.subscribe("evaluation.completed", report_subscriber.handle, group="report_refresh")
-    event_bus.subscribe("evaluation.failed", report_subscriber.handle, group="report_refresh")
-    event_bus.subscribe(
-        "evaluation.metric.computed", report_subscriber.handle, group="report_refresh"
-    )
-    event_bus.subscribe(
-        "safety.attack_run.completed", report_subscriber.handle, group="report_refresh"
-    )
-    event_bus.subscribe("safety.finding.detected", report_subscriber.handle, group="report_refresh")
-    event_bus.subscribe(
-        "safety.campaign.completed", report_subscriber.handle, group="report_refresh"
-    )
+
+    async def _subscribe() -> None:
+        for event_type in (
+            "evaluation.created",
+            "evaluation.queued",
+            "evaluation.started",
+            "evaluation.completed",
+            "evaluation.cancelled",
+            "evaluation.failed",
+            "evaluation.timed_out",
+            "evaluation.item.completed",
+            "evaluation.item.failed",
+            "evaluation.metric.computed",
+            "evaluation.checkpoint.created",
+            "safety.attack_run.created",
+            "safety.attack_run.started",
+            "safety.attack_run.completed",
+            "safety.attack_run.failed",
+            "safety.attack_run.cancelled",
+            "safety.finding.detected",
+            "safety.campaign.completed",
+        ):
+            await event_bus.subscribe(event_type, audit_subscriber.handle, group="audit")
+
+        for event_type in (
+            "evaluation.completed",
+            "evaluation.failed",
+            "safety.finding.detected",
+            "safety.campaign.completed",
+        ):
+            await event_bus.subscribe(event_type, notif_subscriber.handle, group="notifications")
+
+        for event_type in (
+            "evaluation.completed",
+            "safety.campaign.completed",
+            "safety.finding.detected",
+        ):
+            await event_bus.subscribe(event_type, webhook_subscriber.handle, group="webhooks")
+
+        for event_type in (
+            "evaluation.completed",
+            "evaluation.failed",
+            "evaluation.metric.computed",
+            "safety.attack_run.completed",
+            "safety.finding.detected",
+            "safety.campaign.completed",
+        ):
+            await event_bus.subscribe(event_type, report_subscriber.handle, group="report_refresh")
+
+    _run_or_schedule(_subscribe())
 
 
 class InfrastructureServices:
@@ -290,8 +321,6 @@ class InfrastructureServices:
         Reads all definitions from the MetricRegistry and upserts
         them into the database for version traceability.
         """
-        import asyncio
-
         from sqlalchemy import text
 
         from app.evaluation.metrics.registry import MetricRegistry
@@ -340,17 +369,7 @@ class InfrastructureServices:
                     )
                 await session.commit()
 
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Fire-and-forget during async startup; table population
-                # happens in the background and errors are logged inside _upsert.
-                _populate_task = loop.create_task(_upsert())  # noqa: RUF006
-            else:
-                loop.run_until_complete(_upsert())
-        except RuntimeError:
-            # No event loop running — safe to use run_until_complete
-            asyncio.run(_upsert())
+        _run_or_schedule(_upsert())
 
     def _register_event_bus_services(self) -> None:
         """Register event bus lifecycle services, event types, and subscribers.

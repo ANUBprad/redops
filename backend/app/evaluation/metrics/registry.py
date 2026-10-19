@@ -76,7 +76,7 @@ class MetricRegistry:
             version=defn.version,
             evaluator_type=defn.evaluator_type.value,
             plugin=plugin_module or "builtin",
-        )  # type: ignore[call-arg]
+        )
 
     def register_many(
         self,
@@ -157,7 +157,7 @@ class MetricRegistry:
                         "entry_point_not_metric",
                         entry_point=ep.name,
                         type=type(metric_cls).__name__,
-                    )  # type: ignore[call-arg]
+                    )
                     continue
                 metric_instance = metric_cls()
                 defn = metric_instance.definition()
@@ -169,12 +169,12 @@ class MetricRegistry:
                     metric=defn.name,
                     entry_point=ep.name,
                     version=defn.version,
-                )  # type: ignore[call-arg]
+                )
             except Exception:
                 logger.exception(
                     "plugin_metric_load_failed",
                     entry_point=ep.name,
-                )  # type: ignore[call-arg]
+                )
 
         return discovered
 

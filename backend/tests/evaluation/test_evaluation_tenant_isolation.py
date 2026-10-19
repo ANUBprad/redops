@@ -42,7 +42,11 @@ BY_ID_ROUTES = [
     ("post", f"/api/v1/evaluations/{EVAL_ID}/duplicate", {"name": "copy"}),
     ("post", f"/api/v1/evaluations/{EVAL_ID}/archive", None),
     ("post", f"/api/v1/evaluations/{EVAL_ID}/ready", None),
-    ("patch", f"/api/v1/metrics/evaluations/{EVAL_ID}/enabled-metrics", {"metric_names": ["accuracy"]}),
+    (
+        "patch",
+        f"/api/v1/metrics/evaluations/{EVAL_ID}/enabled-metrics",
+        {"metric_names": ["accuracy"]},
+    ),
 ]
 
 CREATE_BODY = {

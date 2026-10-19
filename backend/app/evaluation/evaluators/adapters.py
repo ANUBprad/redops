@@ -125,8 +125,8 @@ class RAGASAdapter(BaseEvaluatorAdapter):
         config: EvaluatorConfig | None = None,
     ) -> MetricResult:
         """Evaluate using the RAGAS framework."""
-        import ragas  # type: ignore[import-not-found]
-        from ragas import metrics as ragas_metrics  # type: ignore[import-not-found]
+        import ragas
+        from ragas import metrics as ragas_metrics
 
         ragas_metric_map = {
             "faithfulness": ragas_metrics.Faithfulness(),
@@ -145,7 +145,7 @@ class RAGASAdapter(BaseEvaluatorAdapter):
                 f"Supported: {list(ragas_metric_map.keys())}",
             )
 
-        from ragas import EvaluationDataset, SingleTurnSample  # type: ignore[import-not-found]
+        from ragas import EvaluationDataset, SingleTurnSample
 
         sample = SingleTurnSample(
             user_input=input_data.prompt,
@@ -156,7 +156,7 @@ class RAGASAdapter(BaseEvaluatorAdapter):
         dataset = EvaluationDataset(samples=[sample])
 
         result = ragas.evaluate(dataset, metrics=[ragas_metric])
-        score = result.score  # type: ignore[union-attr]
+        score = result.score
 
         return MetricResult(
             metric_name=metric_name,
@@ -203,7 +203,7 @@ class CustomAdapter(BaseEvaluatorAdapter):
                 error=f"No custom evaluator registered for '{metric_name}'",
             )
         try:
-            result = await evaluator_fn(input_data, config)
+            result: MetricResult = await evaluator_fn(input_data, config)
             return result
         except Exception as e:
             return MetricResult(

@@ -80,7 +80,7 @@ export default function EvaluationsPage() {
 
       <div className="flex items-center gap-4">
         <div className="relative max-w-sm">
-          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder="Search evaluations..."
             className="pl-8"
@@ -110,7 +110,7 @@ export default function EvaluationsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold">{eval_.name}</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {eval_.provider} · {eval_.model}
                     </p>
                   </div>

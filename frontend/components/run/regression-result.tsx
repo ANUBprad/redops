@@ -79,7 +79,7 @@ export function RegressionResultView({ baselineRunId, currentRunId }: Regression
       {result.reasoning && (
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">{result.reasoning}</p>
+            <p className="text-muted-foreground text-sm">{result.reasoning}</p>
           </CardContent>
         </Card>
       )}
@@ -120,7 +120,7 @@ function MetricRegressionRow({ comparison }: { comparison: MetricRegression }) {
           <span className="text-sm font-medium">{comparison.metric_name}</span>
           <Badge className={statusColor}>{comparison.status}</Badge>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">{comparison.reasoning}</p>
+        <p className="text-muted-foreground mt-1 text-xs">{comparison.reasoning}</p>
       </div>
       <div className="text-right text-sm">
         {comparison.baseline_score !== null && comparison.current_score !== null ? (

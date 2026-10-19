@@ -131,9 +131,7 @@ def _make_json_registry(
     return registry, provider
 
 
-def _make_openai_registry(
-    tokens_in: int = 1000, tokens_out: int = 200
-) -> ProviderRegistry:
+def _make_openai_registry(tokens_in: int = 1000, tokens_out: int = 200) -> ProviderRegistry:
     """Create a registry whose provider reports real usage for a priced model.
 
     The provider is registered under ``openai`` so a known-priced model

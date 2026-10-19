@@ -117,8 +117,16 @@ def _literal(sql: str, column: str) -> str | None:
 class _StubSession:
     """Routes SQL to fixture rows; scoped SQL (JOIN) yields in-scope rows."""
 
-    def __init__(self, *, membership=None, evaluations=None, runs=None,
-                 metrics=None, attacks=None, experiments=None):
+    def __init__(
+        self,
+        *,
+        membership=None,
+        evaluations=None,
+        runs=None,
+        metrics=None,
+        attacks=None,
+        experiments=None,
+    ):
         self._membership = membership
         self._evaluations = evaluations or {}
         self._runs = runs or {}
@@ -328,9 +336,7 @@ def _metric_row(
     )
 
 
-def _attack_row(
-    attack_id: str, run_id: str | None, *, total: int, violated: int
-) -> AttackRunModel:
+def _attack_row(attack_id: str, run_id: str | None, *, total: int, violated: int) -> AttackRunModel:
     return AttackRunModel(
         id=attack_id,
         evaluation_run_id=run_id,
@@ -376,21 +382,43 @@ def _world() -> tuple[dict, dict, list, dict, dict]:
     }
     runs = {
         RUN_A1: _run_row(
-            RUN_A1, evaluation_id=EVAL_A, provider="openai", model="gpt-4o",
-            cost=10.0, latency=100, tokens=150,
+            RUN_A1,
+            evaluation_id=EVAL_A,
+            provider="openai",
+            model="gpt-4o",
+            cost=10.0,
+            latency=100,
+            tokens=150,
         ),
         RUN_A2_ORPHAN: _run_row(
-            RUN_A2_ORPHAN, evaluation_id=None, project_id=ORG,
-            provider="openai", model="gpt-4o-mini", cost=5.0, latency=200, tokens=60,
+            RUN_A2_ORPHAN,
+            evaluation_id=None,
+            project_id=ORG,
+            provider="openai",
+            model="gpt-4o-mini",
+            cost=5.0,
+            latency=200,
+            tokens=60,
         ),
         RUN_B1: _run_row(
-            RUN_B1, evaluation_id=EVAL_B, provider="anthropic", model="claude-3",
-            cost=100.0, latency=1000, tokens=1500,
+            RUN_B1,
+            evaluation_id=EVAL_B,
+            provider="anthropic",
+            model="claude-3",
+            cost=100.0,
+            latency=1000,
+            tokens=1500,
         ),
         RUN_B2_ORPHAN: _run_row(
-            RUN_B2_ORPHAN, evaluation_id=None, project_id=OTHER_ORG,
-            provider="anthropic", model="claude-3", cost=50.0, latency=2000,
-            tokens=600, status="failed",
+            RUN_B2_ORPHAN,
+            evaluation_id=None,
+            project_id=OTHER_ORG,
+            provider="anthropic",
+            model="claude-3",
+            cost=50.0,
+            latency=2000,
+            tokens=600,
+            status="failed",
         ),
     }
     metrics = [
@@ -473,9 +501,7 @@ def test_dashboard_scoped_to_org(app, client):
 
 def test_dashboard_ignores_foreign_project_filter(app, client):
     _override_db(app, membership=_membership_row())
-    payload = client.get(
-        "/api/v1/analytics/dashboard", params={"project_id": OTHER_ORG}
-    ).json()
+    payload = client.get("/api/v1/analytics/dashboard", params={"project_id": OTHER_ORG}).json()
     assert payload["total_evaluations"] == 1
     assert payload["average_cost"] == 7.5
 
@@ -501,9 +527,7 @@ def test_latency_scoped_to_org(app, client):
 
 def test_trends_scoped_to_org(app, client):
     _override_db(app, membership=_membership_row())
-    payload = client.get(
-        "/api/v1/analytics/trends", params={"metric_name": "accuracy"}
-    ).json()
+    payload = client.get("/api/v1/analytics/trends", params={"metric_name": "accuracy"}).json()
     assert payload["points"] != []
     assert all(point["value"] == 0.9 for point in payload["points"])
 
@@ -540,33 +564,25 @@ def test_safety_scoped_to_org(app, client):
 
 def test_distribution_foreign_run_denied(app, client):
     _override_db(app, membership=_membership_row())
-    response = client.get(
-        "/api/v1/analytics/metric-distribution", params={"run_id": RUN_B1}
-    )
+    response = client.get("/api/v1/analytics/metric-distribution", params={"run_id": RUN_B1})
     assert response.status_code == 403
 
 
 def test_distribution_own_run(app, client):
     _override_db(app, membership=_membership_row())
-    payload = client.get(
-        "/api/v1/analytics/metric-distribution", params={"run_id": RUN_A1}
-    ).json()
+    payload = client.get("/api/v1/analytics/metric-distribution", params={"run_id": RUN_A1}).json()
     assert payload["total"] == 2
 
 
 def test_pass_fail_foreign_run_denied(app, client):
     _override_db(app, membership=_membership_row())
-    response = client.get(
-        "/api/v1/analytics/pass-fail-summary", params={"run_id": RUN_B1}
-    )
+    response = client.get("/api/v1/analytics/pass-fail-summary", params={"run_id": RUN_B1})
     assert response.status_code == 403
 
 
 def test_pass_fail_own_run(app, client):
     _override_db(app, membership=_membership_row())
-    payload = client.get(
-        "/api/v1/analytics/pass-fail-summary", params={"run_id": RUN_A1}
-    ).json()
+    payload = client.get("/api/v1/analytics/pass-fail-summary", params={"run_id": RUN_A1}).json()
     assert payload["run_id"] == RUN_A1
     assert "accuracy" in payload["metrics"]
 
@@ -614,9 +630,7 @@ def test_export_foreign_run_denied_no_workflow(app, client, temporal_mock):
 def test_export_carries_caller_org(app, client, temporal_mock):
     _override_db(app, membership=_membership_row())
     app.dependency_overrides[get_temporal_client] = lambda: temporal_mock
-    response = client.post(
-        "/api/v1/analytics/export", params={"project_id": OTHER_ORG}
-    )
+    response = client.post("/api/v1/analytics/export", params={"project_id": OTHER_ORG})
     assert response.status_code == 200
     assert response.json()["status"] == "started"
     temporal_mock.start_workflow.assert_called_once()

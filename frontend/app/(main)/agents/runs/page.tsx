@@ -87,7 +87,7 @@ export default function AgentRunsPage() {
 
       <div className="flex items-center gap-4">
         <div className="relative max-w-sm">
-          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder="Search agent runs..."
             className="pl-8"
@@ -137,7 +137,7 @@ export default function AgentRunsPage() {
                       <Link href={`/agents/runs/${run.id}`} className="font-medium hover:underline">
                         {run.agent_name}
                       </Link>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-muted-foreground text-sm">
                         {run.provider} · {run.model}
                       </div>
                     </td>
@@ -158,7 +158,7 @@ export default function AgentRunsPage() {
                       )}
                     </td>
                     <td className="py-3 text-sm">${run.cost.toFixed(4)}</td>
-                    <td className="py-3 text-sm text-muted-foreground">
+                    <td className="text-muted-foreground py-3 text-sm">
                       {new Date(run.created_at).toLocaleDateString()}
                     </td>
                     <td className="py-3 text-right">

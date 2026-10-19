@@ -6,10 +6,12 @@ Effectiveness Evaluation → Mutation/Strategy Selection → Next Attack.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Awaitable, Callable
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
+from app.kernel.entities.base import UUIDv7
 from app.redteam.domain.campaign import (
     AdaptiveCampaign,
     AttackLineage,
@@ -17,7 +19,7 @@ from app.redteam.domain.campaign import (
     CampaignRound,
 )
 from app.redteam.domain.campaign_enums import CampaignState, MutationPhase
-from app.redteam.domain.enums import AttackCategory
+from app.redteam.domain.enums import AttackCategory, AttackSeverity
 from app.redteam.domain.value_objects import AttackScenario
 from app.redteam.engine.attack_evaluator import AttackEvaluator
 from app.redteam.engine.mutation import MutationStrategy
@@ -29,6 +31,20 @@ if TYPE_CHECKING:
     from app.evaluation.metrics.engine import MetricEngine
     from app.providers.registry.registry import ProviderRegistry
     from app.redteam.engine.semantic_judge import SemanticEffectivenessJudge
+
+
+@dataclass(frozen=True, slots=True)
+class CampaignAttackDefinition:
+    """A persisted attack definition selected for a campaign."""
+
+    definition_id: UUIDv7
+    name: str
+    category: AttackCategory
+    severity: AttackSeverity
+    prompt_template: str
+    system_prompt_override: str | None
+    expected_behavior: str
+    parameters: dict[str, Any]
 
 
 class _CampaignCancelled(Exception):
@@ -84,6 +100,7 @@ class AdaptiveCampaignEngine:
         cancelled: Callable[[], bool] | None = None,
         resume_rounds: tuple[CampaignRound, ...] = (),
         checkpoint_round: Callable[[CampaignRound], Awaitable[None]] | None = None,
+        attack_definitions: tuple[CampaignAttackDefinition, ...] = (),
     ) -> None:
         self._registry = registry
         self._orchestrator = AttackOrchestrator()
@@ -104,6 +121,7 @@ class AdaptiveCampaignEngine:
         self._cancelled = cancelled
         self._resume_rounds = resume_rounds
         self._checkpoint_round = checkpoint_round
+        self._attack_definitions = attack_definitions
         if mutation_strategy == MutationStrategy.PROMPT_VARIATION and (
             mutation_provider is None or not mutation_model
         ):
@@ -331,7 +349,66 @@ class AdaptiveCampaignEngine:
         campaign: AdaptiveCampaign,
         category: AttackCategory,
     ) -> AttackScenario:
-        """Generate an attack scenario for the given category."""
+        """Generate a scenario from a selected persisted definition or built-in template."""
+        if self._attack_definitions:
+            definition = self._attack_definitions[
+                campaign.current_round_number % len(self._attack_definitions)
+            ]
+            if not definition.prompt_template.strip():
+                raise ValueError(
+                    f"Attack definition {definition.definition_id} has no prompt template"
+                )
+            parameters = {
+                **definition.parameters,
+                "severity": definition.severity.value,
+            }
+            variables = parameters.get("variables")
+            if variables is None:
+                # Definition APIs historically store template variables as
+                # top-level string parameters. Support that contract while
+                # preferring an explicit nested "variables" mapping.
+                variables = {
+                    key: value
+                    for key, value in definition.parameters.items()
+                    if isinstance(value, str)
+                }
+                parameters["variables"] = variables
+            if not isinstance(variables, dict):
+                raise ValueError(
+                    f"Attack definition {definition.definition_id} variables must be an object"
+                )
+            required_variables = set(
+                re.findall(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}", definition.prompt_template)
+            )
+            missing_variables = required_variables - set(variables)
+            if missing_variables:
+                missing = ", ".join(sorted(missing_variables))
+                raise ValueError(
+                    f"Attack definition {definition.definition_id} is missing template "
+                    f"variables: {missing}"
+                )
+            scenarios = await self._orchestrator.generate_scenarios(
+                category=definition.category,
+                template={
+                    "prompt_template": definition.prompt_template,
+                    "system_prompt_override": definition.system_prompt_override,
+                    "expected_behavior": definition.expected_behavior,
+                },
+                parameters=parameters,
+                count=1,
+            )
+            if not scenarios:
+                raise ValueError(
+                    f"Attack definition {definition.definition_id} produced no scenario"
+                )
+            return replace(
+                scenarios[0],
+                attack_definition_id=definition.definition_id,
+                template_name=definition.name,
+                category=definition.category,
+                severity=definition.severity,
+            )
+
         scenarios = await self._orchestrator.generate_scenarios(
             category=category,
             template={},
@@ -349,6 +426,12 @@ class AdaptiveCampaignEngine:
 
     def _select_category(self, campaign: AdaptiveCampaign) -> AttackCategory:
         """Select an attack category, rotating through configured categories."""
+        if self._attack_definitions:
+            definition = self._attack_definitions[
+                campaign.current_round_number % len(self._attack_definitions)
+            ]
+            return definition.category
+
         categories = campaign.attack_categories
         if not categories:
             return AttackCategory.PROMPT_INJECTION

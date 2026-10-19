@@ -247,9 +247,7 @@ def _run_row(run_id: str, *, evaluation_id: str | None) -> EvaluationRunModel:
 
 def _world() -> tuple[dict, dict, dict]:
     experiments = {
-        EXP_DRAFT: _experiment_row(
-            EXP_DRAFT, project_id=ORG, status=ExperimentStatus.DRAFT.value
-        ),
+        EXP_DRAFT: _experiment_row(EXP_DRAFT, project_id=ORG, status=ExperimentStatus.DRAFT.value),
         EXP_ACTIVE: _experiment_row(
             EXP_ACTIVE, project_id=ORG, status=ExperimentStatus.ACTIVE.value
         ),
@@ -320,9 +318,7 @@ def test_member_can_crud_own_experiment(app, client):
     _override_db(app, membership=_membership_row())
     assert client.get(f"/api/v1/experiments/{EXP_DRAFT}").status_code == 200
     assert (
-        client.patch(
-            f"/api/v1/experiments/{EXP_DRAFT}", json={"description": "mine"}
-        ).status_code
+        client.patch(f"/api/v1/experiments/{EXP_DRAFT}", json={"description": "mine"}).status_code
         == 200
     )
     assert client.post(f"/api/v1/experiments/{EXP_DRAFT}/activate").status_code == 200
@@ -350,9 +346,7 @@ def test_nonexistent_experiment_is_truthful(app, client):
 
 def test_baseline_foreign_run_denied(app, client):
     _override_db(app, membership=_membership_row())
-    response = client.post(
-        f"/api/v1/experiments/{EXP_DRAFT}/baseline", json={"run_id": RUN_VICTIM}
-    )
+    response = client.post(f"/api/v1/experiments/{EXP_DRAFT}/baseline", json={"run_id": RUN_VICTIM})
     assert response.status_code == 403
 
 
@@ -375,9 +369,7 @@ def test_baseline_nonexistent_and_malformed_run_truthful(app, client):
 
 def test_baseline_own_run_succeeds(app, client):
     _override_db(app, membership=_membership_row())
-    response = client.post(
-        f"/api/v1/experiments/{EXP_DRAFT}/baseline", json={"run_id": RUN_OWNED}
-    )
+    response = client.post(f"/api/v1/experiments/{EXP_DRAFT}/baseline", json={"run_id": RUN_OWNED})
     assert response.status_code == 200
     assert response.json()["baseline_run_id"] == RUN_OWNED
 

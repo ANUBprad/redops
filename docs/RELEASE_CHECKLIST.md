@@ -7,15 +7,34 @@ deployment gates that must be green **before** a release ships.
 
 ---
 
+## Current Release Assessment — 2026-10-16
+
+**Decision: NO-GO for v0.1.0 until the remaining evidence is attached.**
+
+Source commit `7f0adebd233d51b347fb9d17ed28e2d4bd83453f` passed hosted backend/frontend CI, Docker builds, Trivy HIGH/CRITICAL vulnerability gate, and Gitleaks. Backend: 3,238 passed, 3 skipped, 2 warnings in 145.80 seconds; the three skips are live-provider smoke tests skipped because all three API-key secrets are absent. Frontend: 31 passed across six test files. Backend/frontend lint, type, security, build, and test jobs passed. The synthetic-corpus CLI guard passed by confirming the expected refusal. The live-provider workflow did not make external calls; staging evidence is still missing, so the release decision remains NO-GO.
+
+The following are **not verified by source review or unit tests alone** and must remain unchecked until evidence is recorded:
+
+- Real OpenAI, Anthropic, and Groq provider calls using valid credentials.
+- A browser-started red-team run that executes the selected persisted definition, persists round evidence, and renders that evidence in the UI.
+- Live Temporal cancellation/retry and duplicate-persistence checks.
+- Staging deployment and migration verification.
+- Rollback drill with the prior image/tag recorded.
+- Prometheus scraping, Grafana dashboard review, and alert firing.
+- Successful Trivy/Gitleaks scans on the release candidate.
+- Independent, license-cleared ground-truth validation. The checked-in synthetic fixture is not ground truth and must not be used to claim metric accuracy.
+
+Attach workflow links, sanitized provider-run evidence, staging URLs/logs, and the rollback/monitoring evidence to the release PR before changing this decision.
+
 ## 1. Code Quality Gates
 
-- [ ] **Backend lint:** `ruff check .` passes.
-- [ ] **Backend format:** `ruff format --check .` passes.
-- [ ] **Backend types:** `mypy --strict` passes.
-- [ ] **Backend tests:** full `pytest` suite passes.
-- [ ] **Frontend format:** `prettier --check .` passes.
-- [ ] **Frontend lint:** `next lint` passes.
-- [ ] **Frontend types:** `tsc --noEmit` passes.
+- [x] **Backend lint:** `ruff check .` passes in CI.
+- [x] **Backend format:** `ruff format --check .` passes in CI.
+- [x] **Backend types:** `mypy app/` passes in CI with `strict = true` in `pyproject.toml`.
+- [x] **Backend tests:** full pytest suite passes (3,238 passed, 3 skipped, 2 warnings; the skipped tests are live-provider checks with missing secrets).
+- [x] **Frontend format:** `prettier --check .` passes in CI.
+- [x] **Frontend lint:** the configured ESLint job passes in CI.
+- [x] **Frontend types:** `tsc --noEmit` passes in CI.
 - [ ] **redops-gate:** its test suite passes.
 
 > Note: on Windows, `ruff format --check` and `prettier --check` may report style deltas due to
@@ -24,10 +43,9 @@ deployment gates that must be green **before** a release ships.
 
 ## 2. Security Gates
 
-- [ ] `pip-audit` and `npm audit` jobs pass in CI.
-- [ ] Trivy container scan (`.github/workflows/docker-build.yml`) reports no high/critical
-      findings.
-- [ ] Gitleaks secrets scan (`.github/workflows/secrets-scan.yml`) passes.
+- [x] `pip-audit` and `npm audit` jobs pass in CI.
+- [x] Trivy container scan (`.github/workflows/docker-build.yml`) passed with the HIGH/CRITICAL gate on the audited source commit.
+- [x] Gitleaks secrets scan (`.github/workflows/secrets-scan.yml`) passes on the audited source commit.
 - [ ] No secrets, keys, or credentials introduced. `APP_SECRET_KEY` / `DB_PASSWORD` rotated.
 
 ## 3. Build & Images
@@ -60,7 +78,7 @@ deployment gates that must be green **before** a release ships.
 
 - [ ] `CHANGELOG.md` updated (semantic-release does this automatically).
 - [ ] API docs reflect any new endpoints/fields (`docs/API_SPEC.md`).
-- [ ] User-facing changes reflected in `docs/` (GETTING_STARTED, DEPLOYMENT, MONITORING).
+- [x] User-facing audit/validation/release status changes reflected in `README.md` and `docs/`.
 - [ ] Breaking changes documented in the release notes.
 
 ---

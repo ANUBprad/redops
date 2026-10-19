@@ -166,7 +166,7 @@ export default function RunDetailPage() {
           <CardContent>
             <div className="text-2xl font-bold">{Math.round(runData.progress * 100)}%</div>
             <Progress value={runData.progress * 100} className="mt-2 h-2" />
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-xs">
               {runData.items_completed}/{runData.items_total} items
             </p>
           </CardContent>
@@ -177,7 +177,7 @@ export default function RunDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{runData.total_tokens.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               In: {runData.token_input.toLocaleString()} · Out:{" "}
               {runData.token_output.toLocaleString()}
             </p>
@@ -189,7 +189,7 @@ export default function RunDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${runData.cost.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Avg latency: {runData.average_latency_ms}ms
             </p>
           </CardContent>
@@ -201,7 +201,7 @@ export default function RunDetailPage() {
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{runData.items_failed}</div>
             {runData.failure_reason && (
-              <p className="text-xs text-muted-foreground">{runData.failure_reason}</p>
+              <p className="text-muted-foreground text-xs">{runData.failure_reason}</p>
             )}
           </CardContent>
         </Card>

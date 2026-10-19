@@ -210,10 +210,10 @@ _GROQ_PRICING: tuple[_PricingEntry, ...] = (
     },
 )
 
-DEFAULT_PRICING: tuple[PricingModel, ...] = tuple(
-    _model("openai", **entry) for entry in _OPENAI_PRICING
-) + tuple(_model("anthropic", **entry) for entry in _ANTHROPIC_PRICING) + tuple(
-    _model("groq", **entry) for entry in _GROQ_PRICING
+DEFAULT_PRICING: tuple[PricingModel, ...] = (
+    tuple(_model("openai", **entry) for entry in _OPENAI_PRICING)
+    + tuple(_model("anthropic", **entry) for entry in _ANTHROPIC_PRICING)
+    + tuple(_model("groq", **entry) for entry in _GROQ_PRICING)
 )
 
 

@@ -74,7 +74,7 @@ export default function ProjectsPage() {
           </Select>
         )}
         <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder="Search projects..."
             value={search}
@@ -87,7 +87,7 @@ export default function ProjectsPage() {
       {!effectiveOrgId ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FolderOpen className="mb-4 h-12 w-12 text-muted-foreground" />
+            <FolderOpen className="text-muted-foreground mb-4 h-12 w-12" />
             <p className="text-muted-foreground">
               No organizations found. Create an organization first.
             </p>
@@ -96,7 +96,7 @@ export default function ProjectsPage() {
       ) : filteredProjects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FolderOpen className="mb-4 h-12 w-12 text-muted-foreground" />
+            <FolderOpen className="text-muted-foreground mb-4 h-12 w-12" />
             <p className="text-muted-foreground">
               {search ? "No projects match your search." : "No projects yet."}
             </p>
@@ -121,10 +121,10 @@ export default function ProjectsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {project.description || "No description"}
                   </p>
-                  <p className="mt-2 text-xs text-muted-foreground">
+                  <p className="text-muted-foreground mt-2 text-xs">
                     Created {new Date(project.created_at).toLocaleDateString()}
                   </p>
                 </CardContent>

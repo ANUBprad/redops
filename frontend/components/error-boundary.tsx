@@ -19,15 +19,15 @@ export function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
     <div className="flex min-h-[400px] items-center justify-center p-6">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <AlertTriangle className="mx-auto mb-2 h-12 w-12 text-destructive" />
+          <AlertTriangle className="text-destructive mx-auto mb-2 h-12 w-12" />
           <CardTitle>Something went wrong</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             {error.message || "An unexpected error occurred."}
           </p>
           {error.digest && (
-            <p className="text-xs text-muted-foreground">Error ID: {error.digest}</p>
+            <p className="text-muted-foreground text-xs">Error ID: {error.digest}</p>
           )}
           <Button onClick={reset} variant="outline">
             <RefreshCw className="mr-2 h-4 w-4" />

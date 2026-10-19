@@ -1,0 +1,95 @@
+PostgreSQL persistence defect: naive ORM DateTime vs TIMESTAMP WITH TIME ZONE
+============================================================================
+
+Scope of this file
+------------------
+Sanitized reproduction of the defect that broke idempotent metric-result
+persistence on PostgreSQL, captured against the real schema/DB (no mocks).
+
+Repository state
+----------------
+Commit under test : d437c731f75ddd9c12910ab8d96f920ca5be023f (current origin/main)
+Database          : PostgreSQL (docker container, localhost:55432), Alembic head 024
+Driver            : SQLAlchemy 2.0.48 + asyncpg 0.31.0
+Environment       : REDOPS_VERIFY_DB_URL=postgresql+asyncpg://<user>:<password>@localhost:55432/redops
+
+Schema fact (independent of the ORM)
+------------------------------------
+    SELECT data_type, count(*) FROM information_schema.columns
+    WHERE data_type LIKE 'timestamp%' GROUP BY data_type;
+      timestamp with time zone | 126
+      (0 rows of any "timestamp without time zone" variant)
+
+  Every timestamp column in the migrated schema is TIMESTAMP WITH TIME ZONE.
+  The application only ever binds aware UTC datetimes (datetime.now(UTC)).
+
+ORM fact
+--------
+  Models that spell the type explicitly already use DateTime(timezone=True)
+  (api_key, audit_log, identity, notification, project, run_event, schedule,
+  tenant, run_log ...). Bare ``Mapped[datetime]`` columns (metric_result,
+  item_execution) inherited SQLAlchemy's NAIVE default instead.
+
+  Because the declared column type was naive, a Core-style executemany insert
+  rendered a ``::TIMESTAMP WITHOUT TIME ZONE`` bind cast and asyncpg refused the
+  aware value.
+
+Reproduction (pre-fix): idempotent metric-result persistence
+------------------------------------------------------------
+Harness: backend/verify_idempotency.py (two identical persist_metric_results
+activity calls; expects a single row via uq_metric_results_run_item_metric).
+
+Result: FAILED on the first insert, exit code 1.
+
+  asyncpg.exceptions.DataError: invalid input for query argument $11:
+    datetime.datetime(2026, 10, 19, 9, 35, 38, 192070, tzinfo=datetime.timezone.utc)
+    (can't subtract offset-naive and offset-aware datetimes)
+
+  [SQL: INSERT INTO metric_results (run_id, item_id, metric_name, score,
+        normalized_score, raw_output, reasoning, metadata, execution_time_ms,
+        error, created_at, confidence, version, cost_usd)
+        VALUES ($1::VARCHAR, $2::VARCHAR, $3::VARCHAR, $4::FLOAT, $5::FLOAT,
+                $6::VARCHAR, $7::VARCHAR, $8::JSON, $9::INTEGER, $10::VARCHAR,
+                $11::TIMESTAMP WITHOUT TIME ZONE, $12::FLOAT, $13::VARCHAR,
+                $14::FLOAT)
+        ON CONFLICT (run_id, item_id, metric_name) DO UPDATE SET ...
+        RETURNING metric_results.id]
+
+  Traceback chain:
+    sqlalchemy.exc.DBAPIError
+      <- sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.Error
+      <- asyncpg.exceptions.DataError ($11::TIMESTAMP WITHOUT TIME ZONE)
+    Raised from:
+      app/evaluation/temporal/activities.py::persist_metric_results_activity
+      app/infrastructure/database/repositories/metric_result_repository.py::save_many
+        (postgres_insert(table).on_conflict_do_update(...) -> session.execute(stmt, values))
+
+Notes on blast radius (measured, not assumed)
+---------------------------------------------
+  * metric_result_repository.save_many is the only repository that issues a
+    Core ``insert()`` executemany; it is the concrete breakage.
+  * The item_executions durable write goes through the ORM flush path
+    (session.add + commit) and did NOT reproduce the failure pre-fix, so that
+    path is unaffected in practice. It is corrected all the same because its
+    declared type (naive) disagreed with the schema (timestamptz).
+
+Fix
+---
+backend/app/infrastructure/database/models/base.py now sets an explicit
+type_annotation_map so that bare ``Mapped[datetime]`` resolves to
+DateTime(timezone=True), matching the schema. Explicit per-model declarations
+are unchanged (explicit type wins over the annotation map).
+
+  class Base(DeclarativeBase):
+      type_annotation_map = {datetime: DateTime(timezone=True)}
+
+Post-fix: the same harness writes exactly one row (metric_row_count=1,
+distinct ids=1, first_id == last_id), created_at stored as
+2026-10-19T09:22:49.056666+00:00. See idempotency-report.json and
+idempotency-query-results.txt.
+
+Regression test
+---------------
+backend/tests/infrastructure/database/test_datetime_columns_timezone_aware.py
+  - fails pre-fix (2 failed)
+  - passes post-fix (2 passed)

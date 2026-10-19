@@ -66,7 +66,7 @@ export default function MetricsPage() {
               <CardTitle className="text-lg">{metric.display_name}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{metric.description}</p>
+              <p className="text-muted-foreground text-sm">{metric.description}</p>
               <div className="mt-2 flex flex-wrap gap-1">
                 <Badge variant="outline">{metric.category}</Badge>
                 <Badge variant="outline">{metric.scale}</Badge>
