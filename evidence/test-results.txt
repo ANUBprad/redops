@@ -1,0 +1,72 @@
+RedOps — Urgent Verification Sprint: test totals (real execution evidence)
+=========================================================================
+
+Source under test
+-----------------
+  Commit            : d437c731f75ddd9c12910ab8d96f920ca5be023f  (current origin/main)
+  Method            : fresh git clone of that exact commit, isolated from the
+                      working tree; backend run with the repo's Python 3.12
+                      interpreter; frontend run with the repo's node toolchain.
+  Date              : 2026-10-19
+
+Backend — pytest -q  (invoked from the backend project root)
+------------------------------------------------------------
+  PRE-FIX baseline (commit d437c73, no code changes):
+
+      3238 passed, 3 skipped, 1 warning in 283.75s (0:04:43)
+      exit code 0
+
+    Raw artifact: test-results-backend-freshclone.txt
+    The 3 skips are the opt-in live-provider smoke tests (below); the single
+    warning is a third-party StarletteDeprecationWarning about httpx.
+
+  POST-FIX (after the timezone-aware ORM type fix + its regression test):
+
+      3240 passed, 3 skipped, 1 warning in 329.63s (0:05:29)
+      exit code 0
+
+    Raw artifacts: backend/postfix-backend-tests.txt (earlier run),
+                   backend/postfix-backend-tests-final.txt (re-run on exact committed code)
+    Delta: +2 tests, exactly the new regression file
+    (backend/tests/infrastructure/database/test_datetime_columns_timezone_aware.py,
+    2 tests). No previously passing test changed.
+
+Frontend — npx vitest run  (invoked from the frontend project root)
+-------------------------------------------------------------------
+  Two independent fresh runs, identical result:
+
+       Test Files  6 passed (6)
+            Tests  31 passed (31)
+      exit code 0
+
+    Raw artifacts: test-results-frontend-freshclone.txt (17.18s),
+                   test-results-frontend-final.txt (10.52s)
+    Note: `--reporter=basic` is rejected by vitest v4.1.11 in this repo; the
+    default reporter was used.
+
+Live provider smoke tests (opt-in)
+----------------------------------
+  File: backend/tests/providers/test_live_provider_smoke.py
+  Gated by REDOPS_LIVE_PROVIDER_TESTS=1 plus per-provider API keys.
+
+  (a) Default full-suite run (REDOPS_LIVE_PROVIDER_TESTS unset):
+      3 skipped  — this is what the "3 skipped" above refers to.
+
+  (b) Explicit opt-in run (REDOPS_LIVE_PROVIDER_TESTS=1):
+
+      1 failed, 2 skipped, 1 warning in 39.86s
+      exit code 1
+
+        - openai     : FAILED — real call reached the API and was rejected with
+                       HTTP 429 insufficient_quota, code credit_balance_exhausted
+                       ("You have no credits remaining").  => BLOCKED, not PASS.
+        - anthropic  : skipped — ANTHROPIC_API_KEY not configured. => BLOCKED.
+        - groq       : skipped — GROQ_API_KEY not configured.      => BLOCKED.
+
+  Raw artifact: backend/live-provider-smoke-run.txt
+
+Summary of executable reality
+-----------------------------
+  Backend full suite : GREEN  (3240 passed / 3 skipped / 0 failures), post-fix
+  Frontend suite     : GREEN  (31 passed / 6 files / 0 failures)
+  Live provider calls: NOT verified (see verification-report.md — all BLOCKED)

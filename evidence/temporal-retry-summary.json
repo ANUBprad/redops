@@ -1,0 +1,74 @@
+{
+  "mode": "retry",
+  "temporal_address": "localhost:57233",
+  "task_queue": "redops-verify-tq",
+  "started_at_utc": "2026-10-19T09:08:19.030071+00:00",
+  "workflow_id": "redops-verify-retry-20261019-090819",
+  "workflow_input": {
+    "total_items": 1,
+    "provider_name": "openai",
+    "model_id": "gpt-4o-mini"
+  },
+  "completed_at_utc": "2026-10-19T09:08:22.692218+00:00",
+  "workflow_result": {
+    "run_id": "run-retry-20261019-090819",
+    "status": "completed",
+    "items_completed": 1,
+    "items_total": 1,
+    "items_failed": 0,
+    "total_tokens_input": 7,
+    "total_tokens_output": 3
+  },
+  "item_activity_attempts": {
+    "run-retry-20261019-090819:0": 2
+  },
+  "item_indices_executed": [
+    0
+  ],
+  "workflow_status_from_server": "COMPLETED",
+  "activity_started_attempts": [
+    {
+      "activity_type": "complete_run_activity",
+      "started_attempts": 1,
+      "attempt_numbers": [
+        1
+      ]
+    },
+    {
+      "activity_type": "execute_item_activity",
+      "started_attempts": 1,
+      "attempt_numbers": [
+        2
+      ]
+    },
+    {
+      "activity_type": "finalize_run_integrity_activity",
+      "started_attempts": 1,
+      "attempt_numbers": [
+        1
+      ]
+    },
+    {
+      "activity_type": "queue_run_activity",
+      "started_attempts": 1,
+      "attempt_numbers": [
+        1
+      ]
+    },
+    {
+      "activity_type": "start_run_activity",
+      "started_attempts": 1,
+      "attempt_numbers": [
+        1
+      ]
+    },
+    {
+      "activity_type": "update_progress_activity",
+      "started_attempts": 1,
+      "attempt_numbers": [
+        1
+      ]
+    }
+  ],
+  "history_event_count": 41
+}

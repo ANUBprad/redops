@@ -1,0 +1,196 @@
+{
+  "result": "ok",
+  "worker_side_call_count": 2,
+  "events": [
+    {
+      "event_id": "1",
+      "event_type": "EVENT_TYPE_WORKFLOW_EXECUTION_STARTED",
+      "workflow_execution_started_event_attributes": {
+        "workflow_type": {
+          "name": "ProbeRetryWorkflow"
+        },
+        "task_queue": {
+          "name": "redops-verify-tq",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "workflow_task_timeout": "10s",
+        "original_execution_run_id": "1bdba407-d8a2-4938-8aa1-7d73916d7b9a",
+        "identity": "19904@LAPT",
+        "first_execution_run_id": "1bdba407-d8a2-4938-8aa1-7d73916d7b9a",
+        "attempt": 1,
+        "first_workflow_task_backoff": "0s",
+        "workflow_id": "redops-probe-retry-20261019-091319"
+      }
+    },
+    {
+      "event_id": "2",
+      "event_type": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflow_task_scheduled_event_attributes": {
+        "task_queue": {
+          "name": "redops-verify-tq",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "start_to_close_timeout": "10s",
+        "attempt": 1
+      }
+    },
+    {
+      "event_id": "3",
+      "event_type": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflow_task_started_event_attributes": {
+        "scheduled_event_id": "2",
+        "identity": "19904@LAPT",
+        "request_id": "2e970937-643d-4829-890d-085f8b17c0f9",
+        "history_size_bytes": "262",
+        "worker_version": {
+          "build_id": "d62a245d6992607b9c6f3bbbb98ef0cf"
+        }
+      }
+    },
+    {
+      "event_id": "4",
+      "event_type": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflow_task_completed_event_attributes": {
+        "scheduled_event_id": "2",
+        "started_event_id": "3",
+        "identity": "19904@LAPT",
+        "worker_version": {
+          "build_id": "d62a245d6992607b9c6f3bbbb98ef0cf"
+        },
+        "sdk_metadata": {
+          "core_used_flags": [
+            2,
+            3,
+            1
+          ],
+          "sdk_name": "temporal-python",
+          "sdk_version": "1.30.0"
+        },
+        "metering_metadata": {}
+      }
+    },
+    {
+      "event_id": "5",
+      "event_type": "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "activity_task_scheduled_event_attributes": {
+        "activity_id": "1",
+        "activity_type": {
+          "name": "probe_activity"
+        },
+        "task_queue": {
+          "name": "redops-verify-tq",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header": {},
+        "schedule_to_close_timeout": "0s",
+        "schedule_to_start_timeout": "0s",
+        "start_to_close_timeout": "5s",
+        "heartbeat_timeout": "0s",
+        "workflow_task_completed_event_id": "4",
+        "retry_policy": {
+          "initial_interval": "1s",
+          "backoff_coefficient": 2.0,
+          "maximum_interval": "100s",
+          "maximum_attempts": 3
+        },
+        "use_workflow_build_id": true
+      }
+    },
+    {
+      "event_id": "6",
+      "event_type": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "activity_task_started_event_attributes": {
+        "scheduled_event_id": "5",
+        "identity": "19904@LAPT",
+        "request_id": "a77729ab-b469-4d8d-8747-af376265597e",
+        "attempt": 2,
+        "last_failure": {
+          "message": "probe transient failure on attempt 1",
+          "stack_trace": "  File \"C:\\Users\\ANUBHAV\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\temporalio\\worker\\_activity.py\", line 359, in _handle_start_activity_task\n    result = await self._execute_activity(\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n  File \"C:\\Users\\ANUBHAV\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\temporalio\\worker\\_activity.py\", line 714, in _execute_activity\n    return await impl.execute_activity(input)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n  File \"C:\\Users\\ANUBHAV\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\temporalio\\worker\\_activity.py\", line 909, in execute_activity\n    return await input.fn(*input.args)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n  File \"C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\opencode\\redops-verify\\backend\\probe_retry_history.py\", line 30, in probe_activity\n    raise RuntimeError(\"probe transient failure on attempt 1\")\n",
+          "application_failure_info": {
+            "type": "RuntimeError"
+          }
+        },
+        "worker_version": {
+          "build_id": "d62a245d6992607b9c6f3bbbb98ef0cf"
+        }
+      }
+    },
+    {
+      "event_id": "7",
+      "event_type": "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "activity_task_completed_event_attributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "Im9rIg=="
+            }
+          ]
+        },
+        "scheduled_event_id": "5",
+        "started_event_id": "6",
+        "identity": "19904@LAPT"
+      }
+    },
+    {
+      "event_id": "8",
+      "event_type": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflow_task_scheduled_event_attributes": {
+        "task_queue": {
+          "name": "19904@LAPT-d46ff12f39aa482c9a8a4116d58456d4",
+          "kind": "TASK_QUEUE_KIND_STICKY",
+          "normal_name": "redops-verify-tq"
+        },
+        "start_to_close_timeout": "10s",
+        "attempt": 1
+      }
+    },
+    {
+      "event_id": "9",
+      "event_type": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflow_task_started_event_attributes": {
+        "scheduled_event_id": "8",
+        "identity": "19904@LAPT",
+        "request_id": "76bef8eb-91c4-4ebb-be46-9ad36cd70837",
+        "history_size_bytes": "1848",
+        "worker_version": {
+          "build_id": "d62a245d6992607b9c6f3bbbb98ef0cf"
+        }
+      }
+    },
+    {
+      "event_id": "10",
+      "event_type": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflow_task_completed_event_attributes": {
+        "scheduled_event_id": "8",
+        "started_event_id": "9",
+        "identity": "19904@LAPT",
+        "worker_version": {
+          "build_id": "d62a245d6992607b9c6f3bbbb98ef0cf"
+        },
+        "sdk_metadata": {},
+        "metering_metadata": {}
+      }
+    },
+    {
+      "event_id": "11",
+      "event_type": "EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED",
+      "workflow_execution_completed_event_attributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "Im9rIg=="
+            }
+          ]
+        },
+        "workflow_task_completed_event_id": "10"
+      }
+    }
+  ]
+}
