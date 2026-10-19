@@ -246,11 +246,14 @@ The Temporal container uses `temporalio/auto-setup:1.25.0` which automatically c
 Create a `.env` file in the repository root (or export in your shell) to enable real provider calls:
 
 ```bash
-# At least one required for real evaluations
+# Primary runtime credential (recommended)
+GROQ_API_KEY=gsk_...
+# Optional alternatives — a provider is only registered when its key is set
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
-GROQ_API_KEY=gsk_...
 ```
+
+Groq is the default runtime credential: it is an OpenAI-compatible endpoint (`https://api.groq.com/openai/v1`) reached through the same provider abstraction, with model IDs such as `llama-3.3-70b-versatile` supplied per run (see `backend/app/providers/groq/constants.py` for the catalog).
 
 Without keys, the provider registry registers only mock/fallback providers; the system still runs but provider calls will fail with configuration errors.
 
