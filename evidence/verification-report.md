@@ -198,3 +198,35 @@ but the end-to-end metric path against a real frontier judge remains
 
 - Source verified: `d437c731f75ddd9c12910ab8d96f920ca5be023f`
 - Fix + regression test: `479ddf278817d0c574c031bf0b2d022df5e9ddae`
+
+## Addendum — Groq runtime credential configuration (2026-10-19)
+
+Follow-up task: make `GROQ_API_KEY` the intended primary runtime credential,
+preserving the provider abstraction and OpenAI/Anthropic as optional
+alternatives.
+
+- **Audit result:** provider support was already symmetric — `AppConfig`
+  defines all three keys as optional (`config.py:95-97`), the container
+  registers each provider only when its key is set (`container.py:323-335`),
+  and `GroqProvider` targets `https://api.groq.com/openai/v1` through the
+  shared OpenAI-compatible client. No OpenAI-only wiring exists in
+  `docker/`, `helm/`, `kubernetes/`, or `.github/workflows/` (none wire any
+  provider keys), and no global default provider/model env var exists —
+  provider and model are supplied per run. OpenAI support was therefore
+  left intact (not destructively replaced).
+- **Changes:** `.env.example` and `README.md` now list `GROQ_API_KEY` first
+  and document it as the primary runtime credential; provider registration
+  tests extended with Groq registration, all-three registration, and an
+  explicit "missing `GROQ_API_KEY` → run validation fails with
+  `PROVIDER_NOT_FOUND` / `Provider 'groq' not registered`" configuration
+  error test.
+- **Tests:** focused suite `test_provider_registration.py` +
+  `tests/providers/groq/` + `tests/providers/openai/` → **97 passed**
+  (baseline was 6 + 11 + 77 = 94; +3 new Groq tests).
+- **Live Groq request:** **BLOCKED** — `GROQ_API_KEY` is not present in this
+  environment (checked without printing any value). No mock was used to
+  claim a live request.
+- **Commits:** `b0fcd06` (tests + config docs), `1ef0ffe` (conflict
+  resolution of pre-existing local modifications, same message amended);
+  pushed to `origin/main` (`ANUBprad/redops`). No secrets appear in any
+  pushed diff (pattern scan for `gsk_…`/`sk-ant-…`/`sk-proj-…`: 0 matches).
