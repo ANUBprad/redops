@@ -1,0 +1,38 @@
+{
+  "generated_at_utc": "2026-10-19T15:20:53.297336+00:00",
+  "note": "One real minimal chat request per adapter; credentials never recorded.",
+  "prompt": "Reply with the exact token REDOPS_LIVE_SMOKE_OK.",
+  "providers": [
+    {
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "credential_present": true,
+      "request_attempted": true,
+      "started_at_utc": "2026-10-19T15:20:51.493929+00:00",
+      "outcome": "error",
+      "error_type": "RateLimitExceeded",
+      "error_class": "app.providers.exceptions.rate_limit.RateLimitExceeded",
+      "error_message": "Error code: 429 - {'error': {'message': 'You have no credits remaining. Add credits to continue using the API at https://platform.openai.com/settings/organization/billing/.', 'type': 'insufficient_quota', 'param': None, 'code': 'credit_balance_exhausted'}}",
+      "latency_ms": 1801.3,
+      "finished_at_utc": "2026-10-19T15:20:53.294672+00:00"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-20250514",
+      "credential_present": false,
+      "request_attempted": false,
+      "started_at_utc": "2026-10-19T15:20:53.297336+00:00",
+      "outcome": "blocked",
+      "reason": "no credential configured in environment"
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "credential_present": false,
+      "request_attempted": false,
+      "started_at_utc": "2026-10-19T15:20:53.297336+00:00",
+      "outcome": "blocked",
+      "reason": "no credential configured in environment"
+    }
+  ]
+}

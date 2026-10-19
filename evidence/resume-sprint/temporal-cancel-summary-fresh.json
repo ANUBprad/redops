@@ -1,0 +1,68 @@
+{
+  "mode": "cancel",
+  "temporal_address": "localhost:57233",
+  "task_queue": "redops-verify-tq",
+  "started_at_utc": "2026-10-19T15:18:56.410362+00:00",
+  "workflow_id": "redops-verify-cancel-20261019-151856",
+  "workflow_input": {
+    "total_items": 3,
+    "provider_name": "openai",
+    "model_id": "gpt-4o-mini"
+  },
+  "cancellation_requested_at_utc": "2026-10-19T15:18:57.441089+00:00",
+  "completed_at_utc": "2026-10-19T15:19:00.151102+00:00",
+  "workflow_result": {
+    "run_id": "run-cancel-20261019-151856",
+    "status": "cancelled",
+    "items_completed": 1,
+    "items_total": 3,
+    "items_failed": 0,
+    "total_tokens_input": 7,
+    "total_tokens_output": 3
+  },
+  "item_activity_attempts": {
+    "run-cancel-20261019-151856:0": 1
+  },
+  "item_indices_executed": [
+    0
+  ],
+  "workflow_status_from_server": "COMPLETED",
+  "activity_started_attempts": [
+    {
+      "activity_type": "cancel_run_activity",
+      "started_attempts": 1,
+      "attempt_numbers": [
+        1
+      ]
+    },
+    {
+      "activity_type": "execute_item_activity",
+      "started_attempts": 1,
+      "attempt_numbers": [
+        1
+      ]
+    },
+    {
+      "activity_type": "queue_run_activity",
+      "started_attempts": 1,
+      "attempt_numbers": [
+        1
+      ]
+    },
+    {
+      "activity_type": "start_run_activity",
+      "started_attempts": 1,
+      "attempt_numbers": [
+        1
+      ]
+    },
+    {
+      "activity_type": "update_progress_activity",
+      "started_attempts": 1,
+      "attempt_numbers": [
+        1
+      ]
+    }
+  ],
+  "history_event_count": 39
+}
