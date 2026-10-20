@@ -53,6 +53,7 @@ Use this index to find the right documentation for what you're trying to do.
 | [EVENT_FLOW.md](evaluation/EVENT_FLOW.md)                            | Event flow.                             |
 | [EVALUATION_ENGINE.md](evaluation/EVALUATION_ENGINE.md)              | Engine internals.                       |
 | [DESIGN_DECISIONS.md](evaluation/DESIGN_DECISIONS.md)                | Engine design decisions.                |
+| [METRIC_VALIDATION.md](evaluation/METRIC_VALIDATION.md)              | Ground-truth metric validation design.  |
 
 ## Operations
 
