@@ -168,8 +168,9 @@ Commits pushed to `origin/main` (fast-forward, no force-push):
 | `e4d03c8` | `feat(providers): make Groq credentials, model, and identity explicit` |
 | `50b1952` | `chore: repair text encoding, ignore generated harness output, add cleanup audit` |
 | `0eadc5f` | `test(evidence): add Groq judge case to metric-sanity harness and record finalization` |
+| `be6f523` | `docs(evidence): record pushed SHAs and final HEAD in finalization report` |
 
-Final state: `HEAD == origin/main == 0eadc5f` (previous tip `2a19647`). Working
+Final state: `HEAD == origin/main == be6f523` (previous tip `2a19647`). Working
 tree clean apart from the pre-existing untracked user files listed above.
 `git diff --check` reports no whitespace errors.
 
