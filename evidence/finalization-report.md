@@ -171,8 +171,9 @@ Commits pushed to `origin/main` (fast-forward, no force-push):
 | `be6f523` | `docs(evidence): record pushed SHAs and final HEAD in finalization report` |
 | `d1f0fd8` | `docs(evidence): finalize report with HEAD be6f523` |
 | `b82fc31` | `docs(evidence): point finalization report at final HEAD` |
+| `3b1e898` | `docs(evidence): record final HEAD sha in finalization report` |
 
-Final state: `HEAD == origin/main == b82fc31` (previous tip `2a19647`). Working
+Final state: `HEAD == origin/main == 3b1e898` (previous tip `2a19647`). Working
 tree clean apart from the pre-existing untracked user files listed above.
 `git diff --check` reports no whitespace errors.
 
