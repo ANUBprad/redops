@@ -47,7 +47,7 @@ patterns plus `frontend/.next/`, `coverage.xml`, `.venv/`, `.env`.
 | `AGENTS.md` | **keep untracked** | Project agent-rules document; user-owned. `git status` shows it as untracked and it is referenced by `AUTONOMOUS_MASTER_PROGRESS.md` ("Manifesto/AGENTS.md applies"). Not deleted, not added to `.gitignore` (it is a rules file a maintainer may want to commit). |
 | `AUTONOMOUS_MASTER_PROGRESS.md` | **keep untracked** | Active user backlog file (DONE/READY/DISCOVERED unit tracker). User-owned working state. |
 | `graphify-out/` | **keep untracked** | Generated output of the user's `graphify` tooling. No tracked file references it. Left alone; not deleted because it is tooling output the user may be mid-way through. |
-| `login.json` | **keep untracked, content inspected** | Contains a demo/stub credential pair (`test@example.com` / `password123`), not a real secret. Left untouched. See 2.5 for the `.gitignore` recommendation. |
+| `login.json` | **keep untracked and now ignored** | Local credential-shaped file (UTF-16 JSON with `email`/`password` keys). Not tracked by git. Now covered by a `.gitignore` rule (see 2.6). Local copy untouched. |
 
 ### 2.3 Root `tests/` directory vs `backend/tests/` — REDUNDANT, deletion proposed
 
@@ -98,6 +98,11 @@ also exist under `backend/tests/`. Evidence of redundancy:
 guards). The identical, maintained copies remain in `backend/tests/` and remain
 in the CI suite, so no test coverage is lost.
 
+**Applied (final cleanup, commit `f0d9c40`):** the 17 tracked root test files
+were removed. Pre-removal verification confirmed the canonical suite collects
+the same 58 tests; the post-removal backend run is unchanged at 3259 passed /
+3 skipped. No production code or configuration was touched.
+
 `git rm` is deferred to the maintainer (see §3): deleting 17 tracked files in an
 otherwise provider-focused change is a review burden, and the repository rules
 forbids multi-purpose commits.
@@ -108,7 +113,7 @@ forbids multi-purpose commits.
 |---|---|---|
 | `README.md` lists `pytest tests/identity/` as an "Auth tests" example. No such path exists in either `backend/tests/` or the root `tests/`; the nearest real coverage is `backend/tests/rbac/` + `backend/tests/tenant/`. | `Test-Path backend/tests/identity` → false; `git ls-files` shows no `identity/` test dir under `backend/`. | **Fixed in this sprint** (README correction). |
 | `README.md` claimed "Without keys, the provider registry registers only mock/fallback providers". No mock/fallback provider is registered anywhere: `container._register_providers` registers only keyed providers, and a scan for `MockProvider` / `FallbackProvider` classes found no provider implementation. | `grep -r "MockProvider\|FallbackProvider" backend/app` → only `ProviderRuntimeError` strings. | **Fixed in this sprint** (README correction). |
-| `docs/index.md` does not link `docs/evaluation/METRIC_VALIDATION.md`, and no other tracked file references it (only orphan doc in the tree). | Cross-reference scan of all 40 tracked `.md` files. | **Kept.** The document is coherent, describes the metric-validation pipeline that `scripts/validate_metrics.py` implements, and has a companion `docs/METRICS_VALIDATION_REPORT.md`. Adding a single index row is an editorial change outside this sprint's scope; recorded here so it is not re-flagged. |
+| `docs/index.md` does not link `docs/evaluation/METRIC_VALIDATION.md`, and no other tracked file references it (only orphan doc in the tree). | Cross-reference scan of all 40 tracked `.md` files. | **Fixed in final cleanup** (commit `8505f2c`): linked from the Evaluation Engine table in `docs/index.md`; an orphan-doc re-scan now returns none. |
 
 No duplicate doc content was found: a SHA-256 comparison of all tracked `.md`
 and `.jsonl` files returned zero content duplicates.
@@ -153,11 +158,11 @@ Two gaps were found and **fixed in this sprint**:
 **Applied:** `.gitignore` now ignores `evidence/harness/metric-evidence/` and
 `evidence/harness/provider-evidence/`.
 
-**Recommended, not applied:** add `login.json` to `.gitignore`. Not applied
-because the file is the maintainer's local tool state and may be deleted or
-replaced by a redacted `login.example.json` instead; the `.env` / `.env.*`
-credential path that matters for production is already ignored (with
-`!.env.example`).
+**Applied (final cleanup):** `login.json` is now ignored. It is not tracked
+(so no `git rm` was needed and no secret ever entered a diff), but it is
+UTF-16-encoded JSON containing `email` and `password` keys — credential-shaped.
+A single `login.json` rule was added to `.gitignore`; the local copy is
+untouched.
 
 ### 2.7 Retained without change (deliberately)
 
@@ -188,8 +193,16 @@ referenced by CI, tests, or documentation.
 | Corrected false "registers only mock/fallback providers" README claim | README diff, `container._register_providers` source |
 | Ignored generated harness output dirs (`evidence/harness/metric-evidence/`, `evidence/harness/provider-evidence/`) | `git check-ignore -v` → `.gitignore:53/54` |
 
+### 4.1 Final cleanup (this phase)
+
+| Change | Commit | Evidence |
+|---|---|---|
+| Ignore local `login.json` credentials file | `6310fcd` | `git check-ignore -v login.json` → `.gitignore`; file untracked, local copy untouched |
+| Remove redundant root `tests/` (17 tracked files) | `f0d9c40` | parity + reference + CI evidence in 2.3; backend suite unchanged at 3259 passed / 3 skipped |
+| Link `docs/evaluation/METRIC_VALIDATION.md` from `docs/index.md` | `8505f2c` | orphan-doc re-scan → none |
+
 ## 5. Not actioned
 
-- `login.json` → `.gitignore` (recommended, not applied — see 2.6).
-- Root `tests/` deletion (proposed, not applied — see §3).
-- `docs/evaluation/METRIC_VALIDATION.md` index link (editorial, see 2.4).
+- None outstanding. All three previously-open items (login.json ignore, root
+  `tests/` deletion, METRIC_VALIDATION.md index link) were actioned in the
+  final cleanup phase (commits `6310fcd`, `f0d9c40`, `8505f2c`).

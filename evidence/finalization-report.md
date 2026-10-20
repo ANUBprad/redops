@@ -101,16 +101,19 @@ Full audit: `evidence/repository-cleanup-audit.md`. Summary:
   - Ignored regenerated harness output (`evidence/harness/metric-evidence/`,
     `evidence/harness/provider-evidence/`), which was dirtying the working tree
     on every harness run.
-- **Deletion proposed (not applied):** the repo-root `tests/` directory — 17
-  tracked files that duplicate `backend/tests/` one-for-one (identical
-  `test_*` function sets; no root-only tests; zero references from any tracked
-  file outside `tests/`; outside CI, which runs with `working-directory: backend`
-  and only on `backend/**`; not part of the documented suite). Recommend
-  `git rm -r tests/` as its own commit. Kept out of this change to avoid mixing a
-  17-file deletion into a provider-focused diff.
-- **Recommended (not applied):** add `login.json` to `.gitignore`. The file holds
-  a placeholder credential pair (`test@example.com` / `password123`), not a real
-  secret, but the name is credential-shaped.
+- **Applied in the final cleanup phase (2026-10-20):**
+  - Ignored the local `login.json` credentials file (`6310fcd`). It is untracked,
+    so nothing was removed from version control and no secret ever entered a
+    diff; the file is credential-shaped (UTF-16 JSON with `email`/`password`
+    keys) and is now covered by a single `.gitignore` rule. Local copy untouched.
+  - Removed the redundant repo-root `tests/` directory (`f0d9c40`) — 17 tracked
+    files duplicating `backend/tests/` one-for-one (identical `test_*` function
+    sets; no root-only tests; zero references from any tracked file outside
+    `tests/`; outside CI, which runs with `working-directory: backend` and only
+    on `backend/**`; not part of the documented suite). The canonical suite
+    collects the same 58 tests, so no coverage is lost.
+  - Linked `docs/evaluation/METRIC_VALIDATION.md` from the Evaluation Engine
+    table in `docs/index.md` (`8505f2c`); an orphan-doc re-scan now returns none.
 - **Retained deliberately:** all 33 `evidence/` artifacts, `docs/`, `scripts/`
   data, `helm/`, `kubernetes/`, `docker/`, `grafana/`, `redops-gate/`,
   `plugins/` — each referenced by CI, tests, or documentation (recorded per file
@@ -141,6 +144,12 @@ All commands were run **without starting any server** (no uvicorn, no
 
 Backend baseline before this sprint was 3243 passed / 3 skipped; the 16 added
 tests bring it to 3259. Frontend stayed at 31 passed / 6 files.
+
+Re-verified after the final cleanup (root `tests/` removed, `8505f2c`):
+backend `python -m pytest -q` from `backend/` → **3259 passed, 3 skipped**;
+frontend `npx vitest run` → **31 passed (6 files)**. Both match the
+pre-cleanup baseline, confirming the redundant root suite carried no unique
+coverage.
 
 Notes for reproducibility: run the backend suite **from `backend/`** — the root
 run misses `asyncio_mode = "auto"` from `backend/pyproject.toml`. `redops-eval`
@@ -176,24 +185,33 @@ Commits pushed to `origin/main` (fast-forward, no force-push):
 | `f99256d` | `docs(evidence): sync finalization report commit log` |
 | `f50506f` | `docs(evidence): update finalization report HEAD reference` |
 | `ae3aed3` | `docs(evidence): final HEAD reference in finalization report` |
+| `bf3e147` | `docs(evidence): stop pinning self-referential HEAD in finalization report` |
+| `c339ee4` | `docs(evidence): describe mojibake sequence by code point instead of embedding it` |
+| `6310fcd` | `chore(gitignore): ignore local login.json credentials file` |
+| `f0d9c40` | `test: remove redundant root tests/ duplicate of backend suite` |
+| `8505f2c` | `docs(index): link the orphaned METRIC_VALIDATION.md` |
 
-Final state: `HEAD == origin/main` at the tip of `main` (previous tip
-`2a19647`); the exact tip SHA is whatever `git rev-parse origin/main` reports,
-since these report-only commits extend the table. Working
-tree clean apart from the pre-existing untracked user files listed above.
-`git diff --check` reports no whitespace errors.
+Final cleanup phase (2026-10-20): the last three commits (`6310fcd`, `f0d9c40`,
+`8505f2c`) applied the three items the audit had left open. `login.json` was
+never tracked, so no version-control removal was required and no secret entered
+any diff; the redundant root `tests/` (17 files) was removed after confirming
+the canonical suite collects the same 58 tests; the orphaned metric-validation
+doc was linked from the index.
+
+Final state: `HEAD == origin/main` at the tip of `main`. Working tree clean
+apart from the pre-existing untracked user files listed above
+(`login.json` is now ignored and no longer listed). `git diff --check` reports
+no whitespace errors, and a secret scan over the final range reports none.
 
 ## 5. Remaining actions
 
 1. **Live Groq verification — NOT RUN.** Set `GROQ_API_KEY` (and optionally
    `GROQ_MODEL`) and run `backend/tests/providers/test_live_provider_smoke.py`
    (opt-in, real credit spend) to confirm the live path end to end.
-2. **Decide on root `tests/` deletion** (`git rm -r tests/`) — evidence and
-   rationale in `evidence/repository-cleanup-audit.md` §3.
-3. **Add `login.json` to `.gitignore`** if that file may ever hold a real
-   credential.
+2. ~~Decide on root `tests/` deletion~~ **DONE** (`f0d9c40`).
+3. ~~Add `login.json` to `.gitignore`~~ **DONE** (`6310fcd`).
 4. **OpenAI live calls remain blocked** by `insufficient_quota` (HTTP 429,
    `credit_balance_exhausted`) — unchanged from the previous sprint and unrelated
    to this work.
-5. Optional editorial: link `docs/evaluation/METRIC_VALIDATION.md` from
-   `docs/index.md` (currently the only orphan document).
+5. ~~Link `docs/evaluation/METRIC_VALIDATION.md` from `docs/index.md`~~
+   **DONE** (`8505f2c`).
