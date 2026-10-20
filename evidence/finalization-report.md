@@ -174,8 +174,11 @@ Commits pushed to `origin/main` (fast-forward, no force-push):
 | `3b1e898` | `docs(evidence): record final HEAD sha in finalization report` |
 | `f99256d` | `docs(evidence): sync finalization report commit log` |
 | `f50506f` | `docs(evidence): update finalization report HEAD reference` |
+| `ae3aed3` | `docs(evidence): final HEAD reference in finalization report` |
 
-Final state: `HEAD == origin/main == f50506f` (previous tip `2a19647`). Working
+Final state: `HEAD == origin/main` at the tip of `main` (previous tip
+`2a19647`); the exact tip SHA is whatever `git rev-parse origin/main` reports,
+since these report-only commits extend the table. Working
 tree clean apart from the pre-existing untracked user files listed above.
 `git diff --check` reports no whitespace errors.
 
