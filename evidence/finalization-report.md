@@ -161,7 +161,17 @@ is editable-installed against `backend/`, so the local `app` package wins.
   sprint's lockfile repair holds.
 - No secret appeared in any diff, log, or evidence file.
 
-Commits and final SHA: recorded in the push log below.
+Commits pushed to `origin/main` (fast-forward, no force-push):
+
+| SHA | Commit |
+|---|---|
+| `e4d03c8` | `feat(providers): make Groq credentials, model, and identity explicit` |
+| `50b1952` | `chore: repair text encoding, ignore generated harness output, add cleanup audit` |
+| `0eadc5f` | `test(evidence): add Groq judge case to metric-sanity harness and record finalization` |
+
+Final state: `HEAD == origin/main == 0eadc5f` (previous tip `2a19647`). Working
+tree clean apart from the pre-existing untracked user files listed above.
+`git diff --check` reports no whitespace errors.
 
 ## 5. Remaining actions
 
