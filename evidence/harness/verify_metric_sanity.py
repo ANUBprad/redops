@@ -40,6 +40,7 @@ from app.evaluation.metrics.implementations.safety_metric import SafetyMetric
 from app.providers.models.enums import FinishReason
 from app.providers.models.messages import Message
 from app.providers.models.responses import ChatResponse, Usage
+from app.providers.groq.constants import DEFAULT_MODEL
 
 OUT = Path(__file__).resolve().parent / "metric-evidence"
 OUT.mkdir(exist_ok=True)
@@ -97,15 +98,16 @@ async def _run_metric(
     context: str,
     verdict: dict[str, Any],
     judge_model: str,
+    judge_provider: str = "openai",
 ) -> dict[str, Any]:
-    provider = ScriptedJudgeProvider(verdict)
+    provider = ScriptedJudgeProvider(verdict, provider_name=judge_provider)
     input_data = MetricInput(
         prompt=prompt,
         response=response,
         context=context,
         metadata={
             "_judge_provider": provider,
-            "_judge_provider_name": "openai",
+            "_judge_provider_name": judge_provider,
             "_judge_model": judge_model,
             "run_id": "metric-sanity-run",
             "item_id": "metric-sanity-item",
@@ -190,6 +192,15 @@ async def main() -> int:
         context="",
         verdict={"score": 0.8, "confidence": 0.5, "reasoning": "mostly safe"},
         judge_model="claude-sonnet-4-20250514",
+    )
+    safety_groq_judge = await _run_metric(
+        SafetyMetric(),
+        prompt=safe_prompt,
+        response="Preheat the oven to 180C and mix the batter.",
+        context="",
+        verdict={"score": 0.9, "confidence": 0.6, "reasoning": "benign cooking instructions"},
+        judge_model=DEFAULT_MODEL,
+        judge_provider="groq",
     )
 
     context = "The Eiffel Tower is 330 metres tall and located in Paris."
@@ -291,13 +302,18 @@ async def main() -> int:
     )
 
     # --- judge provenance ------------------------------------------------------
-    for case in (safety_safe, safety_unsafe, safety_alt_judge, groundedness_grounded):
+    for case in (
+        safety_safe,
+        safety_unsafe,
+        safety_alt_judge,
+        safety_groq_judge,
+        groundedness_grounded,
+    ):
         meta = case["result"]["metadata"]
         ok = (
             meta.get("judge_model") == case["judge_model_configured"]
             and meta.get("judge_prompt_version") == JUDGE_PROMPT_VERSION
             and meta.get("rubric_version") == "1.0.0"
-            and meta.get("provider") == "openai"
             and isinstance(meta.get("tokens_input"), int)
             and isinstance(meta.get("tokens_output"), int)
             and meta.get("tokens_input", 0) > 0
@@ -310,7 +326,7 @@ async def main() -> int:
                 "judge_model": case["judge_model_configured"],
                 "judge_prompt_version": JUDGE_PROMPT_VERSION,
                 "rubric_version": "1.0.0",
-                "provider": "openai",
+                "provider": meta.get("provider"),
                 "tokens>0": True,
             },
             meta,
@@ -320,6 +336,18 @@ async def main() -> int:
         safety_alt_judge["result"]["metadata"].get("judge_model") == "claude-sonnet-4-20250514",
         "claude-sonnet-4-20250514",
         safety_alt_judge["result"]["metadata"].get("judge_model"),
+    )
+    check(
+        "groq judge records its own provider/model provenance",
+        safety_groq_judge["result"]["metadata"].get("provider") == "groq"
+        and safety_groq_judge["result"]["metadata"].get("judge_model") == DEFAULT_MODEL
+        and safety_groq_judge["judge_calls"] == 1,
+        {"judge_model": DEFAULT_MODEL, "judge_provider": "groq", "judge_calls": 1},
+        {
+            "provider": safety_groq_judge["result"]["metadata"].get("provider"),
+            "judge_model": safety_groq_judge["result"]["metadata"].get("judge_model"),
+            "judge_calls": safety_groq_judge["judge_calls"],
+        },
     )
 
     # --- validation must fail loudly without context ---------------------------
@@ -381,6 +409,7 @@ async def main() -> int:
             "safety_safe": safety_safe,
             "safety_unsafe": safety_unsafe,
             "safety_alt_judge": safety_alt_judge,
+            "safety_groq_judge": safety_groq_judge,
             "groundedness_grounded": groundedness_grounded,
             "groundedness_ungrounded": groundedness_ungrounded,
             "groundedness_missing_context": groundedness_missing_context,
