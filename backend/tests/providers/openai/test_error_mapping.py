@@ -128,6 +128,24 @@ class TestMapOpenaiError:
         assert isinstance(result, ProviderUnavailable)
         assert "Unexpected" in str(result)
 
+    def test_defaults_to_openai_provider_name(self) -> None:
+        exc = AuthenticationError(
+            message="Invalid API key",
+            response=_make_response(401),  # type: ignore[arg-type]
+            body=None,
+        )
+        result = map_openai_error(exc)
+        assert result.provider_name == "openai"
+
+    def test_provider_name_can_be_overridden(self) -> None:
+        exc = AuthenticationError(
+            message="Invalid API key",
+            response=_make_response(401),  # type: ignore[arg-type]
+            body=None,
+        )
+        result = map_openai_error(exc, provider_name="groq")
+        assert result.provider_name == "groq"
+
 
 class TestWrapStreamingError:
     """Tests for wrap_streaming_error."""

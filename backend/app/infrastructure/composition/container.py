@@ -332,7 +332,12 @@ class InfrastructureContainer:
         if cfg.anthropic_api_key:
             registry.register(AnthropicProvider(api_key=cfg.anthropic_api_key))
         if cfg.groq_api_key:
-            registry.register(GroqProvider(api_key=cfg.groq_api_key))
+            registry.register(
+                GroqProvider(
+                    api_key=cfg.groq_api_key,
+                    default_model=cfg.groq_model,
+                ),
+            )
 
     def _register_plugins(self) -> None:
         """Register plugin infrastructure components."""

@@ -21,9 +21,10 @@ if TYPE_CHECKING:
 class OpenAIChatAdapter:
     """Adapter for chat completions through OpenAI."""
 
-    def __init__(self, client: OpenAIClient) -> None:
+    def __init__(self, client: OpenAIClient, *, provider_name: str = "openai") -> None:
         """Initialize with OpenAI client."""
         self._client = client
+        self._provider_name = provider_name
 
     async def chat(
         self,
@@ -45,15 +46,16 @@ class OpenAIChatAdapter:
             **params,
         )
 
-        return map_chat_response(response)
+        return map_chat_response(response, provider=self._provider_name)
 
 
 class OpenAIStreamingAdapter:
     """Adapter for streaming chat completions through OpenAI."""
 
-    def __init__(self, client: OpenAIClient) -> None:
+    def __init__(self, client: OpenAIClient, *, provider_name: str = "openai") -> None:
         """Initialize with OpenAI client."""
         self._client = client
+        self._provider_name = provider_name
 
     async def chat_stream(
         self,
@@ -75,16 +77,17 @@ class OpenAIStreamingAdapter:
             **params,
         )
 
-        async for chunk in adapt_stream(sdk_stream):
+        async for chunk in adapt_stream(sdk_stream, provider=self._provider_name):
             yield chunk
 
 
 class OpenAIToolCallingAdapter:
     """Adapter for tool-calling chat completions through OpenAI."""
 
-    def __init__(self, client: OpenAIClient) -> None:
+    def __init__(self, client: OpenAIClient, *, provider_name: str = "openai") -> None:
         """Initialize with OpenAI client."""
         self._client = client
+        self._provider_name = provider_name
 
     async def chat_with_tools(
         self,
@@ -115,7 +118,7 @@ class OpenAIToolCallingAdapter:
             **params,
         )
 
-        return map_chat_response(response)
+        return map_chat_response(response, provider=self._provider_name)
 
 
 class OpenAIReasoningAdapter:

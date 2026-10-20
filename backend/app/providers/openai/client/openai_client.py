@@ -33,6 +33,7 @@ class OpenAIClient:
         organization: str | None = None,
         timeout: float = 120.0,
         max_retries: int = 0,
+        provider_name: str = "openai",
     ) -> None:
         """Initialize the OpenAI client.
 
@@ -42,8 +43,11 @@ class OpenAIClient:
             organization: OpenAI organization ID.
             timeout: Request timeout in seconds.
             max_retries: SDK-level max retries (distinct from runtime retries).
+            provider_name: Provider label used when mapping SDK errors.
+                OpenAI-compatible providers (e.g. Groq) pass their own name.
 
         """
+        self._provider_name = provider_name
         self._client = AsyncOpenAI(
             api_key=api_key,
             base_url=base_url,
@@ -88,7 +92,7 @@ class OpenAIClient:
                 **kwargs,
             )
         except Exception as exc:
-            raise map_openai_error(exc) from exc
+            raise map_openai_error(exc, provider_name=self._provider_name) from exc
 
     async def create_chat_stream(
         self,
@@ -119,7 +123,7 @@ class OpenAIClient:
                 **kwargs,
             )
         except Exception as exc:
-            raise map_openai_error(exc) from exc
+            raise map_openai_error(exc, provider_name=self._provider_name) from exc
 
     async def create_embedding(
         self,
@@ -149,7 +153,7 @@ class OpenAIClient:
                 **kwargs,
             )
         except Exception as exc:
-            raise map_openai_error(exc) from exc
+            raise map_openai_error(exc, provider_name=self._provider_name) from exc
 
     async def check_health(self) -> bool:
         """Check if the OpenAI API is reachable.

@@ -255,9 +255,9 @@ OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-Groq is the default runtime credential: it is an OpenAI-compatible endpoint (`https://api.groq.com/openai/v1`) reached through the same provider abstraction, with model IDs such as `llama-3.3-70b-versatile` supplied per run (see `backend/app/providers/groq/constants.py` for the catalog).
+Groq is the default runtime credential: it is an OpenAI-compatible endpoint (`https://api.groq.com/openai/v1`) reached through the same provider abstraction. Runs that do not specify a model use `GROQ_MODEL` (default `llama-3.3-70b-versatile`, see `backend/app/providers/groq/constants.py` for the catalog); the model can also be supplied per run.
 
-Without keys, the provider registry registers only mock/fallback providers; the system still runs but provider calls will fail with configuration errors.
+Without provider keys the registry registers no providers; the system still starts and imports normally, and provider calls fail with a clear configuration error rather than silently falling back to another provider.
 
 ### Stop & Cleanup
 
@@ -375,7 +375,7 @@ pytest --cov=app --cov-report=term-missing --cov-report=xml
 pytest tests/evaluation/temporal/        # Temporal workflow/activity tests
 pytest tests/providers/runtime/          # Provider runtime (retry, breaker, rate-limit)
 pytest tests/redteam/temporal/           # Red team durability tests
-pytest tests/identity/                   # Auth tests
+pytest tests/tenant/ tests/rbac/         # Tenant isolation / authz tests
 ```
 
 ### Frontend

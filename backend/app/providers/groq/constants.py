@@ -12,6 +12,10 @@ PROVIDER_NAME = "groq"
 
 DEFAULT_BASE_URL = "https://api.groq.com/openai/v1"
 
+# Default chat model when the caller does not pass one. Overridable through the
+# GROQ_MODEL setting; keep this in sync with the first entry of GROQ_MODELS.
+DEFAULT_MODEL = "llama-3.3-70b-versatile"
+
 # Representative Groq models. Groq hosts Llama, Mixtral, GEMMA, and OpenAI
 # Codex models. The list is informational (the API accepts any model id the
 # account has access to); cost entries in `providers.cost.defaults` cover the

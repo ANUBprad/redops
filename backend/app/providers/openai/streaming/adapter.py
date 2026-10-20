@@ -51,7 +51,7 @@ async def adapt_stream(
             message=str(exc),
             index=chunk_index,
         )
-        raise wrap_streaming_error(exc, chunk_index=chunk_index) from exc
+        raise wrap_streaming_error(exc, chunk_index=chunk_index, provider_name=provider) from exc
 
 
 def _map_chunk(chunk: Any, *, index: int) -> StreamChunk | None:

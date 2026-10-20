@@ -16,6 +16,7 @@ Differences from OpenAI:
 
 from __future__ import annotations
 
+import os
 import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -27,7 +28,8 @@ from app.providers.contracts.chat import ChatProvider
 from app.providers.contracts.reasoning import ReasoningProvider
 from app.providers.contracts.streaming import StreamingProvider
 from app.providers.contracts.tool_calling import ToolCallingProvider
-from app.providers.groq.constants import DEFAULT_BASE_URL, PROVIDER_NAME
+from app.providers.exceptions.base import ProviderException
+from app.providers.groq.constants import DEFAULT_BASE_URL, DEFAULT_MODEL, PROVIDER_NAME
 from app.providers.health.provider_health import ProviderHealth
 from app.providers.health.status import ProviderStatus
 from app.providers.metadata.provider import ProviderMetadata
@@ -89,25 +91,77 @@ class GroqProvider(
         api_key: str | None = None,
         base_url: str | None = None,
         timeout: float = 120.0,
+        default_model: str | None = None,
     ) -> None:
         """Initialize the Groq provider.
 
         Args:
-            api_key: Groq API key. Falls back to GROQ_API_KEY env var.
+            api_key: Groq API key. Falls back to the GROQ_API_KEY env var.
+                The OpenAI credential is never used for Groq requests.
             base_url: Custom API base URL (defaults to Groq's OpenAI-compatible
                 endpoint).
             timeout: Default request timeout in seconds.
+            default_model: Model used when a request omits ``model``
+                (defaults to ``DEFAULT_MODEL``; wire GROQ_MODEL to override).
 
         """
-        self._client = OpenAIClient(
-            api_key=api_key,
-            base_url=base_url or DEFAULT_BASE_URL,
-            timeout=timeout,
-        )
-        self._chat_adapter = OpenAIChatAdapter(self._client)
-        self._streaming_adapter = OpenAIStreamingAdapter(self._client)
-        self._tool_adapter = OpenAIToolCallingAdapter(self._client)
+        self._api_key = api_key or os.environ.get("GROQ_API_KEY", "")
+        self._base_url = base_url or DEFAULT_BASE_URL
+        self._timeout = timeout
+        self._default_model = default_model or DEFAULT_MODEL
+        self._client: OpenAIClient | None = None
         self._started = False
+
+    @property
+    def default_model(self) -> str:
+        """Return the model used when a request does not specify one."""
+        return self._default_model
+
+    def _ensure_client(self) -> OpenAIClient:
+        """Return the Groq client, or raise a clear configuration error.
+
+        Client construction is deferred to the first real request so that an
+        absent optional credential never breaks import or application startup.
+        """
+        if not self._api_key:
+            msg = (
+                "GROQ_API_KEY is not configured. Set the GROQ_API_KEY environment "
+                "variable (or pass api_key to GroqProvider) to use Groq."
+            )
+            raise ProviderException(
+                message=msg,
+                provider_name=PROVIDER_NAME,
+                error_code="PROVIDER_CONFIGURATION_ERROR",
+            )
+        if self._client is None:
+            self._client = OpenAIClient(
+                api_key=self._api_key,
+                base_url=self._base_url,
+                timeout=self._timeout,
+                provider_name=PROVIDER_NAME,
+            )
+        return self._client
+
+    @staticmethod
+    def _validate_options(options: ChatOptions | None) -> None:
+        """Reject OpenAI-only options that Groq documents as unsupported."""
+        if options is None:
+            return
+        unsupported = [
+            name for name in ("logprobs", "top_logprobs") if getattr(options, name) is not None
+        ]
+        if unsupported:
+            msg = (
+                "Groq does not support "
+                + ", ".join(unsupported)
+                + "; remove them from ChatOptions "
+                "(see https://console.groq.com/docs/openai)."
+            )
+            raise ProviderException(
+                message=msg,
+                provider_name=PROVIDER_NAME,
+                error_code="PROVIDER_UNSUPPORTED_PARAMETER",
+            )
 
     @property
     def provider_name(self) -> str:
@@ -155,19 +209,22 @@ class GroqProvider(
 
     async def dispose(self) -> None:
         """Release all resources."""
-        await self._client.close()
+        if self._client is not None:
+            await self._client.close()
         self._started = False
 
     # ── Health ───────────────────────────────────────────────────────
 
     async def health(self) -> bool:
         """Check if the Groq API is reachable."""
-        return await self._client.check_health()
+        if not self._api_key:
+            return False
+        return await self._ensure_client().check_health()
 
     async def detailed_health(self) -> ProviderHealth:
         """Return detailed health with latency info."""
         start = time.monotonic()
-        is_healthy = await self._client.check_health()
+        is_healthy = await self.health()
         elapsed_ms = (time.monotonic() - start) * 1000
         return ProviderHealth(
             provider_name=PROVIDER_NAME,
@@ -183,7 +240,7 @@ class GroqProvider(
         self,
         messages: list[Message],
         *,
-        model: str,
+        model: str | None = None,
         options: ChatOptions | None = None,
     ) -> ChatResponse:
         """Generate a chat completion.
@@ -191,13 +248,20 @@ class GroqProvider(
         Args:
             messages: The conversation messages.
             model: The model identifier (e.g., 'llama-3.3-70b-versatile').
+                Defaults to the configured ``default_model``.
             options: Optional generation parameters.
 
         Returns:
             The model's response.
 
         """
-        return await self._chat_adapter.chat(messages, model=model, options=options)
+        self._validate_options(options)
+        adapter = OpenAIChatAdapter(self._ensure_client(), provider_name=PROVIDER_NAME)
+        return await adapter.chat(
+            messages,
+            model=model or self._default_model,
+            options=options,
+        )
 
     # ── Streaming ────────────────────────────────────────────────────
 
@@ -205,7 +269,7 @@ class GroqProvider(
         self,
         messages: list[Message],
         *,
-        model: str,
+        model: str | None = None,
         options: ChatOptions | None = None,
     ) -> AsyncIterator[StreamChunk]:
         """Stream a chat completion.
@@ -213,9 +277,14 @@ class GroqProvider(
         Yields StreamChunk instances as the model generates tokens.
 
         """
-        async for chunk in self._streaming_adapter.chat_stream(
+        self._validate_options(options)
+        adapter = OpenAIStreamingAdapter(
+            self._ensure_client(),
+            provider_name=PROVIDER_NAME,
+        )
+        async for chunk in adapter.chat_stream(
             messages,
-            model=model,
+            model=model or self._default_model,
             options=options,
         ):
             yield chunk
@@ -226,7 +295,7 @@ class GroqProvider(
         self,
         messages: list[Message],
         *,
-        model: str,
+        model: str | None = None,
         tools: list[dict[str, Any]],
         tool_choice: str | dict[str, Any] | None = None,
         options: ChatOptions | None = None,
@@ -237,9 +306,14 @@ class GroqProvider(
         caller, then fed back as ToolResultContent messages.
 
         """
-        return await self._tool_adapter.chat_with_tools(
+        self._validate_options(options)
+        adapter = OpenAIToolCallingAdapter(
+            self._ensure_client(),
+            provider_name=PROVIDER_NAME,
+        )
+        return await adapter.chat_with_tools(
             messages,
-            model=model,
+            model=model or self._default_model,
             tools=tools,
             tool_choice=tool_choice,
             options=options,
@@ -251,7 +325,7 @@ class GroqProvider(
         self,
         messages: list[Message],
         *,
-        model: str,
+        model: str | None = None,
         options: ChatOptions | None = None,
     ) -> ChatResponse:
         """Generate a response with reasoning traces.
@@ -261,4 +335,4 @@ class GroqProvider(
         so the plain chat adapter is used rather than OpenAI's o1/o3 conversion.
 
         """
-        return await self._chat_adapter.chat(messages, model=model, options=options)
+        return await self.chat(messages, model=model, options=options)

@@ -12,6 +12,8 @@ from typing import Any, Literal
 from pydantic import Field, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.providers.groq.constants import DEFAULT_MODEL
+
 AppEnv = Literal["development", "testing", "production"]
 
 
@@ -95,6 +97,7 @@ class AppConfig(BaseSettings):
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
+    groq_model: str = Field(default=DEFAULT_MODEL, alias="GROQ_MODEL")
 
     # SECURITY
     app_secret_key: str = Field(default="", alias="APP_SECRET_KEY")
