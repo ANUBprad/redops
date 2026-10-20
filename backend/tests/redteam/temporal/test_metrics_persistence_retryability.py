@@ -3,7 +3,7 @@
 A persistence failure during the metric_results phase (which happens AFTER
 all provider calls have produced results) must NOT:
 
-    1. Be swallowed into a FAILED return value â€” the already-paid provider
+    1. Be swallowed into a FAILED return value — the already-paid provider
        result would be silently dropped.
     2. Leave the run COMPLETED before the metric rows are durable.
 
@@ -81,7 +81,7 @@ def _fake_registry_provider(
 
     The provider serves the target call, then the semantic judge call.
     A retry that re-invokes providers would exhaust the side_effect list
-    and fail loudly â€” so a passing retry proves no provider re-invoke.
+    and fail loudly — so a passing retry proves no provider re-invoke.
     """
     from app.providers.models.enums import FinishReason
     from app.providers.models.responses import ChatResponse, Usage
@@ -325,7 +325,7 @@ class TestMetricPersistenceFailurePropagates:
                 redteam_activities._session_factory,
             ) = snapshot
 
-        # The error was NOT converted into a FAILED result â€” it surfaced
+        # The error was NOT converted into a FAILED result — it surfaced
         # so Temporal's activity retry policy can re-run the attempt.
         assert caught is not None
         assert "disk full" in str(caught)

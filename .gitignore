@@ -49,6 +49,10 @@ docker-data/
 tmp/
 .cache/
 
+# Generated harness output (re-runnable; committed copies live in evidence/)
+evidence/harness/metric-evidence/
+evidence/harness/provider-evidence/
+
 # Coverage
 coverage.xml
 
