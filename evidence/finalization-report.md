@@ -169,8 +169,9 @@ Commits pushed to `origin/main` (fast-forward, no force-push):
 | `50b1952` | `chore: repair text encoding, ignore generated harness output, add cleanup audit` |
 | `0eadc5f` | `test(evidence): add Groq judge case to metric-sanity harness and record finalization` |
 | `be6f523` | `docs(evidence): record pushed SHAs and final HEAD in finalization report` |
+| `d1f0fd8` | `docs(evidence): finalize report with HEAD be6f523` |
 
-Final state: `HEAD == origin/main == be6f523` (previous tip `2a19647`). Working
+Final state: `HEAD == origin/main == d1f0fd8` (previous tip `2a19647`). Working
 tree clean apart from the pre-existing untracked user files listed above.
 `git diff --check` reports no whitespace errors.
 
