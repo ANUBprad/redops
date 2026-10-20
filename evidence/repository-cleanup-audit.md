@@ -116,11 +116,12 @@ and `.jsonl` files returned zero content duplicates.
 ### 2.5 Text encoding
 
 A scan of every tracked UTF-8 text file for CP1252 mojibake sequences
-(`â€”`, `Ã©`, `â€œ`, U+FFFD, …) found exactly one damaged file:
+(the em-dash sequence U+00E2 U+20AC U+201D, its U+00C3 U+00A9 and
+U+00E2 U+20AC U+0153 cousins, and U+FFFD) found exactly one damaged file:
 
 - `backend/tests/redteam/temporal/test_metrics_persistence_retryability.py` —
-  three comments/docstring lines contained `â€”` where an em dash (`—`) was
-  intended (a UTF-8 → CP1252 → UTF-8 round-trip artifact).
+  three comments/docstring lines contained the em-dash mojibake sequence where
+  an em dash was intended (a UTF-8 → CP1252 → UTF-8 round-trip artifact).
 
 **Fixed in this sprint**: the three occurrences were replaced with `—`.
 Re-scan result: `total files with mojibake markers: 0`. No other tracked file

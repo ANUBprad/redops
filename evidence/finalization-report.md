@@ -93,7 +93,8 @@ Full audit: `evidence/repository-cleanup-audit.md`. Summary:
   (`.pyc`, `__pycache__`, `node_modules`, pytest/mypy/ruff caches, coverage,
   logs, archives all filtered → no matches).
 - **Applied fixes:**
-  - Repaired CP1252 mojibake (`â€”` → `—`) in three comments of
+  - Repaired CP1252 mojibake (the em-dash byte sequence replaced with a real
+    em dash) in three comments of
     `backend/tests/redteam/temporal/test_metrics_persistence_retryability.py`;
     repo-wide re-scan now reports 0 damaged files and zero non-UTF-8 tracked files.
   - Corrected two false statements in the README provider section (see below).
