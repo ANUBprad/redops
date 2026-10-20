@@ -49,6 +49,9 @@ docker-data/
 tmp/
 .cache/
 
+# Local login credentials (never commit)
+login.json
+
 # Generated harness output (re-runnable; committed copies live in evidence/)
 evidence/harness/metric-evidence/
 evidence/harness/provider-evidence/
