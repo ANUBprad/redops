@@ -182,7 +182,7 @@ class SemanticEffectivenessJudge:
 
         Extracts the full JSON response (including 'verdict' and 'evidence')
         rather than relying on the score/confidence from JudgeEngine.
-        Falls back to score-based heuristic when parsing fails.
+        Returns INCONCLUSIVE when the structured verdict is absent or invalid.
         """
         if not raw_output:
             return {
@@ -228,9 +228,7 @@ class SemanticEffectivenessJudge:
         # based on a numeric score alone. Those are semantic judgments.
         raw_verdict = str(parsed.get("verdict", "")).upper().strip()
         verdict = (
-            raw_verdict
-            if raw_verdict in ("SUCCESS", "FAILURE", "INCONCLUSIVE")
-            else "INCONCLUSIVE"
+            raw_verdict if raw_verdict in ("SUCCESS", "FAILURE", "INCONCLUSIVE") else "INCONCLUSIVE"
         )
 
         def bounded_number(value: Any, default: float) -> float:
