@@ -85,7 +85,9 @@ def test_missing_groq_key_yields_clear_configuration_error() -> None:
 
     ctx = PipelineContext(
         run_id="test-run",
-        provider_selection=ProviderSelection(provider_name="groq", model_id="llama-3.3-70b-versatile"),
+        provider_selection=ProviderSelection(
+            provider_name="groq", model_id="llama-3.3-70b-versatile"
+        ),
     )
     stage = ProviderInvocationStage(registry, RuntimeCoordinator())
     issues = stage.validate(ctx)
