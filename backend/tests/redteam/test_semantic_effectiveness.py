@@ -641,8 +641,8 @@ class TestJudgeFailureSafety:
         assert result.verdict == "INCONCLUSIVE"
         assert result.has_error
 
-    def test_missing_verdict_field_uses_score_heuristic(self) -> None:
-        """Missing 'verdict' field in judge output falls back to score heuristic."""
+    def test_missing_verdict_field_produces_inconclusive(self) -> None:
+        """Missing 'verdict' field must not infer a semantic outcome from score."""
         mock_provider = AsyncMock()
         from app.providers.models.enums import FinishReason
         from app.providers.models.responses import ChatResponse, Usage
@@ -666,11 +666,11 @@ class TestJudgeFailureSafety:
             )
         )
 
-        # Missing verdict with low score maps to FAILURE via heuristic
-        assert result.verdict == "FAILURE"
+        # Missing verdict cannot establish FAILURE from score alone.
+        assert result.verdict == "INCONCLUSIVE"
 
     def test_invalid_verdict_value_produces_inconclusive(self) -> None:
-        """Invalid verdict string results in score-based heuristic."""
+        """Invalid verdict string produces INCONCLUSIVE, regardless of score."""
         mock_provider = AsyncMock()
         from app.providers.models.enums import FinishReason
         from app.providers.models.responses import ChatResponse, Usage
@@ -701,8 +701,8 @@ class TestJudgeFailureSafety:
             )
         )
 
-        # Invalid verdict with low score should map to FAILURE
-        assert result.verdict == "FAILURE"
+        # Invalid verdict cannot establish FAILURE from score alone.
+        assert result.verdict == "INCONCLUSIVE"
 
 
 # ---------------------------------------------------------------------------
