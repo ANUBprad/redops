@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import re
 import time
 from typing import TYPE_CHECKING, Any
@@ -223,30 +224,28 @@ class SemanticEffectivenessJudge:
                 "evidence": "",
             }
 
-        # Extract verdict with validation
+        # A malformed judge response must not be promoted to SUCCESS or FAILURE
+        # based on a numeric score alone. Those are semantic judgments.
         raw_verdict = str(parsed.get("verdict", "")).upper().strip()
-        if raw_verdict not in ("SUCCESS", "FAILURE", "INCONCLUSIVE"):
-            # Invalid verdict — use score-based heuristic
-            score = float(parsed.get("score", fallback.score))
-            if score >= 0.7:
-                verdict = "SUCCESS"
-            elif score <= 0.3:
-                verdict = "FAILURE"
-            else:
-                verdict = "INCONCLUSIVE"
-        else:
-            verdict = raw_verdict
+        verdict = (
+            raw_verdict
+            if raw_verdict in ("SUCCESS", "FAILURE", "INCONCLUSIVE")
+            else "INCONCLUSIVE"
+        )
 
-        # Extract other fields with safe defaults
-        try:
-            score = max(0.0, min(1.0, float(parsed.get("score", fallback.score))))
-        except (TypeError, ValueError):
-            score = fallback.score
+        def bounded_number(value: Any, default: float) -> float:
+            try:
+                number = float(value)
+            except (TypeError, ValueError, OverflowError):
+                number = default
+            if not math.isfinite(number):
+                number = default
+            if not math.isfinite(number):
+                number = 0.0
+            return max(0.0, min(1.0, number))
 
-        try:
-            confidence = max(0.0, min(1.0, float(parsed.get("confidence", fallback.confidence))))
-        except (TypeError, ValueError):
-            confidence = fallback.confidence
+        score = bounded_number(parsed.get("score"), fallback.score)
+        confidence = bounded_number(parsed.get("confidence"), fallback.confidence)
 
         reasoning = parsed.get("reasoning", fallback.reasoning)
         if not isinstance(reasoning, str):
