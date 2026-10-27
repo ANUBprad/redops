@@ -1,4 +1,4 @@
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
 
 class MockEventSource {
   static readonly CONNECTING = 0;
@@ -10,9 +10,9 @@ class MockEventSource {
   readyState = 0;
   url: string;
   withCredentials = false;
-  onopen: ((this: MockEventSource, ev: Event) => any) | null = null;
-  onmessage: ((this: MockEventSource, ev: MessageEvent) => any) | null = null;
-  onerror: ((this: MockEventSource, ev: Event) => any) | null = null;
+  onopen: ((this: MockEventSource, ev: Event) => void) | null = null;
+  onmessage: ((this: MockEventSource, ev: MessageEvent) => void) | null = null;
+  onerror: ((this: MockEventSource, ev: Event) => void) | null = null;
 
   constructor(url: string) {
     this.url = url;
@@ -27,4 +27,8 @@ class MockEventSource {
   }
 }
 
-(global as any).EventSource = MockEventSource;
+Object.defineProperty(globalThis, "EventSource", {
+  configurable: true,
+  writable: true,
+  value: MockEventSource,
+});
