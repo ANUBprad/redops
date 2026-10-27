@@ -82,21 +82,21 @@ describe("API request Authorization header", () => {
 describe("SSE URL correctness", () => {
   it("streamEvents uses /api/v1 prefix in URL", () => {
     const source = api.streamEvents("run-123");
-    const url = (source as any).url as string;
+    const url = (source as EventSource).url;
     expect(url).toContain("/api/v1/runs/run-123/events/stream");
     source.close();
   });
 
   it("streamProgress uses /api/v1 prefix in URL", () => {
     const source = api.streamProgress("run-456");
-    const url = (source as any).url as string;
+    const url = (source as EventSource).url;
     expect(url).toContain("/api/v1/runs/run-456/progress/stream");
     source.close();
   });
 
   it("streamEvents URL contains /api/v1 prefix before run path", () => {
     const source = api.streamEvents("run-789");
-    const url = (source as any).url as string;
+    const url = (source as EventSource).url;
     expect(url).toMatch(/\/api\/v1\/runs\/run-789\/events\/stream$/);
     source.close();
   });
