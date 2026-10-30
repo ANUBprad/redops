@@ -67,3 +67,5 @@ frontend/node_modules/
 frontend/dist/
 frontend/.next/
 frontend/tsconfig.tsbuildinfo
+# Local analysis and code-visualization output
+graphify-out/
